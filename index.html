@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport"/>
+<title>LifePlan Sim v13 (Fixed &amp; Verified)</title>
+<style>
+  :root {
+    --primary: #2563eb; --primary-bg: #eff6ff;
+    --text: #1e293b; --text-light:#64748b;
+    --bg: #f1f5f9; --white:#ffffff; --border:#e2e8f0;
+    --radius: 12px;
+    --shadow: 0 6px 18px rgba(2,6,23,.06);
+
+    /* Pastel palette (UI + Chart) */
+    --c-nw: #7c3aed;
+    --c-cash: #0284c7;
+    --c-fund: #c026d3;
+    --c-stock: #d97706;
+    --c-crypto: #0d9488;
+        --c-dc: #22c55e;
+--c-loan: #475569;
+    --c-draw: #dc2626;
+
+    --c-inc: #16a34a;
+    --c-asset: #4f46e5;
+    --c-exp: #e11d48;
+    --c-edu: #ca8a04;
+    --c-home: #ea580c;
+    --c-re: #a855f7;
+
+
+    --c-kid1: #2563eb;
+    --c-kid2: #db2777;
+    --c-kid3: #16a34a;
+    --c-kid4: #f59e0b;
+
+    --bg-kid1: #dbeafe;
+    --bg-kid2: #fce7f3;
+    --bg-kid3: #dcfce7;
+    --bg-kid4: #fef3c7;
+
+    /* Section background tints */
+    --bg-basic: #f8fafc;
+    --bg-inc: #dcfce7;
+    --bg-asset: #e0e7ff;
+    --bg-exp: #ffe4e6;
+    --bg-home: #ffedd5;
+    --bg-edu: #fef3c7;
+    --bg-re: #f3e8ff;
+}
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-bottom: 80px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  
+  /* Header */
+  .header {
+    height: 60px; background: rgba(255,255,255,0.95);
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+    box-shadow: var(--shadow); backdrop-filter: blur(4px);
+  }
+  .h-title { font-weight: 800; font-size: 18px; color: var(--primary); }
+  .h-actions { display: flex; gap: 8px; }
+
+  /* Layout */
+  .grid {
+    display: grid; grid-template-columns: minmax(320px, 420px) minmax(0, 1fr); gap: 20px;
+    max-width: 1600px; margin: 20px auto; padding: 0 20px; align-items: start;
+  }
+  
+  .panel-left, .panel-right { min-width: 0; }
+  .card, .chart-wrap, .items-panel { min-width: 0; }
+
+
+  @media (max-width: 1300px) {
+    .grid { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); }
+  }
+
+@media (max-width: 1000px) {
+  .grid { grid-template-columns: 1fr; }
+  /* Mobile: disable sticky/inner-scroll (iOS/Androidで描画・クリック不具合が出やすい) */
+  .panel-right { position: relative; top: auto; height: auto; overflow: visible; }
+  /* Tabs may overflow on small screens */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tabs::-webkit-scrollbar { display: none; }
+  /* KPI grid */
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  /* Chart height a bit smaller */
+  .chart-wrap { height: clamp(220px, 42vh, 320px); }
+}
+
+  /* Components */
+  .btn {
+    border: 1px solid var(--border); background: var(--white); padding: 8px 14px;
+    border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; color: var(--text);
+    transition: all 0.2s;
+  }
+  .btn:hover { background: #f1f5f9; }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn.danger { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
+  .btn.sm { padding: 4px 10px; font-size: 11px; }
+
+  /* Input Panel */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  
+  details.sect {
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow);
+  }
+  details.sect summary {
+    padding: 12px 16px; font-weight: bold; font-size: 13px; cursor: pointer;
+    background: #fff; border-bottom: 1px solid transparent;
+    display: flex; justify-content: space-between; align-items: center;
+    border-left: 4px solid transparent;
+  }
+  details.sect[open] summary { border-bottom-color: var(--border); background: #f8fafc; }
+  details.sect .content { padding: 16px; }
+
+  /* Section Colors */
+  .s-basic summary { border-left-color: #64748b; }
+  .s-inc summary { border-left-color: var(--c-inc); }
+  .s-asset summary { border-left-color: var(--c-asset); }
+  .s-exp summary { border-left-color: var(--c-exp); }
+  .s-home summary { border-left-color: var(--c-home); }
+  .s-edu summary { border-left-color: var(--c-edu); }
+  .s-re summary { border-left-color: var(--c-re); }
+  /* Soft section tint (open content) */
+  details.sect.s-basic[open] .content { background: var(--bg-basic); }
+  details.sect.s-inc[open] .content { background: var(--bg-inc); }
+  details.sect.s-asset[open] .content { background: var(--bg-asset); }
+  details.sect.s-exp[open] .content { background: var(--bg-exp); }
+  details.sect.s-home[open] .content { background: var(--bg-home); }
+  details.sect.s-edu[open] .content { background: var(--bg-edu); }
+  details.sect.s-re[open] .content { background: var(--bg-re); }
+
+  /* Legend */
+  .legend { display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:10px; align-items:center; }
+  .legend .lg-item { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--text); }
+  .legend .sw { width:12px; height:12px; border-radius:4px; border:1px solid rgba(15,23,42,.12); }
+  .legend input[type="checkbox"]{ width:14px; height:14px; }
+
+  /* Items mode */
+  .items-section{ margin-top:12px; }
+  .items-section-title{
+    font-size:12px; font-weight:900;
+    color: var(--muted);
+    margin: 10px 2px 6px;
+  }
+
+  .items-panel{ margin-top:12px; }
+  .items-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .card{
+    border:1px solid var(--border);
+    border-radius:10px;
+    background: var(--white);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .card-h{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 12px;
+    font-size:12px; font-weight:800;
+    border-left:6px solid transparent;
+    background: linear-gradient(90deg, rgba(2,6,23,.03), rgba(2,6,23,0));
+  }
+  .card-sub{ padding:0 12px 10px; font-size:11px; color: var(--text-light); }
+  .mini-svg{ width:100%; height:130px; display:block; }
+
+
+  /* Input Fields */
+  .row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end; }
+  .field { flex: 1; min-width: 0; }
+  .lbl { font-size: 11px; color: var(--text-light); margin-bottom: 4px; font-weight: 700; }
+  .inp-box { position: relative; }
+  input[type="text"], input[type="number"], select {
+    width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; outline: none; background: #fff; color: var(--text);
+  }
+  input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-bg); }
+  .unit { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-light); pointer-events: none; }
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .pill-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; user-select: none; }
+
+  /* List Items */
+  .item { border: 1px dashed var(--border); padding: 10px; border-radius: 6px; margin-bottom: 8px; background: #fcfcfc; }
+  .item-head { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; font-weight: bold; color: var(--text-light); }
+
+  /* Right Panel */
+  .panel-right { position: sticky; top: 80px; height: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; overflow: visible; }
+  
+  /* KPI */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .kpi { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; text-align: center; }
+  .kpi-lbl { font-size: 10px; color: var(--text-light); }
+  .kpi-val { font-size: 14px; font-weight: 800; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; overflow-x: auto; }
+  .tab { touch-action: manipulation;
+    padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; color: var(--text-light); white-space: nowrap;
+  }
+  .tab:hover { background: var(--primary-bg); }
+  .tab.active { background: var(--primary); color: #fff; }
+
+  /* Chart Area */
+  .chart-wrap {
+    position: relative; width: 100%; height: 350px;
+    background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .chart-svg { width: 100%; height: 100%; display: block; }
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 2000;
+    background: rgba(15, 23, 42, 0.95); color: #fff; padding: 8px 12px;
+    border-radius: 6px; font-size: 12px; white-space: nowrap; display: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2); line-height: 1.4;
+  }
+
+  /* Table */
+  .table-box { max-height: 400px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; font-size: 11px; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  th { position: sticky; top: 0; background: #f1f5f9; text-align: right; padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; z-index: 10; }
+  td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--border); font-family: monospace; white-space: nowrap; }
+  th:first-child, td:first-child { position: sticky; left: 0; text-align: left; background: #fff; border-right: 1px solid var(--border); z-index: 11; }
+  th:first-child { z-index: 12; background: #f1f5f9; }
+  tr:hover td { box-shadow: inset 0 0 0 9999px rgba(2, 6, 23, .03); }
+  .neg { color: #dc2626; font-weight: bold; }
+
+  
+  /* 年次データ表：支出内訳の視認性 */
+  th.mini, td.mini { padding: 4px 6px; font-size: 10px; }
+  th.col-expTotal, td.col-expTotal { background: rgba(15, 23, 42, .06); font-weight: 700; }
+  th.col-basic, td.col-basic { background: rgba(59, 130, 246, .12); }
+  th.col-special, td.col-special { background: rgba(168, 85, 247, .12); }
+  th.col-home, td.col-home { background: rgba(249, 115, 22, .12); }
+  th.col-eduT, td.col-eduT { background: rgba(34, 197, 94, .12); }
+  th.col-eduJ, td.col-eduJ { background: rgba(20, 184, 166, .12); }
+  th.col-re, td.col-re { background: rgba(245, 158, 11, .14); }
+  th.col-tax, td.col-tax { background: rgba(100, 116, 139, .12); }
+
+/* Kid color accents */
+  .kid-card { border-left: 8px solid #94a3b8; padding-left: 10px; }
+  .kid-card.kid1 { border-left-color: var(--c-kid1); background: var(--bg-kid1); }
+  .kid-card.kid2 { border-left-color: var(--c-kid2); background: var(--bg-kid2); }
+  .kid-card.kid3 { border-left-color: var(--c-kid3); background: var(--bg-kid3); }
+  .kid-card.kid4 { border-left-color: var(--c-kid4); background: var(--bg-kid4); }
+
+  /* FP comment */
+  .fp-wrap { margin-top: 10px; }
+  .fp-card { border: 1px solid var(--border); border-radius: 10px; background: #ffffff; overflow:hidden; }
+  .fp-card.hidden { display:none; }
+  .fp-head { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:#f1f5f9; cursor:default; user-select:none; }
+  .fp-title { font-size:12px; color:#0f172a; letter-spacing:.02em; }
+  .fp-body { padding:10px 12px; font-size:12px; line-height:1.65; color:#334155; }
+  .fp-chip { display:inline-flex; align-items:center; gap:8px; margin-top:10px; padding:8px 10px; border:1px dashed #94a3b8; border-radius:999px; font-size:12px; color:#334155; background:#f8fafc; cursor:pointer; }
+
+</style>
+</head>
+<body><div id="jsWarn" style="position:sticky;top:0;z-index:9999;background:#ffe8a3;color:#3b2f00;padding:10px 12px;font-size:13px;line-height:1.4;border-bottom:1px solid rgba(0,0,0,.15);">この画面はプレビューでは動作しないことがあります。ファイルを保存して、Safari/Chromeで開いてください（JavaScriptが必要です）。</div><noscript><div style="position:sticky;top:0;z-index:9999;background:#ffe8a3;color:#3b2f00;padding:10px 12px;font-size:13px;line-height:1.4;border-bottom:1px solid rgba(0,0,0,.15);">JavaScriptが無効のため動作しません。Safari/Chromeで開き、JavaScriptを有効にしてください。</div></noscript>
+<header class="header">
+<div class="h-title">LifePlan Sim v13</div>
+<div class="h-actions">
+<button class="btn danger" onclick="app.reset()">初期化</button>
+<button class="btn" onclick="app.exportData()" title="入力データをJSONとして保存します">保存</button>
+<button class="btn" onclick="app.openImport()" title="保存したJSONを読み込みます">読み込み</button>
+<input accept="application/json" id="fileLoad" style="display:none" type="file"/>
+<button class="btn primary" onclick="app.calc()">再計算</button>
+</div>
+</header>
+<div class="grid">
+<div class="panel-left">
+<details class="sect s-basic" open="">
+<summary>基本設定</summary>
+<div class="content">
+<div class="row">
+<div class="field"><div class="lbl">現在年齢</div><div class="inp-box"><input id="curAge" type="number"/></div></div>
+<div class="field"><div class="lbl">最終年齢</div><div class="inp-box"><input id="endAge" type="number"/></div></div>
+</div>
+<div class="row">
+<div class="field"><div class="lbl">インフレ率(年)</div><div class="inp-box"><input id="infl" step="0.1" type="number"/><span class="unit">%</span></div></div>
+<div class="field"><div class="lbl">税率(概算)</div><div class="inp-box"><input id="taxRate" type="number"/><span class="unit">%</span></div></div>
+</div>
+<div class="divider"></div>
+<div class="lbl">取り崩し設定</div>
+<div class="row">
+<div class="field"><div class="lbl">最低現金</div><div class="inp-box"><input data-fmt="int" id="cashFloor" type="text"/><span class="unit">円</span></div></div>
+</div>
+<label class="pill-check"><input id="allowNegCash" type="checkbox"/> <span>不足時に借金を許容 (資産売却しない)</span></label>
+<div style="margin-top:8px;">
+<div class="lbl">不足時の売却順序</div>
+<select id="drawOrder">
+<option value="auto-tiered">自動（60歳未満:投信→株→仮想 / 60-64:確定拠出年金→株→投信→仮想 / 65+:投信→株→確定拠出年金→仮想）</option>
+<option value="fund-stock-crypto">手動：投信 → 株 → 仮想通貨</option>
+<option value="stock-fund-crypto">手動：株 → 投信 → 仮想通貨</option>
+</select>
+<div id="drawOrderHint" class="muted" style="margin-top:6px;font-size:12px;line-height:1.35;"></div>
+
+</div>
+</div>
+</details>
+<details class="sect s-inc">
+<summary>収入・仕事・副業</summary>
+<div class="content">
+<div class="lbl">本業・勤務先リスト</div>
+<div id="listJobs"></div>
+<button class="btn sm" onclick="app.addJob()">+ 勤務先を追加</button>
+<div class="divider"></div>
+<div class="lbl">副業リスト</div>
+<div id="listSideJobs"></div>
+<button class="btn sm" onclick="app.addSideJob()">+ 副業を追加</button>
+<div class="divider"></div>
+<div class="lbl">年金</div>
+<div class="row">
+<div class="field"><div class="lbl">本人開始</div><div class="inp-box"><input id="penStartA" type="number"/></div></div>
+<div class="field"><div class="lbl">月額(手取)</div><div class="inp-box"><input data-fmt="int" id="penAmtA" type="text"/><span class="unit">円</span></div></div>
+</div>
+<label class="pill-check"><input id="useSpousePen" type="checkbox"/> <span>配偶者分も含める</span></label>
+<div id="boxSpousePen" style="margin-top:8px;">
+<div class="row">
+<div class="field"><div class="lbl">配偶者開始</div><div class="inp-box"><input id="penStartB" type="number"/></div></div>
+<div class="field"><div class="lbl">月額(手取)</div><div class="inp-box"><input data-fmt="int" id="penAmtB" type="text"/><span class="unit">円</span></div></div>
+</div>
+</div>
+</div>
+</details>
+<details class="sect s-asset">
+<summary>金融資産</summary>
+<div class="content">
+<div class="row"><div class="field"><div class="lbl">現金</div><div class="inp-box"><input data-fmt="int" id="cashBal" type="text"/><span class="unit">円</span></div></div><div class="field"><div class="lbl">現金金利(年)</div><div class="inp-box"><input id="cashRate" step="0.1" type="number"/><span class="unit">%</span></div></div></div>
+<div class="divider"></div>
+<div class="row">
+<div class="field"><div class="lbl">投信 残高</div><div class="inp-box"><input data-fmt="int" id="fundBal" type="text"/><span class="unit">円</span></div></div>
+<div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="fundR" step="0.1" type="number"/><span class="unit">%</span></div></div>
+</div>
+<div class="row"><div class="field"><div class="lbl">投信積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveFundM" type="text"/><span class="unit">円</span></div></div></div>
+<div class="divider"></div>
+<div class="row">
+<div class="field"><div class="lbl">株 残高</div><div class="inp-box"><input data-fmt="int" id="stockBal" type="text"/><span class="unit">円</span></div></div>
+<div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="stockR" step="0.1" type="number"/><span class="unit">%</span></div></div>
+</div>
+<div class="row"><div class="field"><div class="lbl">株積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveStockM" type="text"/><span class="unit">円</span></div></div></div>
+<div class="divider"></div>
+<div class="row">
+<div class="field"><div class="lbl">確定拠出年金 残高</div><div class="inp-box"><input data-fmt="int" id="dcBal" type="text"/><span class="unit">円</span></div></div>
+<div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="dcR" step="0.1" type="number"/><span class="unit">%</span></div></div>
+</div>
+<div class="row"><div class="field"><div class="lbl">拠出(月)</div><div class="inp-box"><input data-fmt="int" id="saveDcM" type="text"/><span class="unit">円</span></div></div></div>
+<div class="divider"></div>
+<div class="row"><div class="field"><div class="lbl">仮想通貨 残高</div><div class="inp-box"><input data-fmt="int" id="cryptoBal" type="text"/><span class="unit">円</span></div></div><div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="cryptoR" step="0.1" type="number"/><span class="unit">%</span></div></div></div><div class="row"><div class="field"><div class="lbl">仮想積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveCryptoM" type="text"/><span class="unit">円</span></div></div></div><div class="divider"></div><div class="field"><div class="lbl">積立終了年齢</div><div class="inp-box"><input id="saveEndAge" type="number"/></div></div>
+</div>
+</details>
+<details class="sect s-exp" open="">
+<summary>基本支出 (住宅・教育以外)</summary>
+<div class="content">
+<div class="row">
+<div class="field"><div class="lbl">基本生活費(月)</div><div class="inp-box"><input data-fmt="int" id="livingM" type="text"/><span class="unit">円</span></div></div>
+<div class="field"><div class="lbl">特別費(年)</div><div class="inp-box"><input data-fmt="int" id="specialY" type="text"/><span class="unit">円</span></div></div>
+</div>
+</div>
+</details>
+<details class="sect s-edu">
+<summary>教育費</summary>
+<div class="content">
+<div class="card" style="margin-bottom:10px;">
+<div class="lbl" style="font-weight:700; color:var(--c-edu);">塾代モデル（都会・教育熱心）</div>
+<div class="lbl" style="font-size:12px; color:#64748b; margin-top:2px;">月額の想定。学年が上がるほど増える設定にしています（必要ならここで調整）。</div>
+<div class="row" style="margin-top:8px;">
+<div class="field"><div class="lbl">幼児(3-5)</div><input data-fmt="int" id="jukuPre" type="text" value="15000"/><span class="unit">円/月</span></div>
+<div class="field"><div class="lbl">小1-3</div><input data-fmt="int" id="jukuE13" type="text" value="35000"/><span class="unit">円/月</span></div>
+<div class="field"><div class="lbl">小4-6</div><input data-fmt="int" id="jukuE46" type="text" value="50000"/><span class="unit">円/月</span></div>
+</div>
+<div class="row">
+<div class="field"><div class="lbl">中学</div><input data-fmt="int" id="jukuJH" type="text" value="70000"/><span class="unit">円/月</span></div>
+<div class="field"><div class="lbl">高校</div><input data-fmt="int" id="jukuHS" type="text" value="80000"/><span class="unit">円/月</span></div>
+<div class="field"><div class="lbl">浪人</div><input data-fmt="int" id="jukuRonin" type="text" value="120000"/><span class="unit">円/月</span></div>
+</div>
+</div>
+<div id="listKids"></div>
+<button class="btn sm" id="btnAddKid" type="button">+ 子供を追加</button>
+</div>
+</details>
+<details class="sect s-home" open="">
+<summary>住宅費</summary>
+<div class="content">
+<div class="row">
+<div class="field"><div class="lbl">家賃/管理費(月)</div><div class="inp-box"><input data-fmt="int" id="rentM" type="text"><span class="unit">円</span></input></div></div>
+<div class="field"><div class="lbl">固定資産税(年)</div><div class="inp-box"><input data-fmt="int" id="homeTaxY" type="text"><span class="unit">円</span></input></div></div>
+</div>
+<div class="divider"></div>
+<label class="pill-check"><input id="useHomeLoan" type="checkbox"> <span>住宅ローンあり</span></input></label>
+<div id="boxHomeLoan" style="margin-top:8px; padding:10px; background:#fff7ed; border-radius:6px; border:1px solid #fed7aa;">
+<div class="row">
+<div class="field"><div class="lbl">残高</div><div class="inp-box"><input data-fmt="int" id="hlBal" type="text"><span class="unit">円</span></input></div></div>
+<div class="field"><div class="lbl">金利</div><div class="inp-box"><input id="hlRate" step="0.1" type="number"><span class="unit">%</span></input></div></div>
+</div>
+<div class="row">
+<div class="field"><div class="lbl">残期間</div><div class="inp-box"><input id="hlTerm" type="number"/></div></div>
+<div class="field"><div class="lbl">開始年齢</div><div class="inp-box"><input id="hlStart" type="number"/></div></div>
+</div>
+<div class="lbl">月返済目安: <span id="dispHlPay" style="font-weight:bold; color:var(--c-home)">-</span></div>
+</div>
+</div>
+</details>
+<details class="sect s-re">
+<summary>投資不動産</summary>
+<div class="content">
+<div id="listRE"></div>
+<button class="btn sm" id="btnAddRE" type="button">+ 物件を追加</button>
+</div>
+</details>
+</div>
+<div class="panel-right">
+<div class="card">
+<div class="kpi-row">
+<div class="kpi"><div class="kpi-lbl">最終資産</div><div class="kpi-val" id="kpiNw">-</div></div>
+<div class="kpi"><div class="kpi-lbl">最低現金</div><div class="kpi-val" id="kpiMin">-</div></div>
+<div class="kpi"><div class="kpi-lbl">教育ピーク</div><div class="kpi-val" id="kpiEdu">-</div></div>
+<div class="kpi"><div class="kpi-lbl">住宅総額</div><div class="kpi-val" id="kpiHome">-</div></div>
+</div>
+<div class="divider"></div>
+<div class="tabs" id="tabContainer">
+<div class="tab active" data-mode="basic">資産推移</div>
+<div class="tab" data-mode="items">項目別</div>
+<div class="tab" data-mode="cf">年間収支</div>
+<div class="tab" data-mode="assets">資産内訳</div>
+<div class="tab" data-mode="inc">収入構成</div>
+<div class="tab" data-mode="edu">教育費</div>
+<div class="tab" data-mode="home">住宅費</div>
+<div class="tab" data-mode="re">投資不動産</div>
+</div>
+<div class="chart-wrap" id="chartBox">
+<svg class="chart-svg" id="chartSvg" preserveaspectratio="none" viewbox="0 0 1000 500"></svg>
+</div>
+<div class="legend" id="chartLegend"></div>
+<div class="items-panel" id="itemsPanel" style="display:none;">
+<div class="items-grid" id="itemsGrid"></div>
+</div>
+<div style="display:flex; justify-content:flex-end; margin-top:8px;">
+<button class="btn sm" id="btnAdjustChart" title="現在のデータに合わせて縦軸を調整します">グラフを調整</button>
+</div>
+<div id="memoBox" style="margin-top:12px; font-size:12px; line-height:1.6; color:#334155;"></div><div id="fpCommentWrap" style="margin-top:12px;"></div>
+</div>
+<details class="sect">
+<summary>年次データ表</summary>
+<div class="content" style="padding:0">
+<div class="table-box">
+<table id="dataTable">
+<thead>
+<tr>
+  <th>年齢</th>
+  <th>収入</th>
+  <th class="col-expTotal">支出</th>
+  <th class="mini col-basic">基本生活費</th>
+  <th class="mini col-special">特別費</th>
+  <th class="mini col-home">住宅費</th>
+  <th class="mini col-eduT">教育(学校)</th>
+  <th class="mini col-eduJ">教育(塾)</th>
+  <th class="mini col-re">投資不動産費(参考)</th>
+  <th class="mini col-tax">税(参考)</th>
+  <th>収支</th>
+  <th>切り崩し金額</th>
+  <th>現金残高</th>
+  <th>資産残高</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+</details>
+</div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+
+window.app = (function() {
+  const $ = id => document.getElementById(id);
+  const ce = tag => document.createElement(tag);
+  const ceNS = tag => document.createElementNS("http://www.w3.org/2000/svg", tag);
+  const toInt = v => parseInt(String(v).replace(/,/g,''), 10) || 0;
+  const toFloat = v => parseFloat(v) || 0;
+  const fmt = n => Math.round(n).toLocaleString();
+  const fmtMan = n => (Math.round(n/10000)).toLocaleString() + "万";
+
+  // 1億以上は「億+万」で表示（例: 1億5000万）
+  const fmtOkuMan = (yen) => {
+    const s = (yen < 0) ? '-' : '';
+    const a = Math.abs(Math.round(yen));
+    if(a < 100000000) return s + fmtMan(yen);
+    const oku = Math.floor(a / 100000000);
+    const man = Math.floor((a % 100000000) / 10000);
+    if(man === 0) return s + oku + "億";
+    return s + oku + "億" + man + "万";
+  };
+  const fmtAxisY = (yen) => fmtOkuMan(yen);
+  const cssVar = (v) => {
+    if(!v) return v;
+    const s = String(v).trim();
+    if(!s.startsWith("var(")) return s;
+    const name = s.slice(4, -1).trim();
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || s;
+  };
+
+  // Kid palette (education stacked bars)
+  const kidPalette = ["var(--c-kid1)","var(--c-kid2)","var(--c-kid3)","var(--c-kid4)"];
+  const getKidColor = (i) => kidPalette[i % kidPalette.length];
+  const getKidJukuFill = (i) => `url(#pat_juku_${i % kidPalette.length})`;
+
+  function ensureJukuPatterns(svg){
+    if(svg.querySelector('defs[data-juku="1"]')) return;
+    const defs = ceNS('defs');
+    defs.setAttribute('data-juku','1');
+    kidPalette.forEach((c,idx)=>{
+      const pid = `pat_juku_${idx}`;
+      const pat = ceNS('pattern');
+      pat.setAttribute('id', pid);
+      pat.setAttribute('patternUnits','userSpaceOnUse');
+      pat.setAttribute('width','8');
+      pat.setAttribute('height','8');
+
+      const bg = ceNS('rect');
+      bg.setAttribute('x','0'); bg.setAttribute('y','0');
+      bg.setAttribute('width','8'); bg.setAttribute('height','8');
+      bg.setAttribute('fill', cssVar(c));
+      bg.setAttribute('opacity','0.30');
+      pat.appendChild(bg);
+
+      const ln1 = ceNS('path');
+      ln1.setAttribute('d','M-2,8 l10,-10 M0,10 l10,-10 M2,12 l10,-10');
+      ln1.setAttribute('stroke', cssVar(c));
+      ln1.setAttribute('stroke-width','2');
+      ln1.setAttribute('opacity','0.85');
+      pat.appendChild(ln1);
+
+      defs.appendChild(pat);
+    });
+    svg.appendChild(defs);
+  }
+
+
+
+
+  // "キリのいい" 縦軸を作るためのスケール
+  const niceNum = (range, round) => {
+    if(!isFinite(range) || range <= 0) return 1;
+    const exp = Math.floor(Math.log10(range));
+    const f = range / Math.pow(10, exp);
+    let nf;
+    if(round){
+      if(f < 1.5) nf = 1;
+      else if(f < 3) nf = 2;
+      else if(f < 7) nf = 5;
+      else nf = 10;
+    } else {
+      if(f <= 1) nf = 1;
+      else if(f <= 2) nf = 2;
+      else if(f <= 5) nf = 5;
+      else nf = 10;
+    }
+    return nf * Math.pow(10, exp);
+  };
+  const makeNiceScale = (min, max, desiredTicks = 6) => {
+    if(!isFinite(min) || !isFinite(max)) return {min:0, max:1, step:1, ticks:[0,1]};
+    if(min === max){
+      max = min + 10000;
+    }
+    const rawRange = Math.abs(max - min);
+    const range = niceNum(rawRange, false);
+    const step = niceNum(range / Math.max(1, (desiredTicks - 1)), true);
+    const niceMin = Math.floor(min / step) * step;
+    const niceMax = Math.ceil(max / step) * step;
+
+    const ticks = [];
+    for(let v = niceMin; v <= niceMax + step * 0.5; v += step) ticks.push(v);
+
+    // Tickが多すぎる場合は間引く（見た目優先）
+    if(ticks.length > 10){
+      const step2 = niceNum((niceMax - niceMin) / 5, true);
+      const nMin = Math.floor(min / step2) * step2;
+      const nMax = Math.ceil(max / step2) * step2;
+      const ticks2 = [];
+      for(let v = nMin; v <= nMax + step2 * 0.5; v += step2) ticks2.push(v);
+      return {min:nMin, max:nMax, step:step2, ticks:ticks2};
+    }
+    return {min:niceMin, max:niceMax, step, ticks};
+  };
+
+  // モードごとに縦軸を固定するためのキャッシュ
+  const yScaleCache = {};
+  let forceRescale = false;
+
+  // --- Default Data ---
+  const DEF = {
+    curAge:35, endAge:95, infl:1.0, taxRate:20, cashFloor:2000000, allowNegCash:false, drawOrder:"auto-tiered",
+    jukuM:{pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000},
+    cashBal:5000000, cashRate:0.01, fundBal:3000000, fundR:4.0, saveFundM:50000,
+    stockBal:1000000, stockR:5.0, saveStockM:0, cryptoBal:0, cryptoR:0, saveCryptoM:0, dcBal:0, dcR:4.0, saveDcM:0, saveEndAge:60,
+    jobs: [ {name:"現職", start:30, end:60, inc:6000000, sev:10000000, sevAge:60} ],
+    sideJobs: [ {name:"副業", start:35, end:50, inc:500000} ],
+    penStartA:65, penAmtA:150000, useSpousePen:true, penStartB:65, penAmtB:60000,
+    livingM:200000, specialY:500000,
+    rentM:100000, homeTaxY:0, useHomeLoan:true, hlBal:30000000, hlRate:0.7, hlTerm:30, hlStart:35,
+    kids: [ {name:"子1", offset:2, s:{k:'pub',e:'pub',j:'pub',h:'pub',u:'pub'}, opt:{ronin:false,grad:false,dormU:true,dormG:false,send:100000}} ],
+    res: [ {name:"物件1", rent:80000, cost:150000, bal:15000000, rate:2.0, term:20, start:35} ]
+  };
+  let d = JSON.parse(JSON.stringify(DEF));
+  // default juku model (都会・教育熱心)
+  if(!d.jukuM) d.jukuM = {pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000};
+    // migration: older buggy versions saved all zeros -> recover defaults
+    const _jm = d.jukuM || {};
+    const _jmVals = [ _jm.pre, _jm.e13, _jm.e46, _jm.jh, _jm.hs, _jm.ronin ].map(v => (typeof v === 'number' ? v : 0));
+    if(_jmVals.every(v => v === 0)){
+      d.jukuM = {pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000};
+    }
+    // ensure new DC fields
+    if(d.dcBal===undefined) d.dcBal=0;
+    if(d.dcR===undefined) d.dcR=4.0;
+    if(d.saveDcM===undefined) d.saveDcM=0;
+
+
+  const EDU = { k:{pub:20,pri:50}, e:{pub:30,pri:100}, j:{pub:40,pri:120}, h:{pub:40,pri:100}, u:{pub:120,pri:180}, g:{pub:120,pri:180}, r:{pub:100,pri:100} };
+
+  // --- Render UI (Lists) ---
+  function renderItems(){
+    // Jobs
+    const jBox = $('listJobs'); jBox.innerHTML='';
+    d.jobs.forEach((j,i)=>{
+      const el = ce('div'); el.className='item';
+      el.innerHTML = `<div class="item-head"><span>勤務先${i+1}</span> <span style="cursor:pointer;color:red" onclick="app.act('delJob',${i})">×</span></div>
+        <div class="row"><div class="field"><div class="lbl">名称</div><input type="text" value="${j.name}" onchange="app.act('setJob',${i},'name',this.value)"></div>
+        <div class="field"><div class="lbl">年収</div><input type="text" data-fmt="int" value="${fmt(j.inc)}" onchange="app.act('setJob',${i},'inc',this.value)"></div></div>
+        <div class="row"><div class="field"><div class="lbl">開始</div><input type="number" value="${j.start}" onchange="app.act('setJob',${i},'start',this.value)"></div>
+        <div class="field"><div class="lbl">終了</div><input type="number" value="${j.end}" onchange="app.act('setJob',${i},'end',this.value)"></div></div>
+        <div class="row"><div class="field"><div class="lbl">退職金</div><input type="text" data-fmt="int" value="${fmt(j.sev)}" onchange="app.act('setJob',${i},'sev',this.value)"></div>
+        <div class="field"><div class="lbl">受取年齢</div><input type="number" value="${j.sevAge}" onchange="app.act('setJob',${i},'sevAge',this.value)"></div></div>`;
+      jBox.appendChild(el);
+    });
+    // Side Jobs
+    const sjBox = $('listSideJobs'); sjBox.innerHTML='';
+    d.sideJobs.forEach((j,i)=>{
+      const el = ce('div'); el.className='item';
+      el.innerHTML = `<div class="item-head"><span>副業${i+1}</span> <span style="cursor:pointer;color:red" onclick="app.act('delSideJob',${i})">×</span></div>
+        <div class="row"><div class="field"><div class="lbl">名称</div><input type="text" value="${j.name}" onchange="app.act('setSideJob',${i},'name',this.value)"></div>
+        <div class="field"><div class="lbl">年収</div><input type="text" data-fmt="int" value="${fmt(j.inc)}" onchange="app.act('setSideJob',${i},'inc',this.value)"></div></div>
+        <div class="row"><div class="field"><div class="lbl">開始</div><input type="number" value="${j.start}" onchange="app.act('setSideJob',${i},'start',this.value)"></div>
+        <div class="field"><div class="lbl">終了</div><input type="number" value="${j.end}" onchange="app.act('setSideJob',${i},'end',this.value)"></div></div>`;
+      sjBox.appendChild(el);
+    });
+    // Kids
+    const kBox = $('listKids'); kBox.innerHTML='';
+    const ST = {k:"幼",e:"小",j:"中",h:"高",u:"大"};
+    d.kids.forEach((k,i)=>{
+      const el = ce('div'); el.className='item kid-card ' + (['kid1','kid2','kid3','kid4'][i%4]||'kid1');
+      let s = `<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin-bottom:8px;">`;
+      for(let key in ST){ s += `<div style="text-align:center; font-size:10px; border:1px solid #ddd; padding:2px; background:#fff;"><div>${ST[key]}</div><select style="font-size:10px; padding:0" onchange="app.act('setKidStage',${i},'${key}',this.value)"><option value="pub" ${k.s[key]=='pub'?'selected':''}>公</option><option value="pri" ${k.s[key]=='pri'?'selected':''}>私</option></select></div>`; }
+      s += `</div><div style="display:flex; flex-wrap:wrap; gap:8px; border-top:1px dashed #ddd; padding-top:6px;">
+        <label class="pill-check"><input type="checkbox" ${k.opt.ronin?'checked':''} onchange="app.act('setKidOpt',${i},'ronin',this.checked)">浪人</label>
+        <label class="pill-check"><input type="checkbox" ${k.opt.grad?'checked':''} onchange="app.act('setKidOpt',${i},'grad',this.checked)">大学院</label>
+        <label class="pill-check"><input type="checkbox" ${k.opt.dormU?'checked':''} onchange="app.act('setKidOpt',${i},'dormU',this.checked)">大学下宿</label>
+        <label class="pill-check"><input type="checkbox" ${k.opt.dormG?'checked':''} onchange="app.act('setKidOpt',${i},'dormG',this.checked)">院下宿</label></div>`;
+      el.innerHTML = `<div class="item-head"><span>${k.name}</span> <span style="cursor:pointer;color:red" onclick="app.act('delKid',${i})">×</span></div>
+        <div class="row"><div class="field"><div class="lbl">親との年齢差</div><input type="number" value="${k.offset}" onchange="app.act('setKid',${i},'offset',this.value)"></div></div>${s}
+        <div class="row" style="margin-top:6px;"><div class="field"><div class="lbl">仕送り(月)</div><input type="text" data-fmt="int" value="${fmt(k.opt.send)}" onchange="app.act('setKidOpt',${i},'send',this.value)"></div></div>`;
+      kBox.appendChild(el);
+    });
+    // RE
+    const rBox = $('listRE'); rBox.innerHTML='';
+    d.res.forEach((r,i)=>{
+      const el = ce('div'); el.className='item';
+      el.innerHTML = `<div class="item-head"><span>${r.name}</span> <span style="cursor:pointer;color:red" onclick="app.act('delRE',${i})">×</span></div>
+        <div class="row"><div class="field"><div class="lbl">家賃(月)</div><input type="text" data-fmt="int" value="${fmt(r.rent)}" onchange="app.act('setRE',${i},'rent',this.value)"></div>
+        <div class="field"><div class="lbl">経費(年)</div><input type="text" data-fmt="int" value="${fmt(r.cost)}" onchange="app.act('setRE',${i},'cost',this.value)"></div></div>
+        <div class="row"><div class="field"><div class="lbl">ローン残</div><input type="text" data-fmt="int" value="${fmt(r.bal)}" onchange="app.act('setRE',${i},'bal',this.value)"></div>
+        <div class="field"><div class="lbl">金利%</div><input type="number" step="0.1" value="${r.rate}" onchange="app.act('setRE',${i},'rate',this.value)"></div></div>
+        <div class="row"><div class="field"><div class="lbl">期間</div><input type="number" value="${r.term}" onchange="app.act('setRE',${i},'term',this.value)"></div>
+        <div class="field"><div class="lbl">開始</div><input type="number" value="${r.start}" onchange="app.act('setRE',${i},'start',this.value)"></div></div>`;
+      rBox.appendChild(el);
+    });
+    attachFormatters();
+  }
+
+  function attachFormatters(){
+    document.querySelectorAll('input[data-fmt="int"]').forEach(el=>{
+      el.oninput = e => { let v=e.target.value.replace(/[^0-9]/g,''); e.target.value=v?parseInt(v).toLocaleString():''; };
+    });
+  }
+
+  // --- IO ---
+  function bindInputs(){
+    const map = ['curAge','endAge','infl','taxRate','cashFloor','cashBal','cashRate','fundBal','fundR','saveFundM','stockBal','stockR','saveStockM','cryptoBal','cryptoR','saveCryptoM','dcBal','dcR','saveDcM','saveEndAge','penStartA','penAmtA','penStartB','penAmtB','livingM','specialY','rentM','homeTaxY','hlBal','hlRate','hlTerm','hlStart'];
+    map.forEach(k=>{ if($(k)) $(k).value = ($(k).dataset.fmt=='int' ? fmt(d[k]) : d[k]); });
+    if($('cashRate')) $('cashRate').value = (d.cashRate*100);
+
+    if($('allowNegCash')) $('allowNegCash').checked = d.allowNegCash;
+    if($('useSpousePen')) $('useSpousePen').checked = d.useSpousePen; 
+    if($('useHomeLoan')) $('useHomeLoan').checked = d.useHomeLoan;
+    if($('drawOrder')) $('drawOrder').value = d.drawOrder;
+    // Juku model (display only)
+    if(!d.jukuM) d.jukuM = {pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000};
+    if($('jukuPre')) $('jukuPre').value   = fmt(d.jukuM.pre);
+    if($('jukuE13')) $('jukuE13').value   = fmt(d.jukuM.e13);
+    if($('jukuE46')) $('jukuE46').value   = fmt(d.jukuM.e46);
+    if($('jukuJH'))  $('jukuJH').value    = fmt(d.jukuM.jh);
+    if($('jukuHS'))  $('jukuHS').value    = fmt(d.jukuM.hs);
+    if($('jukuRonin')) $('jukuRonin').value = fmt(d.jukuM.ronin);
+
+    updateVis();
+
+  }
+
+  function readInputs(){
+    d.curAge=toInt($('curAge').value); d.endAge=toInt($('endAge').value);
+    d.infl=toFloat($('infl').value); d.taxRate=toFloat($('taxRate').value); d.cashFloor=toInt($('cashFloor').value);
+    d.allowNegCash=$('allowNegCash').checked; d.drawOrder=$('drawOrder').value;
+    d.cashBal=toInt($('cashBal').value); d.cashRate=toFloat($('cashRate').value)/100;
+    d.fundBal=toInt($('fundBal').value); d.fundR=toFloat($('fundR').value); d.saveFundM=toInt($('saveFundM').value);
+    d.stockBal=toInt($('stockBal').value); d.stockR=toFloat($('stockR').value); d.saveStockM=toInt($('saveStockM').value);
+    d.cryptoBal=toInt($('cryptoBal').value); d.cryptoR=toFloat($('cryptoR').value); d.saveCryptoM=toInt($('saveCryptoM').value);
+    d.dcBal=toInt($('dcBal').value); d.dcR=toFloat($('dcR').value); d.saveDcM=toInt($('saveDcM').value);
+    d.saveEndAge=toInt($('saveEndAge').value);
+    d.penStartA=toInt($('penStartA').value); d.penAmtA=toInt($('penAmtA').value);
+    d.useSpousePen=$('useSpousePen').checked; d.penStartB=toInt($('penStartB').value); d.penAmtB=toInt($('penAmtB').value);
+    d.livingM=toInt($('livingM').value); d.specialY=toInt($('specialY').value);
+    d.rentM=toInt($('rentM').value); d.homeTaxY=toInt($('homeTaxY').value);
+    d.useHomeLoan=$('useHomeLoan').checked; d.hlBal=toInt($('hlBal').value); d.hlRate=toFloat($('hlRate').value); d.hlTerm=toInt($('hlTerm').value); d.hlStart=toInt($('hlStart').value);
+    // Juku model (input)
+    d.jukuM = d.jukuM || {pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000};
+    d.jukuM.pre   = toInt($('jukuPre').value);
+    d.jukuM.e13   = toInt($('jukuE13').value);
+    d.jukuM.e46   = toInt($('jukuE46').value);
+    d.jukuM.jh    = toInt($('jukuJH').value);
+    d.jukuM.hs    = toInt($('jukuHS').value);
+    d.jukuM.ronin = toInt($('jukuRonin').value);
+
+    updateVis();
+  }
+
+  function updateVis(){
+    $('boxSpousePen').style.display = d.useSpousePen?'block':'none';
+    $('boxHomeLoan').style.display = d.useHomeLoan?'block':'none';
+  }
+
+
+  // --- Drawdown order helpers ---
+  const DRAW_LABEL = { f:"投信", s:"株", k:"仮想通貨", dc:"確定拠出年金", c:"現金" };
+
+  function resolveDrawOrder(age){
+    const v = d.drawOrder;
+    if(v === "auto-tiered"){
+      if(age < 60) return ['f','s','k'];              // DC excluded
+      if(age < 65) return ['dc','s','f','k'];         // 60-64
+      return ['f','s','dc','k'];                      // 65+
+    }
+    if(v === "fund-stock-crypto") return ['f','s','k'];
+    if(v === "stock-fund-crypto") return ['s','f','k'];
+    // fallback
+    return (age < 60) ? ['f','s','k'] : (age < 65) ? ['dc','s','f','k'] : ['f','s','dc','k'];
+  }
+
+  function orderToText(ord){
+    return ord.map(x => DRAW_LABEL[x] || x).join(" → ");
+  }
+
+  function updateDrawOrderHint(){
+    const el = $('drawOrderHint');
+    if(!el) return;
+    const age = d.curAge;
+    const ord = resolveDrawOrder(age);
+    el.textContent = "現在の売却順序（年齢 " + age + "）: " + orderToText(ord);
+  }
+  // --- Calc ---
+  function pmt(r,n,p){ if(r===0)return p/n; return (p*r)/(1-Math.pow(1+r,-n)); }
+
+  function calc(){
+    readInputs();
+    updateDrawOrderHint(); // THIS WAS MISSING IN v11 causing crash
+    if(d.useHomeLoan && d.hlBal>0) $('dispHlPay').innerText=fmt(pmt((d.hlRate/100)/12,d.hlTerm*12,d.hlBal))+"円"; else $('dispHlPay').innerText="-";
+
+    const rows=[];
+    let ass={c:d.cashBal, f:d.fundBal, s:d.stockBal, k:d.cryptoBal, dc:d.dcBal};
+    let hlBal = d.useHomeLoan?d.hlBal:0;
+    let hlPayY = (d.useHomeLoan && d.hlBal>0) ? pmt((d.hlRate/100)/12, d.hlTerm*12, d.hlBal)*12 : 0;
+    let rSims = d.res.map(r=>({ ...r, bal:r.bal, payY:(r.bal>0?pmt((r.rate/100)/12,r.term*12,r.bal)*12:0) }));
+
+    for(let age=d.curAge; age<=d.endAge; age++){
+      const infl = Math.pow(1+d.infl/100, age-d.curAge);
+      let job=0; d.jobs.forEach(j=>{ if(age>=j.start && age<j.end) job+=j.inc; if(age==j.sevAge) job+=j.sev; });
+      let side=0; d.sideJobs.forEach(j=>{ if(age>=j.start && age<j.end) side+=j.inc; });
+      let pen=0; if(age>=d.penStartA) pen+=d.penAmtA*12; if(d.useSpousePen && age>=d.penStartB) pen+=d.penAmtB*12;
+      let gross = job+side+pen;
+      let tax = gross*(d.taxRate/100);
+      let net = gross-tax;
+
+      let reInc=0, reD=[], reRentTot=0, reCostTot=0, rePayTot=0, reTaxTot=0;
+      rSims.forEach(r=>{
+        let rent=r.rent*12*infl, cost=r.cost*infl, pay=0, intr=0;
+        if(r.bal>0 && age>=r.start){ intr=r.bal*(r.rate/100); let p=r.payY; if(r.bal<p)p=r.bal+intr; pay=p; r.bal=Math.max(0,r.bal-(p-intr)); }
+        let profit=Math.max(0,rent-cost-intr), taxR=profit*(d.taxRate/100);
+        
+        reRentTot+=rent; reCostTot+=cost; rePayTot+=pay; reTaxTot+=taxR;
+let flow=rent-cost-pay-taxR; reInc+=flow; reD.push({bal:r.bal,flow,rent});
+      });
+
+      
+      let edu=0, eduT=0, eduJ=0, eduD=[], eduKD=[];
+      const jukuM = d.jukuM || {pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000};
+
+      d.kids.forEach(k=>{
+        let ca = age - k.offset;
+        let tuitionMan = 0;
+        let jukuMan = 0;
+
+        // school tuition (万円/年)
+        if(ca>=3 && ca<=5){
+          tuitionMan = EDU.k[k.s.k];
+          jukuMan = (jukuM.pre*12)/10000;
+        } else if(ca>=6 && ca<=11){
+          tuitionMan = EDU.e[k.s.e];
+          jukuMan = ((ca<=8 ? jukuM.e13 : jukuM.e46) * 12)/10000;
+        } else if(ca>=12 && ca<=14){
+          tuitionMan = EDU.j[k.s.j];
+          jukuMan = (jukuM.jh*12)/10000;
+        } else if(ca>=15 && ca<=17){
+          tuitionMan = EDU.h[k.s.h];
+          jukuMan = (jukuM.hs*12)/10000;
+        } else {
+          // university / grad / ronin
+          let uS = k.opt.ronin ? 19 : 18;
+
+          // ronin year is treated as juku (予備校)
+          if(k.opt.ronin && ca==18){
+            tuitionMan = 0;
+            jukuMan = (jukuM.ronin*12)/10000;
+          }
+          // university (tuition + allowance if dorm)
+          else if(ca>=uS && ca<uS+4){
+            tuitionMan = EDU.u[k.s.u];
+            if(k.opt.dormU) tuitionMan += (k.opt.send*12)/10000;
+            jukuMan = 0;
+          }
+          // graduate school (tuition + allowance if dorm)
+          else if(k.opt.grad && ca>=uS+4 && ca<uS+6){
+            tuitionMan = EDU.g.pub;
+            if(k.opt.dormG) tuitionMan += (k.opt.send*12)/10000;
+            jukuMan = 0;
+          }
+        }
+
+        const vT = tuitionMan>0 ? tuitionMan*10000*infl : 0;
+        const vJ = jukuMan>0 ? jukuMan*10000*infl : 0;
+        const v  = vT + vJ;
+
+        if(v>0){
+          edu += v;
+          eduT += vT;
+          eduJ += vJ;
+          eduD.push({name:k.name,val:v}); // total (for compatibility)
+          eduKD.push({name:k.name, tuition:vT, juku:vJ});
+        }
+      });
+
+      let basicL=(d.livingM*12)*infl, special=(d.specialY)*infl, basic=basicL+special, homeRent=(d.rentM*12)*infl, homeTax=(d.homeTaxY)*infl, home=(homeRent+homeTax), homePay=0;
+      if(d.useHomeLoan && hlBal>0 && age>=d.hlStart){ let i=hlBal*(d.hlRate/100); let p=hlPayY; if(hlBal<p)p=hlBal+i; homePay=p; home+=p; hlBal=Math.max(0,hlBal-(p-i)); }
+
+      let can=(age<d.saveEndAge), tF=can?d.saveFundM*12:0, tS=can?d.saveStockM*12:0, tK=can?d.saveCryptoM*12:0, tD=can?d.saveDcM*12:0;
+      let cf = net+reInc-(basic+home+edu)-(tF+tS+tK+tD);
+      ass.c += cf; if(ass.c>0) ass.c*=(1+d.cashRate);
+      ass.f=(ass.f+tF)*(1+d.fundR/100); ass.s=(ass.s+tS)*(1+d.stockR/100); ass.k=(ass.k+tK)*(1+d.cryptoR/100); ass.dc=(ass.dc+tD)*(1+d.dcR/100);
+
+      let draw=0;
+
+      if(!d.allowNegCash && ass.c<d.cashFloor){
+        let def = d.cashFloor - ass.c;
+        let ord = resolveDrawOrder(age);
+        ord.forEach(t=>{
+          if(def>0 && ass[t]>0){
+            let s = Math.min(def, ass[t]);
+            ass[t]-=s; ass.c+=s; def-=s; draw+=s;
+          }
+        });
+      }
+
+      let nw = ass.c+ass.f+ass.s+ass.k+ass.dc - hlBal - rSims.reduce((a,r)=>a+r.bal,0);
+      rows.push({age,nw,cf,draw,ass:{...ass},reInc,net,income:(net+reInc),exp:(basic+home+edu),inv:(tF+tS+tK+tD),edu,eduT,eduJ,home,homeRent,homeTax,homePay,basic,hlBal,reD,eduD,eduKD,taxWage:tax,basicL,special,reRentTot,reCostTot,rePayTot,reTaxTot,jobNet:(job+side)*(1-d.taxRate/100),penNet:pen*(1-d.taxRate/100)});
+    }
+    
+    lastRows = rows;
+    drawCurrent(rows);
+    drawTable(rows);
+    const end = rows[rows.length-1];
+    $('kpiNw').innerText=fmtMan(end.nw);
+    $('kpiMin').innerText=fmtMan(Math.min(...rows.map(r=>r.ass.c)));
+    $('kpiEdu').innerText=fmtMan(Math.max(...rows.map(r=>r.edu)));
+    $('kpiHome').innerText=fmtMan(rows.reduce((a,r)=>a+r.home,0));
+    const bad=rows.find(r=>r.ass.c<0);
+    $('memoBox').innerHTML = bad ? `<span style="color:red">⚠️ ${bad.age}歳で資金ショート</span>` : `<span style="color:green">✅ 黒字維持</span>`;
+    
+    localStorage.setItem('lp_v12', JSON.stringify(d));
+  }
+
+  // --- Chart ---
+  const C = { nw:"var(--c-nw)", c:"var(--c-cash)", f:"var(--c-fund)", s:"var(--c-stock)", k:"var(--c-crypto)", dc:"var(--c-dc)", loan:"var(--c-loan)", draw:"var(--c-draw)", inc:"var(--c-inc)", exp:"var(--c-exp)", edu:"var(--c-edu)", home:"var(--c-home)", re:"var(--c-re)" };
+  let curMode="basic";
+  let lastRows = [];
+  const seriesOn = {}; // label => boolean
+  const itemScaleCache = {}; // key => {min,max,step,ticks}
+
+
+  
+  function drawCurrent(rows){
+    const svg = $('chartSvg');
+    const legend = $('chartLegend');
+    const itemsPanel = $('itemsPanel');
+    const chartBox = $('chartBox');
+
+    // ボタン表記をモードで切り替え
+    const adj = $('btnAdjustChart');
+    if(adj){
+      adj.textContent = (curMode === 'items') ? "項目別グラフを調整" : "グラフを調整";
+    }
+
+    if(curMode === 'items'){
+      if(chartBox) chartBox.style.display = "none";
+      if(svg) svg.style.display = "none";
+      if(legend) legend.style.display = "none";
+      if(itemsPanel) itemsPanel.style.display = "block";
+      drawItems(rows);
+      updateFpComment(curMode);
+    } else {
+      if(chartBox) chartBox.style.display = "block";
+      if(svg) svg.style.display = "block";
+      if(legend) legend.style.display = "flex";
+      if(itemsPanel) itemsPanel.style.display = "none";
+      lastRows = rows;
+      drawChart(rows);
+      updateFpComment(curMode);
+    }
+}
+
+  function buildLegend(sers){
+    const legend = $('chartLegend');
+    if(!legend) return;
+    legend.innerHTML = "";
+    sers.forEach(s=>{
+      // 初回はON
+      if(seriesOn[s.l] === undefined) seriesOn[s.l] = true;
+
+      const lab = document.createElement('label');
+      lab.className = "lg-item";
+
+      const cb = document.createElement('input');
+      cb.type = "checkbox";
+      cb.checked = !!seriesOn[s.l];
+      cb.onchange = () => {
+        seriesOn[s.l] = cb.checked;
+        if(lastRows && lastRows.length) drawCurrent(lastRows);
+      };
+
+      const sw = document.createElement('span');
+      sw.className = "sw";
+      if(String(s.c||'').startsWith('url(')){
+        sw.style.background = cssVar(s.base || '#94a3b8');
+        sw.style.backgroundImage = "linear-gradient(135deg, rgba(255,255,255,.35) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.35) 50%, rgba(255,255,255,.35) 75%, transparent 75%, transparent)";
+        sw.style.backgroundSize = "6px 6px";
+        sw.style.border = "1px solid " + cssVar(s.base || '#94a3b8');
+      } else {
+        sw.style.background = cssVar(s.c);
+      }
+
+      const tx = document.createElement('span');
+      tx.textContent = s.l;
+
+      lab.appendChild(cb);
+      lab.appendChild(sw);
+      lab.appendChild(tx);
+      legend.appendChild(lab);
+    });
+  }
+
+  function drawItems(rows){
+    const grid = $('itemsGrid');
+    if(!grid) return;
+    grid.innerHTML = "";
+
+    const makeSection = (title, items) => {
+      const wrap = document.createElement('div');
+      wrap.className = "items-section";
+      const h = document.createElement('div');
+      h.className = "items-section-title";
+      h.textContent = title;
+      wrap.appendChild(h);
+
+      const g = document.createElement('div');
+      g.className = "items-grid";
+      wrap.appendChild(g);
+
+      items.forEach(it=>{
+        const card = document.createElement('div');
+        card.className = "card";
+        const head = document.createElement('div');
+        head.className = "card-h";
+        head.style.borderLeftColor = cssVar(it.color);
+        const t = document.createElement('div');
+        t.textContent = it.label;
+        const v = document.createElement('div');
+        v.className = "mono";
+        v.textContent = "-";
+        head.appendChild(t);
+        head.appendChild(v);
+
+        const sub = document.createElement('div');
+        sub.className = "card-sub";
+        sub.textContent = it.note || "";
+
+        const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+        svg.setAttribute("class","mini");
+        svg.setAttribute("viewBox","0 0 300 130");
+        svg.setAttribute("preserveAspectRatio","none");
+
+        card.appendChild(head);
+        card.appendChild(sub);
+        card.appendChild(svg);
+        g.appendChild(card);
+
+        drawMini(svg, rows, it, v);
+      });
+
+      grid.appendChild(wrap);
+    };
+
+    // --- groups ---
+    makeSection("年間収支", [
+      {key:"income", label:"手取り収入", color:C.inc, v:r=>r.income, note:"税引後（勤労+副業+年金+不動産）"},
+      {key:"exp", label:"生活支出", color:"var(--c-exp)", v:r=>r.exp, note:"生活費+住宅費+教育費"},
+      {key:"inv", label:"積立投資", color:"var(--c-fund)", v:r=>r.inv, note:"投信+株+仮想+確定拠出年金の積立"},
+      {key:"cf", label:"年間収支", color:"var(--c-exp)", v:r=>r.cf, note:"手取り−支出−積立"},
+    ]);
+
+    makeSection("資産内訳", [
+      {key:"cash", label:"現金残高", color:C.c, v:r=>r.ass.c, note:"年末時点"},
+      {key:"fund", label:"投資信託", color:C.f, v:r=>r.ass.f, note:"年末残高"},
+      {key:"stock", label:"株式", color:C.s, v:r=>r.ass.s, note:"年末残高"},
+            {key:"dc", label:"確定拠出年金", color:C.dc, v:r=>r.ass.dc, note:"年末残高（原則60歳まで引出不可）"},
+      {key:"crypto", label:"仮想通貨", color:C.k, v:r=>r.ass.k, note:"年末残高"},
+      {key:"loan", label:"ローン残高", color:C.loan, v:r=>r.hlBal + r.reD.reduce((a,x)=>a+x.bal,0), note:"住宅+投資不動産"},
+      {key:"nw", label:"純資産", color:C.nw, v:r=>r.nw, note:"資産合計−ローン残高"},
+    ]);
+
+    makeSection("収入構成", [
+      {key:"job", label:"勤労+副業", color:C.inc, v:r=>r.jobNet, note:"税引後"},
+      {key:"pen", label:"年金", color:"#4ade80", v:r=>r.penNet, note:"税引後"},
+      {key:"reinc", label:"不動産収入", color:C.re, v:r=>r.reInc, note:"税引後（家賃−費用−返済−税）"},
+    ]);
+
+    makeSection("住宅", [
+      {key:"hlbal", label:"住宅ローン残高", color:C.loan, v:r=>r.hlBal, note:"年末残高"},
+      {key:"home", label:"住宅費", color:C.home, v:r=>r.home, note:"家賃/固定費+返済（年）"},
+      {key:"homePay", label:"返済額", color:C.home, v:r=>r.homePay, note:"年次返済（概算）"},
+      {key:"homeRent", label:"家賃", color:C.home, v:r=>r.homeRent, note:"年次家賃"},
+      {key:"homeTax", label:"住居固定費", color:C.home, v:r=>r.homeTax, note:"固定資産税等（年）"},
+    ]);
+
+    // education summary + per kid tuition/juku
+    const eduItems = [
+      {key:"edu", label:"教育費合計", color:C.edu, v:r=>r.edu, note:"学費+塾代（年）"},
+      {key:"eduT", label:"学費", color:"var(--c-edu)", v:r=>r.eduT, note:"年次合計"},
+      {key:"eduJ", label:"塾代", color:"var(--c-edu)", v:r=>r.eduJ, note:"年次合計"},
+    ];
+    (d.kids||[]).forEach((k,i)=>{
+      const clr = `var(--c-kid${i+1})`;
+      eduItems.push({key:`kidT${i}`, label:`${k.name||('子'+(i+1))} 学費`, color:clr, v:r=>((r.eduKD||[]).find(x=>x.name==k.name)||{}).tuition||0, note:"年次"});
+      eduItems.push({key:`kidJ${i}`, label:`${k.name||('子'+(i+1))} 塾代`, color:clr, v:r=>((r.eduKD||[]).find(x=>x.name==k.name)||{}).juku||0, note:"年次"});
+    });
+    makeSection("教育費", eduItems);
+
+    makeSection("投資不動産", [
+      {key:"reLoan", label:"不動産ローン残高", color:C.loan, v:r=>r.reD.reduce((a,x)=>a+x.bal,0), note:"年末残高（合計）"},
+      {key:"rent", label:"家賃収入", color:C.re, v:r=>r.reD.reduce((a,x)=>a+x.rent,0), note:"年次合計"},
+      {key:"reinc2", label:"不動産手取り収入", color:C.re, v:r=>r.reInc, note:"税引後（年）"},
+    ]);
+
+    makeSection("その他", [
+      {key:"draw", label:"切り崩し金額", color:C.draw, v:r=>r.draw, note:"その年に売却した合計"},
+    ]);
+  }
+
+  function drawMini(svg, rows, it, vEl){
+    svg.innerHTML = "";
+    const W=300, H=130, P={t:16,b:22,l:44,r:10};
+    const vals = rows.map(it.v);
+    let min = Math.min(...vals), max = Math.max(...vals);
+    min = Math.min(min, 0);
+    max = Math.max(max, 0);
+    if(vEl){ vEl.textContent = fmtMan(vals[vals.length-1] || 0); }
+
+    // 年間収支などで上下あり得るものは0を含める
+    if(it.key === "cf") { min = Math.min(min, 0); max = Math.max(max, 0); }
+
+    let scale = itemScaleCache[it.key];
+    if(!scale || forceRescale){
+      scale = makeNiceScale(min, max, 5);
+      itemScaleCache[it.key] = scale;
+    }
+    if(forceRescale) forceRescale = false;
+
+    const X = i => P.l + (W-P.l-P.r) * (i/(rows.length-1||1));
+    const Y = v => P.t + (H-P.t-P.b) * (1 - (v-scale.min)/(scale.max-scale.min||1));
+
+    // grid + y labels (3 ticks)
+    const ticks = scale.ticks.length>6 ? [scale.ticks[0], scale.ticks[Math.floor(scale.ticks.length/2)], scale.ticks[scale.ticks.length-1]] : scale.ticks;
+    ticks.forEach(tv=>{
+      const y=Y(tv);
+      const ln=ceNS('line');
+      ln.setAttribute('x1',P.l); ln.setAttribute('x2',W-P.r);
+      ln.setAttribute('y1',y); ln.setAttribute('y2',y);
+      ln.setAttribute('stroke','#e2e8f0');
+      svg.appendChild(ln);
+
+      const tx=ceNS('text');
+      tx.setAttribute('x',P.l-6); tx.setAttribute('y',y+4);
+      tx.setAttribute('text-anchor','end');
+      tx.setAttribute('font-size','10');
+      tx.setAttribute('fill','#64748b');
+      tx.textContent = fmtAxisY(tv);
+      svg.appendChild(tx);
+    });
+
+    // line path
+    let p="";
+    rows.forEach((r,i)=>{
+      const x=X(i), y=Y(it.v(r));
+      p += (i===0?"M":"L")+x+","+y;
+    });
+    const path=ceNS('path');
+    path.setAttribute('d',p);
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke',cssVar(it.color));
+    path.setAttribute('stroke-width','2.2');
+    path.setAttribute('stroke-linecap','round');
+    svg.appendChild(path);
+
+    // x labels start/end
+    if(rows.length){
+      const t1=ceNS('text'); t1.setAttribute('x',P.l); t1.setAttribute('y',H-6);
+      t1.setAttribute('font-size','10'); t1.setAttribute('fill','#64748b'); t1.textContent=rows[0].age;
+      svg.appendChild(t1);
+      const t2=ceNS('text'); t2.setAttribute('x',W-P.r); t2.setAttribute('y',H-6);
+      t2.setAttribute('text-anchor','end'); t2.setAttribute('font-size','10'); t2.setAttribute('fill','#64748b'); t2.textContent=rows[rows.length-1].age;
+      svg.appendChild(t2);
+    }
+  }
+
+function drawChart(rows){
+    const svg = $('chartSvg'); svg.innerHTML='';
+    ensureJukuPatterns(svg);
+    const W=1000, H=500, P={t:40,b:40,l:60,r:20};
+    
+    let sers=[], type="line";
+    if(curMode==='basic') sers=[{l:"純資産",c:C.nw,v:r=>r.nw},{l:"現金残高",c:C.c,v:r=>r.ass.c},{l:"ローン残高",c:C.loan,v:r=>r.hlBal + r.reD.reduce((a,x)=>a+x.bal,0)}];
+    else if(curMode==='assets'){ type="stack"; sers=[{l:"現金",c:C.c,v:r=>r.ass.c},{l:"投信",c:C.f,v:r=>r.ass.f},{l:"株",c:C.s,v:r=>r.ass.s},{l:"確定拠出年金",c:C.dc,v:r=>r.ass.dc},{l:"仮想",c:C.k,v:r=>r.ass.k}]; }
+    else if(curMode==='cf'){ type="bar"; }
+    else if(curMode==='inc'){ type="stack"; sers=[{l:"勤労",c:C.inc,v:r=>r.jobNet},{l:"年金",c:"#4ade80",v:r=>r.penNet},{l:"不動産",c:C.re,v:r=>r.reInc}]; }
+    else if(curMode==='edu'){ type="stack"; sers=[]; d.kids.forEach((k,i)=>{ const base=getKidColor(i); sers.push({l:k.name+" 学費",c:base,base:base,v:r=>((r.eduKD||[]).find(x=>x.name==k.name)||{}).tuition||0}); sers.push({l:k.name+" 塾代",c:getKidJukuFill(i),base:base,pattern:true,v:r=>((r.eduKD||[]).find(x=>x.name==k.name)||{}).juku||0}); }); }
+    else if(curMode==='home'){ type="multi"; sers=[{l:"ローン残",c:C.loan,v:r=>r.hlBal},{l:"コスト",c:C.home,v:r=>r.home}]; }
+    else if(curMode==='re'){ type="multi"; sers=[{l:"RE残",c:C.loan,v:r=>r.reD.reduce((a,x)=>a+x.bal,0)},{l:"家賃",c:C.re,v:r=>r.reD.reduce((a,x)=>a+x.rent,0)}]; }
+    // legend (checkboxes should stay visible even when series is hidden)
+    const allSers = sers.slice();
+    buildLegend(allSers);
+    // series filter (legend toggles)
+    sers = allSers.filter(s => seriesOn[s.l] !== false);
+
+let dataMin=0, dataMax=0;
+    if(type==='bar'){ 
+      let vs=rows.map(r=>r.cf); 
+      dataMin=Math.min(0,...vs); 
+      dataMax=Math.max(0,...vs); 
+    }
+    else if(type==='stack'){ 
+      rows.forEach(r=>{ 
+        let t=0; sers.forEach(s=>t+=s.v(r)); 
+        if(t>dataMax) dataMax=t; 
+      }); 
+      dataMin = 0;
+    }
+    else { 
+      rows.forEach(r=>{ 
+        sers.forEach(s=>{ 
+          let v=s.v(r); 
+          if(v>dataMax) dataMax=v; 
+          if(v<dataMin) dataMin=v; 
+        }); 
+      }); 
+    }
+    // always include 0 on Y axis
+    dataMin = Math.min(dataMin, 0);
+    dataMax = Math.max(dataMax, 0);
+
+
+    // 縦軸スケールはリアルタイム変化では固定し、ボタンで再調整する
+    let scale = yScaleCache[curMode];
+    if(!scale || forceRescale){
+      scale = makeNiceScale(dataMin, dataMax, 6);
+      yScaleCache[curMode] = scale;
+      forceRescale = false;
+    }
+    let min = scale.min, max = scale.max;
+    let range = max - min;
+    if(range === 0) range = 1;
+
+    const X = i => P.l + (i/(rows.length-1)) * (W-P.l-P.r);
+    const Y = v => P.t + (1-(v-min)/range) * (H-P.t-P.b);
+    const Y0 = Y(0);
+
+    // Y軸（グリッドとラベル）
+    (scale.ticks || []).forEach(v=>{
+      let y = Y(v);
+      let l = ceNS('line'); 
+      l.setAttribute('x1',P.l); l.setAttribute('x2',W-P.r);
+      l.setAttribute('y1',y); l.setAttribute('y2',y); 
+      l.setAttribute('stroke','#e2e8f0'); 
+      svg.appendChild(l);
+
+      let t = ceNS('text'); 
+      t.setAttribute('x',P.l-8); t.setAttribute('y',y+4);
+      t.setAttribute('text-anchor','end'); 
+      t.setAttribute('font-size','12'); 
+      t.setAttribute('fill','#64748b'); 
+      t.textContent = fmtAxisY(v); 
+      svg.appendChild(t);
+    });
+
+    // X軸（年齢ラベル）
+    for(let i=0; i<rows.length; i+=5){
+      let x = X(i);
+      let t = ceNS('text'); 
+      t.setAttribute('x',x); t.setAttribute('y',H-10); 
+      t.setAttribute('text-anchor','middle'); 
+      t.setAttribute('font-size','12'); 
+      t.setAttribute('fill','#64748b'); 
+      t.textContent=rows[i].age; 
+      svg.appendChild(t);
+    }
+
+    if(type==='line'){
+      sers.forEach(s=>{
+        let p=""; rows.forEach((r,i)=>p+=(i==0?"M":"L")+`${X(i)},${Y(s.v(r))} `);
+        let path=ceNS('path'); path.setAttribute('d',p); path.setAttribute('fill','none'); path.setAttribute('stroke',cssVar(s.c)); path.setAttribute('stroke-width',3); svg.appendChild(path);
+      });
+    } else if(type==='stack'){
+      let w = (W-P.l-P.r)/rows.length;
+      rows.forEach((r,i)=>{
+        let b = Y0;
+        sers.forEach(s=>{
+          let v=s.v(r); if(v<=0)return;
+          let h=Math.abs(Y(v)-Y(0)); let y=b-h;
+          let rect=ceNS('rect'); rect.setAttribute('x',X(i)-w/2); rect.setAttribute('y',y); rect.setAttribute('width',w); rect.setAttribute('height',h); rect.setAttribute('fill',cssVar(s.c)); svg.appendChild(rect);
+          b=y;
+        });
+      });
+    } else if(type==='bar'){
+      let w = (W-P.l-P.r)/rows.length;
+      rows.forEach((r,i)=>{
+        let v=r.cf; let y=Y(Math.max(0,v)); let h=Math.abs(Y(v)-Y(0));
+        let rect=ceNS('rect'); rect.setAttribute('x',X(i)-w/2); rect.setAttribute('y',y); rect.setAttribute('width',w); rect.setAttribute('height',h); rect.setAttribute('fill',v>=0?C.inc:C.exp); svg.appendChild(rect);
+      });
+    } else if(type==='multi'){
+      let w = ((W-P.l-P.r)/rows.length)/2;
+      rows.forEach((r,i)=>{
+        sers.forEach((s,si)=>{
+          let v=s.v(r); let y=Y(v); let h=Math.abs(y-Y0);
+          let rect=ceNS('rect'); rect.setAttribute('x',X(i)+(si*w)-w); rect.setAttribute('y',Math.min(y,Y0)); rect.setAttribute('width',w); rect.setAttribute('height',h); rect.setAttribute('fill',cssVar(s.c)); rect.setAttribute('opacity',0.8); svg.appendChild(rect);
+        });
+      });
+    }
+
+    svg.onmousemove = e => {
+      let rect = svg.getBoundingClientRect();
+      let x = e.clientX - rect.left;
+      let i = Math.round( ((x/rect.width)*W - P.l) / ((W-P.l-P.r)/(rows.length-1)) );
+      if(i>=0 && i<rows.length){
+        let r = rows[i];
+        let t = $('tooltip'); t.style.display='block'; t.style.left=(e.clientX+10)+'px'; t.style.top=(e.clientY+10)+'px';
+        let h = `<b>${r.age}歳</b><br>`;
+        if(curMode==='cf') h += `収支: ${fmtMan(r.cf)}`;
+        else sers.forEach(s=> h += `${s.l}: ${fmtMan(s.v(r))}<br>`);
+        t.innerHTML = h;
+      }
+    };
+    svg.onmouseleave = () => $('tooltip').style.display='none';
+  }
+
+  
+  const FP_COMMENTS = {
+    basic: "見たいのは『いつ資金繰りが苦しくなるか』。収入や運用利回りより、現金残高の底をどこまで守れるかが生死を分けます。",
+    assets: "資産は増やすより守る方が難しい。暴落と取り崩しが同時に来る年に耐えられる設計か確認。",
+    cf: "年間収支がマイナスの年は、その穴をどの資産で埋めているかが本質。取り崩し順がズレると寿命が縮みます。",
+    inc: "収入は『いつ終わるか』がすべて。年収の高さより、終点と税率の設計が先。",
+    edu: "教育費は『学費』より『塾代』がブレる。子どもが増えるほど“上限”を決めないと家計が持っていかれます。",
+    home: "住宅は固定費の塊。金利より、保有年数と維持費（税・修繕）を甘く見ない。",
+    re: "不動産は手取りがブレる前提で現金クッションを厚く。利回り計算だけで安心しない。",
+    items: "項目別は『支配的なリスク』を見抜く道具。現金・ローン・教育が同時に悪化する年が山場です。"
+  };
+
+  function updateFpComment(mode){
+    const wrap = $('fpCommentWrap');
+    if(!wrap) return;
+
+    const key = mode || 'basic';
+    const txt = FP_COMMENTS[key] || "";
+
+    const hidKey = 'fpHide_' + key;
+    const isHidden = localStorage.getItem(hidKey) === '1';
+
+    wrap.innerHTML = "";
+    const card = ce('div'); card.className = "fp-card" + (isHidden ? " hidden" : "");
+    card.innerHTML = `
+      <div class="fp-head" title="ダブルクリックで非表示">
+        <div class="fp-title">FPコメント（ダブルクリックで閉じる）</div>
+        <div style="font-size:12px;color:#64748b;">${key}</div>
+      </div>
+      <div class="fp-body">${txt}</div>
+    `;
+    const chip = ce('div'); chip.className="fp-chip"; chip.textContent="FPコメントを表示";
+    chip.style.display = isHidden ? "inline-flex" : "none";
+
+    const head = card.querySelector('.fp-head');
+    head.ondblclick = () => {
+      localStorage.setItem(hidKey,'1');
+      card.classList.add('hidden');
+      chip.style.display="inline-flex";
+    };
+    chip.ondblclick = () => {
+      localStorage.setItem(hidKey,'0');
+      card.classList.remove('hidden');
+      chip.style.display="none";
+    };
+    chip.onclick = () => {
+      localStorage.setItem(hidKey,'0');
+      card.classList.remove('hidden');
+      chip.style.display="none";
+    };
+
+    wrap.appendChild(card);
+    wrap.appendChild(chip);
+  }
+
+
+function drawTable(rows){
+    const t = $('dataTable').querySelector('tbody'); t.innerHTML='';
+    rows.forEach(r=>{
+      let tr = ce('tr');
+      const inc = r.net + r.reInc;
+      const exp = (r.basic + r.edu + r.home);
+            const reFee = (r.reCostTot||0) + (r.rePayTot||0) + (r.reTaxTot||0);
+      const taxRef = (r.taxWage||0) + (r.reTaxTot||0);
+      tr.innerHTML = `
+        <td>${r.age}</td>
+        <td>${fmtOkuMan(inc)}</td>
+        <td class="col-expTotal">${fmtOkuMan(exp)}</td>
+        <td class="mini col-basic">${fmtOkuMan(r.basicL||0)}</td>
+        <td class="mini col-special">${fmtOkuMan(r.special||0)}</td>
+        <td class="mini col-home">${fmtOkuMan(r.home||0)}</td>
+        <td class="mini col-eduT">${fmtOkuMan(r.eduT||0)}</td>
+        <td class="mini col-eduJ">${fmtOkuMan(r.eduJ||0)}</td>
+        <td class="mini col-re">${fmtOkuMan(reFee)}</td>
+        <td class="mini col-tax">${fmtOkuMan(taxRef)}</td>
+        <td class="${r.cf<0?'neg':''}">${fmtOkuMan(r.cf)}</td>
+        <td>${fmtOkuMan(r.draw||0)}</td>
+        <td>${fmtOkuMan(r.ass.c)}</td>
+        <td>${fmtOkuMan(r.nw)}</td>
+      `;
+t.appendChild(tr);
+    });
+  }
+
+  // --- Actions ---
+  function act(type, idx, key, val){
+    if(type==='delJob') d.jobs.splice(idx,1);
+    else if(type==='setJob') d.jobs[idx][key] = (key=='name'?val:toInt(val));
+    else if(type==='delSideJob') d.sideJobs.splice(idx,1);
+    else if(type==='setSideJob') d.sideJobs[idx][key] = (key=='name'?val:toInt(val));
+    else if(type==='delKid') d.kids.splice(idx,1);
+    else if(type==='setKid') d.kids[idx][key] = toInt(val);
+    else if(type==='setKidStage') d.kids[idx].s[key] = val;
+    else if(type==='setKidOpt') d.kids[idx].opt[key] = (key=='send'?toInt(val):val);
+    else if(type==='delRE') d.res.splice(idx,1);
+    else if(type==='setRE') d.res[idx][key] = (key=='name'?val:(key=='rate'?toFloat(val):toInt(val)));
+    renderItems(); calc();
+  }
+
+  function init(){
+    const __w = document.getElementById('jsWarn'); if(__w) __w.style.display='none';
+    const saved = localStorage.getItem('lp_v12');
+    if(saved) try { let ld = JSON.parse(saved); Object.assign(d, ld); } catch(e){}
+    // migrate old saved formats (v11/v12-beta)
+    if(typeof d.cashRate==='number' && d.cashRate>1) d.cashRate = d.cashRate/100;
+    ['fundR','stockR','cryptoR'].forEach(k=>{ if(typeof d[k]==='number' && d[k]>0 && d[k]<1) d[k] = d[k]*100; });
+    if(typeof d.saveCryptoM!=='number') d.saveCryptoM = 0;
+    // validate drawOrder
+    const __validDrawOrders = {"auto-tiered":1,"fund-stock-crypto":1,"stock-fund-crypto":1};
+    if(!__validDrawOrders[d.drawOrder]) d.drawOrder = "auto-tiered";
+
+
+    
+    // Auto-bind simple inputs
+    document.querySelectorAll('input, select').forEach(el => {
+        if(!el.onchange && el.id && !el.closest('.item')) el.onchange = calc;
+    });
+      // Tabs: robust binding (touch/click)
+    const tabsWrap = document.querySelector('.tabs');
+    if(tabsWrap){
+      const activateTab = (el) => {
+        if(!el) return;
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        el.classList.add('active');
+        curMode = el.dataset.mode || 'basic';
+        calc();
+      };
+      const handler = (ev) => {
+        const t = ev.target && ev.target.closest ? ev.target.closest('.tab') : null;
+        if(!t) return;
+        ev.preventDefault();
+        activateTab(t);
+      };
+      tabsWrap.addEventListener('click', handler);
+      tabsWrap.addEventListener('pointerup', handler, {passive:false});
+    }
+
+const adj = $('btnAdjustChart');
+    if(adj){
+      adj.onclick = () => { forceRescale = true; calc(); };
+    }
+
+
+    const fileEl = $('fileLoad');
+    if(fileEl){
+      fileEl.onchange = async () => {
+        const f = fileEl.files && fileEl.files[0];
+        if(!f) return;
+        try{
+          const txt = await f.text();
+          importDataObj(JSON.parse(txt));
+        }catch(e){
+          alert("読み込みに失敗しました: " + (e && e.message ? e.message : e));
+        }
+      };
+    }
+
+
+    // Mobile-friendly: bind add buttons with Pointer Events (touch/click)
+    const bk = document.getElementById('btnAddKid');
+    if(bk){
+      bk.addEventListener('pointerup', function(ev){ ev.preventDefault(); app.addKid(); }, {passive:false});
+      bk.addEventListener('click', function(ev){ ev.preventDefault(); app.addKid(); });
+    }
+    const br = document.getElementById('btnAddRE');
+    if(br){
+      br.addEventListener('pointerup', function(ev){ ev.preventDefault(); app.addRE(); }, {passive:false});
+      br.addEventListener('click', function(ev){ ev.preventDefault(); app.addRE(); });
+    }
+
+    // Charts: redraw after layout changes (mobile orientation / resize / bfcache)
+    let __redrawT = null;
+    function scheduleRedraw(force){
+      if(__redrawT) clearTimeout(__redrawT);
+      __redrawT = setTimeout(function(){
+        try{
+          if(force) forceRescale = true;
+          if(lastRows && lastRows.length) drawChart(lastRows);
+          else calc();
+        }catch(e){}
+      }, 80);
+    }
+    window.addEventListener('resize', function(){ scheduleRedraw(false); });
+    window.addEventListener('orientationchange', function(){ scheduleRedraw(true); });
+    window.addEventListener('pageshow', function(){ scheduleRedraw(true); });
+
+    bindInputs();
+    updateDrawOrderHint();
+    renderItems();
+    calc(); // Force initial calc
+  }
+
+  // --- Export / Import (JSON file) ---
+  function exportData(){
+    // sync UI -> data
+    try{ readInputs(); }catch(e){}
+    const snapshot = JSON.parse(JSON.stringify(d));
+    const payload = { version:"LifePlanSim-v13", savedAt:new Date().toISOString(), data:snapshot };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = "lifeplan_data_" + new Date().toISOString().slice(0,10).replace(/-/g,"") + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+
+  function importDataObj(obj){
+    const data = (obj && typeof obj==="object" && obj.data && typeof obj.data==="object") ? obj.data : obj;
+    if(!data || typeof data!=="object") throw new Error("データ形式が不正です");
+    Object.assign(d, data);
+
+    if(!d.jukuM) d.jukuM = {pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000};
+
+    // normalize core arrays
+    if(!Array.isArray(d.jobs)) d.jobs = [];
+    if(!Array.isArray(d.sideJobs)) d.sideJobs = [];
+    if(!Array.isArray(d.kids)) d.kids = [];
+    if(!Array.isArray(d.res)) d.res = [];
+
+    // migrations / guards
+    if(typeof d.cashRate==='number' && d.cashRate>1) d.cashRate = d.cashRate/100;
+    ['fundR','stockR','cryptoR'].forEach(k=>{ if(typeof d[k]==='number' && d[k]>0 && d[k]<1) d[k] = d[k]*100; });
+    if(typeof d.saveCryptoM!=='number') d.saveCryptoM = 0;
+
+    bindInputs();
+    renderItems();
+    calc();
+    alert("読み込みました");
+  }
+
+  function openImport(){
+    const el = $('fileLoad');
+    if(!el){ alert("読み込みUIが見つかりません"); return; }
+    el.value = "";
+    el.click();
+  }
+
+  return {
+    init, calc, act,
+    exportData, openImport,
+    addJob: ()=>{ d.jobs.push({name:"新",start:30,end:60,inc:0,sev:0,sevAge:60}); renderItems(); calc(); },
+    addSideJob: ()=>{ d.sideJobs.push({name:"副",start:30,end:40,inc:0}); renderItems(); calc(); },
+    addKid: ()=>{ d.kids.push({name:"子",offset:30,s:{k:'pub',e:'pub',j:'pub',h:'pub',u:'pub'},opt:{ronin:false,grad:false,dormU:false,dormG:false,send:100000}}); renderItems(); calc(); },
+    addRE: ()=>{ d.res.push({name:"物",rent:0,cost:0,bal:0,rate:1.0,term:10,start:30}); renderItems(); calc(); },
+    reset: ()=>{ if(confirm("初期化しますか？")){ localStorage.removeItem('lp_v12'); location.reload(); } }
+  };
+})();
+
+// Automatic Startup
+window.addEventListener('DOMContentLoaded', app.init);
+
+</script>
+</body>
+</html>
