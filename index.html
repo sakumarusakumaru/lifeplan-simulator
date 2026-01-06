@@ -259,6 +259,21 @@
   .fp-body { padding:10px 12px; font-size:12px; line-height:1.65; color:#334155; }
   .fp-chip { display:inline-flex; align-items:center; gap:8px; margin-top:10px; padding:8px 10px; border:1px dashed #94a3b8; border-radius:999px; font-size:12px; color:#334155; background:#f8fafc; cursor:pointer; }
 
+
+  /* Left input tabs (2 rows x 4 cols) */
+  .ltabs { display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin: 0 0 10px; }
+  .ltab { padding:8px 6px; border:1px solid var(--border); border-radius: 10px; background:#fff;
+    font-size:12px; font-weight:800; text-align:center; color:#334155; cursor:pointer;
+    user-select:none; touch-action: manipulation; }
+  .ltab.active { background: var(--primary); border-color: var(--primary); color:#fff; }
+  .ltab:active { transform: translateY(1px); }
+
+  /* Insurance section */
+  .s-ins summary { border-left-color: #0284c7; }
+
+  /* Yearly table: insurance column */
+  th.col-ins, td.col-ins { background: rgba(2, 132, 199, .12); }
+
 </style>
 </head>
 <body><div id="jsWarn" style="position:sticky;top:0;z-index:9999;background:#ffe8a3;color:#3b2f00;padding:10px 12px;font-size:13px;line-height:1.4;border-bottom:1px solid rgba(0,0,0,.15);">この画面はプレビューでは動作しないことがあります。ファイルを保存して、Safari/Chromeで開いてください（JavaScriptが必要です）。</div><noscript><div style="position:sticky;top:0;z-index:9999;background:#ffe8a3;color:#3b2f00;padding:10px 12px;font-size:13px;line-height:1.4;border-bottom:1px solid rgba(0,0,0,.15);">JavaScriptが無効のため動作しません。Safari/Chromeで開き、JavaScriptを有効にしてください。</div></noscript>
@@ -274,7 +289,19 @@
 </header>
 <div class="grid">
 <div class="panel-left">
-<details class="sect s-basic" open="">
+
+<div class="ltabs" id="leftTabs">
+  <div class="ltab active" data-lmode="basic">基本</div>
+  <div class="ltab" data-lmode="inc">収入</div>
+  <div class="ltab" data-lmode="exp">支出</div>
+  <div class="ltab" data-lmode="asset">金融資産</div>
+  <div class="ltab" data-lmode="edu">教育</div>
+  <div class="ltab" data-lmode="home">住宅</div>
+  <div class="ltab" data-lmode="re">投資不動産</div>
+  <div class="ltab" data-lmode="ins">保険</div>
+</div>
+
+<details class="sect s-basic" open="" data-lpane="basic">
 <summary>基本設定</summary>
 <div class="content">
 <div class="row">
@@ -303,7 +330,7 @@
 </div>
 </div>
 </details>
-<details class="sect s-inc">
+<details class="sect s-inc" data-lpane="inc">
 <summary>収入・仕事・副業</summary>
 <div class="content">
 <div class="lbl">本業・勤務先リスト</div>
@@ -328,7 +355,7 @@
 </div>
 </div>
 </details>
-<details class="sect s-asset">
+<details class="sect s-asset" data-lpane="asset">
 <summary>金融資産</summary>
 <div class="content">
 <div class="row"><div class="field"><div class="lbl">現金</div><div class="inp-box"><input data-fmt="int" id="cashBal" type="text"/><span class="unit">円</span></div></div><div class="field"><div class="lbl">現金金利(年)</div><div class="inp-box"><input id="cashRate" step="0.1" type="number"/><span class="unit">%</span></div></div></div>
@@ -354,7 +381,7 @@
 <div class="row"><div class="field"><div class="lbl">仮想通貨 残高</div><div class="inp-box"><input data-fmt="int" id="cryptoBal" type="text"/><span class="unit">円</span></div></div><div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="cryptoR" step="0.1" type="number"/><span class="unit">%</span></div></div></div><div class="row"><div class="field"><div class="lbl">仮想積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveCryptoM" type="text"/><span class="unit">円</span></div></div></div><div class="divider"></div><div class="field"><div class="lbl">積立終了年齢</div><div class="inp-box"><input id="saveEndAge" type="number"/></div></div>
 </div>
 </details>
-<details class="sect s-exp" open="">
+<details class="sect s-exp" open="" data-lpane="exp">
 <summary>基本支出 (住宅・教育以外)</summary>
 <div class="content">
 <div class="row">
@@ -363,7 +390,7 @@
 </div>
 </div>
 </details>
-<details class="sect s-edu">
+<details class="sect s-edu" data-lpane="edu">
 <summary>教育費</summary>
 <div class="content">
 <div class="card" style="margin-bottom:10px;">
@@ -384,7 +411,7 @@
 <button class="btn sm" id="btnAddKid" type="button">+ 子供を追加</button>
 </div>
 </details>
-<details class="sect s-home" open="">
+<details class="sect s-home" open="" data-lpane="home">
 <summary>住宅費</summary>
 <div class="content">
 <div class="row">
@@ -406,13 +433,25 @@
 </div>
 </div>
 </details>
-<details class="sect s-re">
+<details class="sect s-re" data-lpane="re">
 <summary>投資不動産</summary>
 <div class="content">
 <div id="listRE"></div>
 <button class="btn sm" id="btnAddRE" type="button">+ 物件を追加</button>
 </div>
 </details>
+
+<details class="sect s-ins" data-lpane="ins">
+<summary>保険</summary>
+<div class="content">
+  <div style="font-size:12px; color:#475569; margin-bottom:8px; line-height:1.6;">
+    月額入力 → 年額換算して「支出」にのみ加算します（生活費には含めません）。有効をOFFにすると計算に含めません。
+  </div>
+  <div id="listIns"></div>
+  <button class="btn sm" id="btnAddIns" type="button">+ 保険を追加</button>
+</div>
+</details>
+
 </div>
 <div class="panel-right">
 <div class="card">
@@ -458,6 +497,7 @@
   <th class="mini col-basic">基本生活費</th>
   <th class="mini col-special">特別費</th>
   <th class="mini col-home">住宅費</th>
+  <th class="mini col-ins">保険料</th>
   <th class="mini col-eduT">教育(学校)</th>
   <th class="mini col-eduJ">教育(塾)</th>
   <th class="mini col-re">投資不動産費(参考)</th>
@@ -606,7 +646,8 @@ window.app = (function() {
     livingM:200000, specialY:500000,
     rentM:100000, homeTaxY:0, useHomeLoan:true, hlBal:30000000, hlRate:0.7, hlTerm:30, hlStart:35,
     kids: [ {name:"子1", offset:2, s:{k:'pub',e:'pub',j:'pub',h:'pub',u:'pub'}, opt:{ronin:false,grad:false,dormU:true,dormG:false,send:100000}} ],
-    res: [ {name:"物件1", rent:80000, cost:150000, bal:15000000, rate:2.0, term:20, start:35} ]
+    res: [ {name:"物件1", rent:80000, cost:150000, bal:15000000, rate:2.0, term:20, start:35} ],
+    ins: []
   };
   let d = JSON.parse(JSON.stringify(DEF));
   // default juku model (都会・教育熱心)
@@ -622,6 +663,21 @@ window.app = (function() {
     if(d.dcR===undefined) d.dcR=4.0;
     if(d.saveDcM===undefined) d.saveDcM=0;
 
+
+  function calcInsuranceY(age, infl){
+    if(!Array.isArray(d.ins)) return 0;
+    let sum = 0;
+    d.ins.forEach(p=>{
+      if(!p) return;
+      if(p.enabled === false) return;
+      const s = toInt(p.start);
+      const e = toInt(p.end);
+      if(age >= s && age <= e){
+        sum += (toInt(p.premM) * 12) * infl;
+      }
+    });
+    return sum;
+  }
 
   const EDU = { k:{pub:20,pri:50}, e:{pub:30,pri:100}, j:{pub:40,pri:120}, h:{pub:40,pri:100}, u:{pub:120,pri:180}, g:{pub:120,pri:180}, r:{pub:100,pri:100} };
 
@@ -681,7 +737,54 @@ window.app = (function() {
         <div class="field"><div class="lbl">開始</div><input type="number" value="${r.start}" onchange="app.act('setRE',${i},'start',this.value)"></div></div>`;
       rBox.appendChild(el);
     });
-    attachFormatters();
+
+    // Insurance
+    const insBox = $('listIns');
+    if(insBox){
+      insBox.innerHTML = '';
+      if(!Array.isArray(d.ins)) d.ins = [];
+      const TYPE_OPTS = [
+        "生命（死亡・収入保障）","医療","がん・三大疾病","就業不能","介護",
+        "火災・地震","自動車","個人賠償・その他損保","貯蓄型","その他"
+      ];
+      const INSURED_OPTS = ["本人","配偶者","子","その他"];
+      d.ins.forEach((p,i)=>{
+        if(!p) p = d.ins[i] = {name:"保険", type:TYPE_OPTS[0], insured:"本人", premM:0, start:d.curAge, end:d.endAge, memo:"", enabled:true};
+        if(p.enabled===undefined) p.enabled = true;
+        const el = ce('div'); el.className='item';
+        const typeSel = TYPE_OPTS.map(v=>`<option value="${v}" ${p.type==v?'selected':''}>${v}</option>`).join('');
+        const insSel = INSURED_OPTS.map(v=>`<option value="${v}" ${p.insured==v?'selected':''}>${v}</option>`).join('');
+        el.innerHTML = `
+          <div class="item-head">
+            <span>${p.name || ('保険'+(i+1))}</span>
+            <span style="display:flex; gap:10px; align-items:center;">
+              <label class="pill-check" style="margin:0;">
+                <input type="checkbox" ${p.enabled?'checked':''} onchange="app.act('setIns',${i},'enabled',this.checked)">有効
+              </label>
+              <span style="cursor:pointer;color:red" onclick="app.act('delIns',${i})">×</span>
+            </span>
+          </div>
+          <div class="row">
+            <div class="field"><div class="lbl">保険名</div><input type="text" value="${p.name||''}" onchange="app.act('setIns',${i},'name',this.value)"></div>
+            <div class="field"><div class="lbl">保険種類</div><select onchange="app.act('setIns',${i},'type',this.value)">${typeSel}</select></div>
+          </div>
+          <div class="row">
+            <div class="field"><div class="lbl">被保険者</div><select onchange="app.act('setIns',${i},'insured',this.value)">${insSel}</select></div>
+            <div class="field"><div class="lbl">月額保険料(円)</div><input type="text" data-fmt="int" value="${fmt(p.premM||0)}" onchange="app.act('setIns',${i},'premM',this.value)"></div>
+          </div>
+          <div class="row">
+            <div class="field"><div class="lbl">払込開始年齢</div><input type="number" value="${p.start||0}" onchange="app.act('setIns',${i},'start',this.value)"></div>
+            <div class="field"><div class="lbl">払込終了年齢</div><input type="number" value="${p.end||0}" onchange="app.act('setIns',${i},'end',this.value)"></div>
+          </div>
+          <div class="row">
+            <div class="field" style="flex:1;"><div class="lbl">メモ（計算非対象）</div><input type="text" value="${p.memo||''}" onchange="app.act('setIns',${i},'memo',this.value)"></div>
+          </div>
+        `;
+        insBox.appendChild(el);
+      });
+    }
+
+        attachFormatters();
   }
 
   function attachFormatters(){
@@ -866,9 +969,10 @@ let flow=rent-cost-pay-taxR; reInc+=flow; reD.push({bal:r.bal,flow,rent});
 
       let basicL=(d.livingM*12)*infl, special=(d.specialY)*infl, basic=basicL+special, homeRent=(d.rentM*12)*infl, homeTax=(d.homeTaxY)*infl, home=(homeRent+homeTax), homePay=0;
       if(d.useHomeLoan && hlBal>0 && age>=d.hlStart){ let i=hlBal*(d.hlRate/100); let p=hlPayY; if(hlBal<p)p=hlBal+i; homePay=p; home+=p; hlBal=Math.max(0,hlBal-(p-i)); }
+      let ins = calcInsuranceY(age, infl);
 
       let can=(age<d.saveEndAge), tF=can?d.saveFundM*12:0, tS=can?d.saveStockM*12:0, tK=can?d.saveCryptoM*12:0, tD=can?d.saveDcM*12:0;
-      let cf = net+reInc-(basic+home+edu)-(tF+tS+tK+tD);
+      let cf = net+reInc-(basic+home+edu+ins)-(tF+tS+tK+tD);
       ass.c += cf; if(ass.c>0) ass.c*=(1+d.cashRate);
       ass.f=(ass.f+tF)*(1+d.fundR/100); ass.s=(ass.s+tS)*(1+d.stockR/100); ass.k=(ass.k+tK)*(1+d.cryptoR/100); ass.dc=(ass.dc+tD)*(1+d.dcR/100);
 
@@ -886,7 +990,7 @@ let flow=rent-cost-pay-taxR; reInc+=flow; reD.push({bal:r.bal,flow,rent});
       }
 
       let nw = ass.c+ass.f+ass.s+ass.k+ass.dc - hlBal - rSims.reduce((a,r)=>a+r.bal,0);
-      rows.push({age,nw,cf,draw,ass:{...ass},reInc,net,income:(net+reInc),exp:(basic+home+edu),inv:(tF+tS+tK+tD),edu,eduT,eduJ,home,homeRent,homeTax,homePay,basic,hlBal,reD,eduD,eduKD,taxWage:tax,basicL,special,reRentTot,reCostTot,rePayTot,reTaxTot,jobNet:(job+side)*(1-d.taxRate/100),penNet:pen*(1-d.taxRate/100)});
+      rows.push({age,nw,cf,draw,ass:{...ass},reInc,net,income:(net+reInc),exp:(basic+home+edu+ins),inv:(tF+tS+tK+tD),edu,eduT,eduJ,home,homeRent,homeTax,homePay,ins,basic,hlBal,reD,eduD,eduKD,taxWage:tax,basicL,special,reRentTot,reCostTot,rePayTot,reTaxTot,jobNet:(job+side)*(1-d.taxRate/100),penNet:pen*(1-d.taxRate/100)});
     }
     
     lastRows = rows;
@@ -1355,7 +1459,7 @@ function drawTable(rows){
     rows.forEach(r=>{
       let tr = ce('tr');
       const inc = r.net + r.reInc;
-      const exp = (r.basic + r.edu + r.home);
+      const exp = (r.basic + r.edu + r.home + (r.ins||0));
             const reFee = (r.reCostTot||0) + (r.rePayTot||0) + (r.reTaxTot||0);
       const taxRef = (r.taxWage||0) + (r.reTaxTot||0);
       tr.innerHTML = `
@@ -1365,6 +1469,7 @@ function drawTable(rows){
         <td class="mini col-basic">${fmtOkuMan(r.basicL||0)}</td>
         <td class="mini col-special">${fmtOkuMan(r.special||0)}</td>
         <td class="mini col-home">${fmtOkuMan(r.home||0)}</td>
+        <td class="mini col-ins">${fmtOkuMan(r.ins||0)}</td>
         <td class="mini col-eduT">${fmtOkuMan(r.eduT||0)}</td>
         <td class="mini col-eduJ">${fmtOkuMan(r.eduJ||0)}</td>
         <td class="mini col-re">${fmtOkuMan(reFee)}</td>
@@ -1390,6 +1495,13 @@ t.appendChild(tr);
     else if(type==='setKidOpt') d.kids[idx].opt[key] = (key=='send'?toInt(val):val);
     else if(type==='delRE') d.res.splice(idx,1);
     else if(type==='setRE') d.res[idx][key] = (key=='name'?val:(key=='rate'?toFloat(val):toInt(val)));
+    else if(type==='delIns') d.ins.splice(idx,1);
+    else if(type==='setIns') {
+      if(!d.ins[idx]) d.ins[idx] = {};
+      if(key==='enabled') d.ins[idx][key] = !!val;
+      else if(key==='name' || key==='type' || key==='insured' || key==='memo') d.ins[idx][key] = val;
+      else d.ins[idx][key] = toInt(val);
+    }
     renderItems(); calc();
   }
 
@@ -1404,6 +1516,9 @@ t.appendChild(tr);
     // validate drawOrder
     const __validDrawOrders = {"auto-tiered":1,"fund-stock-crypto":1,"stock-fund-crypto":1};
     if(!__validDrawOrders[d.drawOrder]) d.drawOrder = "auto-tiered";
+
+    if(!Array.isArray(d.ins)) d.ins = [];
+    d.ins.forEach(p=>{ if(p && p.enabled===undefined) p.enabled = true; });
 
 
     
@@ -1420,6 +1535,7 @@ t.appendChild(tr);
         el.classList.add('active');
         curMode = el.dataset.mode || 'basic';
         calc();
+        requestAnimationFrame(function(){ try{ if(lastRows && lastRows.length) drawChart(lastRows); }catch(e){} });
       };
       const handler = (ev) => {
         const t = ev.target && ev.target.closest ? ev.target.closest('.tab') : null;
@@ -1463,9 +1579,43 @@ const adj = $('btnAdjustChart');
       br.addEventListener('pointerup', function(ev){ ev.preventDefault(); app.addRE(); }, {passive:false});
       br.addEventListener('click', function(ev){ ev.preventDefault(); app.addRE(); });
     }
+    const bi = document.getElementById('btnAddIns');
+    if(bi){
+      bi.addEventListener('pointerup', function(ev){ ev.preventDefault(); app.addIns(); }, {passive:false});
+      bi.addEventListener('click', function(ev){ ev.preventDefault(); app.addIns(); });
+    }
 
     // Charts: redraw after layout changes (mobile orientation / resize / bfcache)
     let __redrawT = null;
+    
+    function setupLeftTabs(){
+      const wrap = document.getElementById('leftTabs');
+      if(!wrap) return;
+      const panes = document.querySelectorAll('.panel-left details.sect[data-lpane]');
+      const activate = (el) => {
+        if(!el) return;
+        wrap.querySelectorAll('.ltab').forEach(t=>t.classList.remove('active'));
+        el.classList.add('active');
+        const mode = el.dataset.lmode || 'basic';
+        try{ localStorage.setItem('lp_leftTab', mode); }catch(e){}
+        panes.forEach(p=>{
+          p.style.display = (p.dataset.lpane === mode) ? '' : 'none';
+        });
+        scheduleRedraw(true);
+      };
+      const handler = (ev) => {
+        const t = ev.target && ev.target.closest ? ev.target.closest('.ltab') : null;
+        if(!t) return;
+        ev.preventDefault();
+        activate(t);
+      };
+      wrap.addEventListener('click', handler);
+      wrap.addEventListener('pointerup', handler, {passive:false});
+      const savedMode = (function(){ try{ return localStorage.getItem('lp_leftTab'); }catch(e){ return null; } })() || 'basic';
+      const initTab = wrap.querySelector('.ltab[data-lmode="'+savedMode+'"]') || wrap.querySelector('.ltab[data-lmode="basic"]') || wrap.querySelector('.ltab');
+      activate(initTab);
+    }
+
     function scheduleRedraw(force){
       if(__redrawT) clearTimeout(__redrawT);
       __redrawT = setTimeout(function(){
@@ -1479,6 +1629,8 @@ const adj = $('btnAdjustChart');
     window.addEventListener('resize', function(){ scheduleRedraw(false); });
     window.addEventListener('orientationchange', function(){ scheduleRedraw(true); });
     window.addEventListener('pageshow', function(){ scheduleRedraw(true); });
+
+    setupLeftTabs();
 
     bindInputs();
     updateDrawOrderHint();
@@ -1515,6 +1667,8 @@ const adj = $('btnAdjustChart');
     if(!Array.isArray(d.sideJobs)) d.sideJobs = [];
     if(!Array.isArray(d.kids)) d.kids = [];
     if(!Array.isArray(d.res)) d.res = [];
+    if(!Array.isArray(d.ins)) d.ins = [];
+    d.ins.forEach(p=>{ if(p && p.enabled===undefined) p.enabled = true; });
 
     // migrations / guards
     if(typeof d.cashRate==='number' && d.cashRate>1) d.cashRate = d.cashRate/100;
@@ -1527,6 +1681,14 @@ const adj = $('btnAdjustChart');
     alert("読み込みました");
   }
 
+  function redraw(force){
+    try{
+      if(force) forceRescale = true;
+      if(lastRows && lastRows.length) drawChart(lastRows);
+      else calc();
+    }catch(e){}
+  }
+
   function openImport(){
     const el = $('fileLoad');
     if(!el){ alert("読み込みUIが見つかりません"); return; }
@@ -1535,18 +1697,26 @@ const adj = $('btnAdjustChart');
   }
 
   return {
-    init, calc, act,
+    init, calc, act, redraw,
     exportData, openImport,
     addJob: ()=>{ d.jobs.push({name:"新",start:30,end:60,inc:0,sev:0,sevAge:60}); renderItems(); calc(); },
     addSideJob: ()=>{ d.sideJobs.push({name:"副",start:30,end:40,inc:0}); renderItems(); calc(); },
     addKid: ()=>{ d.kids.push({name:"子",offset:30,s:{k:'pub',e:'pub',j:'pub',h:'pub',u:'pub'},opt:{ronin:false,grad:false,dormU:false,dormG:false,send:100000}}); renderItems(); calc(); },
     addRE: ()=>{ d.res.push({name:"物",rent:0,cost:0,bal:0,rate:1.0,term:10,start:30}); renderItems(); calc(); },
+    addIns: ()=>{ if(!Array.isArray(d.ins)) d.ins=[]; d.ins.push({name:"保険", type:"生命（死亡・収入保障）", insured:"本人", premM:0, start:d.curAge, end:d.endAge, memo:"", enabled:true}); renderItems(); calc(); },
     reset: ()=>{ if(confirm("初期化しますか？")){ localStorage.removeItem('lp_v12'); location.reload(); } }
   };
 })();
 
 // Automatic Startup
-window.addEventListener('DOMContentLoaded', app.init);
+window.addEventListener('DOMContentLoaded', function(){
+  requestAnimationFrame(function(){
+    try{ app.init(); }catch(e){ console.error(e); }
+    requestAnimationFrame(function(){
+      try{ if(app && typeof app.redraw==='function') app.redraw(true); else if(app && typeof app.calc==='function') app.calc(); }catch(e){ console.error(e); }
+    });
+  });
+});
 
 </script>
 </body>
