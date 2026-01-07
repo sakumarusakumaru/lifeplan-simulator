@@ -221,6 +221,30 @@
     box-shadow: 0 4px 6px rgba(0,0,0,0.2); line-height: 1.4;
   }
 
+
+  /* Assets grouping */
+  .asset-group{
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 10px 0;
+  }
+  .asset-group-title{
+    font-size: 12px;
+    font-weight: 700;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  /* Sticky table cells: keep opaque to avoid bleed-through while scrolling */
+  .table-box th, .table-box td { background-clip: padding-box; }
+  .table-box td:first-child { background: #fff !important; }
+  .table-box th:first-child { background: #f1f5f9 !important; }
+  .table-box tr:hover td:first-child { box-shadow: none; }
+
   /* Table */
   .table-box { max-height: 400px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; font-size: 11px; }
   table { width: 100%; border-collapse: separate; border-spacing: 0; }
@@ -304,10 +328,39 @@
 <details class="sect s-basic" open="" data-lpane="basic">
 <summary>基本設定</summary>
 <div class="content">
+<div class="lbl">自分の基本設定</div>
 <div class="row">
-<div class="field"><div class="lbl">現在年齢</div><div class="inp-box"><input id="curAge" type="number"/></div></div>
-<div class="field"><div class="lbl">最終年齢</div><div class="inp-box"><input id="endAge" type="number"/></div></div>
+  <div class="field"><div class="lbl">生年月日</div><div class="inp-box"><input id="selfBirth" type="date"/></div></div>
+  <div class="field"><div class="lbl">年齢(自動)</div><div class="inp-box"><input id="curAge" type="number" disabled/></div></div>
 </div>
+<div class="muted" style="margin-top:6px;font-size:12px;">生年月日が入っている場合、現在年齢は自動計算で固定</div>
+<div class="divider"></div>
+<div class="lbl">家族情報</div>
+<div class="row">
+  <div class="field"><div class="lbl">配偶者 生年月日</div><div class="inp-box"><input id="spouseBirth" type="date"/></div></div>
+  <div class="field"><div class="lbl">配偶者 年齢(自動)</div><div class="inp-box"><input id="spouseAge" type="number" disabled/></div></div>
+</div>
+<div class="row" style="margin-top:6px;">
+  <div class="field" style="flex:1;"><div class="lbl">配偶者 就労</div><div class="inp-box"><select id="spouseWork">
+    <option value="work">勤労</option>
+    <option value="house">専業主婦/主夫</option>
+    <option value="part">パート</option>
+    <option value="other">その他</option>
+  </select></div></div>
+</div>
+<div class="row" style="margin-top:6px;">
+  <div class="field" style="flex:1;"><div class="lbl">子供（生年月日）</div><div id="familyKids" style="margin-top:6px;"></div></div>
+</div>
+<div style="display:flex; gap:8px; margin-top:8px;">
+  <button class="btn" type="button" id="btnAddKidFamily">＋ 子供を追加</button>
+</div>
+<div class="divider"></div>
+
+<div class="row">
+  <div class="field"><div class="lbl">最終年齢</div><div class="inp-box"><input id="endAge" type="number"/></div></div>
+</div>
+<div class="divider"></div>
+<div class="lbl">市況</div>
 <div class="row">
 <div class="field"><div class="lbl">インフレ率(年)</div><div class="inp-box"><input id="infl" step="0.1" type="number"/><span class="unit">%</span></div></div>
 <div class="field"><div class="lbl">税率(概算)</div><div class="inp-box"><input id="taxRate" type="number"/><span class="unit">%</span></div></div>
@@ -324,7 +377,12 @@
 <option value="auto-tiered">自動（60歳未満:投信→株→仮想 / 60-64:確定拠出年金→株→投信→仮想 / 65+:投信→株→確定拠出年金→仮想）</option>
 <option value="fund-stock-crypto">手動：投信 → 株 → 仮想通貨</option>
 <option value="stock-fund-crypto">手動：株 → 投信 → 仮想通貨</option>
+<option value="custom">カスタム：自分で順位を決める</option>
 </select>
+<div id="drawCustomWrap" style="display:none; margin-top:8px;">
+  <div class="muted" style="font-size:12px; margin-bottom:6px;">上から優先（年齢<60では確定拠出年金は自動的に除外）</div>
+  <div id="drawCustomList" style="display:flex; flex-direction:column; gap:6px;"></div>
+</div>
 <div id="drawOrderHint" class="muted" style="margin-top:6px;font-size:12px;line-height:1.35;"></div>
 
 </div>
@@ -335,6 +393,16 @@
 <div class="content">
 <div class="lbl">本業・勤務先リスト</div>
 <div id="listJobs"></div>
+<div id="boxSpouseIncome" style="margin-top:10px; padding:10px; background: rgba(34, 197, 94, .06); border:1px solid rgba(34, 197, 94, .12); border-radius:6px; display:none;">
+  <div class="lbl">配偶者の収入（配偶者 就労=勤労のとき）</div>
+  <div class="row">
+    <div class="field"><div class="lbl">年収</div><div class="inp-box"><input data-fmt="int" id="spouseIncY" type="text"/><span class="unit">円</span></div></div>
+    <div class="field"><div class="lbl">開始年齢</div><div class="inp-box"><input id="spouseIncStart" type="number"/></div></div>
+    <div class="field"><div class="lbl">終了年齢</div><div class="inp-box"><input id="spouseIncEnd" type="number"/></div></div>
+  </div>
+  <div class="muted" style="margin-top:6px;font-size:12px;line-height:1.35;">配偶者の年齢を基準に判定します（本人の年齢とはズレる場合があります）</div>
+</div>
+
 <button class="btn sm" onclick="app.addJob()">+ 勤務先を追加</button>
 <div class="divider"></div>
 <div class="lbl">副業リスト</div>
@@ -358,34 +426,79 @@
 <details class="sect s-asset" data-lpane="asset">
 <summary>金融資産</summary>
 <div class="content">
-<div class="row"><div class="field"><div class="lbl">現金</div><div class="inp-box"><input data-fmt="int" id="cashBal" type="text"/><span class="unit">円</span></div></div><div class="field"><div class="lbl">現金金利(年)</div><div class="inp-box"><input id="cashRate" step="0.1" type="number"/><span class="unit">%</span></div></div></div>
-<div class="divider"></div>
-<div class="row">
-<div class="field"><div class="lbl">投信 残高</div><div class="inp-box"><input data-fmt="int" id="fundBal" type="text"/><span class="unit">円</span></div></div>
-<div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="fundR" step="0.1" type="number"/><span class="unit">%</span></div></div>
-</div>
-<div class="row"><div class="field"><div class="lbl">投信積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveFundM" type="text"/><span class="unit">円</span></div></div></div>
-<div class="divider"></div>
-<div class="row">
-<div class="field"><div class="lbl">株 残高</div><div class="inp-box"><input data-fmt="int" id="stockBal" type="text"/><span class="unit">円</span></div></div>
-<div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="stockR" step="0.1" type="number"/><span class="unit">%</span></div></div>
-</div>
-<div class="row"><div class="field"><div class="lbl">株積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveStockM" type="text"/><span class="unit">円</span></div></div></div>
-<div class="divider"></div>
-<div class="row">
-<div class="field"><div class="lbl">確定拠出年金 残高</div><div class="inp-box"><input data-fmt="int" id="dcBal" type="text"/><span class="unit">円</span></div></div>
-<div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="dcR" step="0.1" type="number"/><span class="unit">%</span></div></div>
-</div>
-<div class="row"><div class="field"><div class="lbl">拠出(月)</div><div class="inp-box"><input data-fmt="int" id="saveDcM" type="text"/><span class="unit">円</span></div></div></div>
-<div class="divider"></div>
-<div class="row"><div class="field"><div class="lbl">仮想通貨 残高</div><div class="inp-box"><input data-fmt="int" id="cryptoBal" type="text"/><span class="unit">円</span></div></div><div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="cryptoR" step="0.1" type="number"/><span class="unit">%</span></div></div></div><div class="row"><div class="field"><div class="lbl">仮想積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveCryptoM" type="text"/><span class="unit">円</span></div></div></div><div class="divider"></div><div class="field"><div class="lbl">積立終了年齢</div><div class="inp-box"><input id="saveEndAge" type="number"/></div></div>
+
+  <div class="asset-group">
+    <div class="asset-group-title">現金</div>
+    <div class="row">
+      <div class="field"><div class="lbl">残高</div><div class="inp-box"><input data-fmt="int" id="cashBal" type="text"/><span class="unit">円</span></div></div>
+      <div class="field"><div class="lbl">利息(年)</div><div class="inp-box"><input id="cashRate" step="0.1" type="number"/><span class="unit">%</span></div></div>
+    </div>
+  </div>
+
+  <div class="asset-group">
+    <div class="asset-group-title">投資信託</div>
+    <div class="row">
+      <div class="field"><div class="lbl">投信 残高</div><div class="inp-box"><input data-fmt="int" id="fundBal" type="text"/><span class="unit">円</span></div></div>
+      <div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="fundR" step="0.1" type="number"/><span class="unit">%</span></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><div class="lbl">投信積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveFundM" type="text"/><span class="unit">円</span></div></div>
+    </div>
+    <div class="row" style="margin-top:6px;">
+      <div class="field"><div class="lbl">投信 積立終了年齢</div><div class="inp-box"><input id="saveFundEndAge" type="number"/></div></div>
+    </div>
+  </div>
+
+  <div class="asset-group">
+    <div class="asset-group-title">株</div>
+    <div class="row">
+      <div class="field"><div class="lbl">株 残高</div><div class="inp-box"><input data-fmt="int" id="stockBal" type="text"/><span class="unit">円</span></div></div>
+      <div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="stockR" step="0.1" type="number"/><span class="unit">%</span></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><div class="lbl">株 積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveStockM" type="text"/><span class="unit">円</span></div></div>
+    </div>
+    <div class="row" style="margin-top:6px;">
+      <div class="field"><div class="lbl">株 積立終了年齢</div><div class="inp-box"><input id="saveStockEndAge" type="number"/></div></div>
+    </div>
+  </div>
+
+  <div class="asset-group">
+    <div class="asset-group-title">確定拠出年金</div>
+    <div class="row">
+      <div class="field"><div class="lbl">DC 残高</div><div class="inp-box"><input data-fmt="int" id="dcBal" type="text"/><span class="unit">円</span></div></div>
+      <div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="dcR" step="0.1" type="number"/><span class="unit">%</span></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><div class="lbl">DC 積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveDcM" type="text"/><span class="unit">円</span></div></div>
+    </div>
+    <div class="row" style="margin-top:6px;">
+      <div class="field"><div class="lbl">DC 積立終了年齢</div><div class="inp-box"><input id="saveDcEndAge" type="number"/></div></div>
+    </div>
+  </div>
+
+  <div class="asset-group">
+    <div class="asset-group-title">仮想通貨</div>
+    <div class="row">
+      <div class="field"><div class="lbl">仮想 残高</div><div class="inp-box"><input data-fmt="int" id="cryptoBal" type="text"/><span class="unit">円</span></div></div>
+      <div class="field"><div class="lbl">リターン(年)</div><div class="inp-box"><input id="cryptoR" step="0.1" type="number"/><span class="unit">%</span></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><div class="lbl">仮想 積立(月)</div><div class="inp-box"><input data-fmt="int" id="saveCryptoM" type="text"/><span class="unit">円</span></div></div>
+    </div>
+    <div class="row" style="margin-top:6px;">
+      <div class="field"><div class="lbl">仮想 積立終了年齢</div><div class="inp-box"><input id="saveCryptoEndAge" type="number"/></div></div>
+    </div>
+  </div>
+
+  <!-- legacy: saveEndAge removed from UI -->
 </div>
 </details>
 <details class="sect s-exp" open="" data-lpane="exp">
-<summary>基本支出 (住宅・教育以外)</summary>
+<summary>基本支出（住宅・教育・保険以外）</summary>
 <div class="content">
 <div class="row">
-<div class="field"><div class="lbl">基本生活費(月)</div><div class="inp-box"><input data-fmt="int" id="livingM" type="text"/><span class="unit">円</span></div></div>
+<div class="field"><div class="lbl">基本支出(月)</div><div class="inp-box"><input data-fmt="int" id="livingM" type="text"/><span class="unit">円</span></div></div>
 <div class="field"><div class="lbl">特別費(年)</div><div class="inp-box"><input data-fmt="int" id="specialY" type="text"/><span class="unit">円</span></div></div>
 </div>
 </div>
@@ -426,8 +539,9 @@
 <div class="field"><div class="lbl">金利</div><div class="inp-box"><input id="hlRate" step="0.1" type="number"><span class="unit">%</span></input></div></div>
 </div>
 <div class="row">
-<div class="field"><div class="lbl">残期間</div><div class="inp-box"><input id="hlTerm" type="number"/></div></div>
-<div class="field"><div class="lbl">開始年齢</div><div class="inp-box"><input id="hlStart" type="number"/></div></div>
+<div class="field"><div class="lbl">ローン期間</div><div class="inp-box"><input id="hlTerm" type="number"/></div></div>
+<div class="field"><div class="lbl">開始年齢</div><div class="inp-box"><input id="hlStart" type="number" placeholder="例:35"/></div></div>
+<div class="muted" style="margin-top:6px;font-size:12px;line-height:1.35;">開始年齢は「本人の年齢」で入力（例:35）</div>
 </div>
 <div class="lbl">月返済目安: <span id="dispHlPay" style="font-weight:bold; color:var(--c-home)">-</span></div>
 </div>
@@ -636,16 +750,17 @@ window.app = (function() {
 
   // --- Default Data ---
   const DEF = {
-    curAge:35, endAge:95, infl:1.0, taxRate:20, cashFloor:2000000, allowNegCash:false, drawOrder:"auto-tiered",
+    baseDate:"", selfBirth:"", spouseBirth:"", spouseWork:"work",
+    spouseIncY:0, spouseIncStart:30, spouseIncEnd:60, curAge:35, endAge:95, infl:1.0, taxRate:20, cashFloor:2000000, allowNegCash:false, drawOrder:"auto-tiered", drawCustomOrder:['f','s','dc','k'],
     jukuM:{pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000},
     cashBal:5000000, cashRate:0.01, fundBal:3000000, fundR:4.0, saveFundM:50000,
-    stockBal:1000000, stockR:5.0, saveStockM:0, cryptoBal:0, cryptoR:0, saveCryptoM:0, dcBal:0, dcR:4.0, saveDcM:0, saveEndAge:60,
+    stockBal:1000000, stockR:5.0, saveStockM:0, cryptoBal:0, cryptoR:0, saveCryptoM:0, dcBal:0, dcR:4.0, saveDcM:0, saveFundEndAge:60, saveStockEndAge:60, saveDcEndAge:60, saveCryptoEndAge:60, saveEndAge:60,
     jobs: [ {name:"現職", start:30, end:60, inc:6000000, sev:10000000, sevAge:60} ],
     sideJobs: [ {name:"副業", start:35, end:50, inc:500000} ],
     penStartA:65, penAmtA:150000, useSpousePen:true, penStartB:65, penAmtB:60000,
     livingM:200000, specialY:500000,
     rentM:100000, homeTaxY:0, useHomeLoan:true, hlBal:30000000, hlRate:0.7, hlTerm:30, hlStart:35,
-    kids: [ {name:"子1", offset:2, s:{k:'pub',e:'pub',j:'pub',h:'pub',u:'pub'}, opt:{ronin:false,grad:false,dormU:true,dormG:false,send:100000}} ],
+    kids:[],
     res: [ {name:"物件1", rent:80000, cost:150000, bal:15000000, rate:2.0, term:20, start:35} ],
     ins: []
   };
@@ -716,14 +831,15 @@ window.app = (function() {
       for(let key in ST){ s += `<div style="text-align:center; font-size:10px; border:1px solid #ddd; padding:2px; background:#fff;"><div>${ST[key]}</div><select style="font-size:10px; padding:0" onchange="app.act('setKidStage',${i},'${key}',this.value)"><option value="pub" ${k.s[key]=='pub'?'selected':''}>公</option><option value="pri" ${k.s[key]=='pri'?'selected':''}>私</option></select></div>`; }
       s += `</div><div style="display:flex; flex-wrap:wrap; gap:8px; border-top:1px dashed #ddd; padding-top:6px;">
         <label class="pill-check"><input type="checkbox" ${k.opt.ronin?'checked':''} onchange="app.act('setKidOpt',${i},'ronin',this.checked)">浪人</label>
-        <label class="pill-check"><input type="checkbox" ${k.opt.grad?'checked':''} onchange="app.act('setKidOpt',${i},'grad',this.checked)">大学院</label>
-        <label class="pill-check"><input type="checkbox" ${k.opt.dormU?'checked':''} onchange="app.act('setKidOpt',${i},'dormU',this.checked)">大学下宿</label>
-        <label class="pill-check"><input type="checkbox" ${k.opt.dormG?'checked':''} onchange="app.act('setKidOpt',${i},'dormG',this.checked)">院下宿</label></div>`;
+        <label class="pill-check"><input type="checkbox" ${k.opt.grad?'checked':''} onchange="app.act('setKidOpt',${i},'grad',this.checked)">院</label>
+        <label class="pill-check"><input type="checkbox" ${k.opt.dormU?'checked':''} onchange="app.act('setKidOpt',${i},'dormU',this.checked)">下宿(大)</label>
+        <label class="pill-check"><input type="checkbox" ${k.opt.dormG?'checked':''} onchange="app.act('setKidOpt',${i},'dormG',this.checked)">下宿(院)</label></div>`;
       el.innerHTML = `<div class="item-head"><span>${k.name}</span> <span style="cursor:pointer;color:red" onclick="app.act('delKid',${i})">×</span></div>
-        <div class="row"><div class="field"><div class="lbl">親との年齢差</div><input type="number" value="${k.offset}" onchange="app.act('setKid',${i},'offset',this.value)"></div></div>${s}
+        <div class="row"><div class="field"><div class="lbl">生年月日</div><input type="date" value="${k.birth||''}" onchange="app.act('setKid',${i},'birth',this.value)"></div></div><div class="field"><div class="lbl">現在年齢</div><div class="inp-box"><input type="number" value="${kidAge(k)}" disabled></div></div></div>${s}
         <div class="row" style="margin-top:6px;"><div class="field"><div class="lbl">仕送り(月)</div><input type="text" data-fmt="int" value="${fmt(k.opt.send)}" onchange="app.act('setKidOpt',${i},'send',this.value)"></div></div>`;
       kBox.appendChild(el);
     });
+        renderFamilyKids();
     // RE
     const rBox = $('listRE'); rBox.innerHTML='';
     d.res.forEach((r,i)=>{
@@ -733,8 +849,8 @@ window.app = (function() {
         <div class="field"><div class="lbl">経費(年)</div><input type="text" data-fmt="int" value="${fmt(r.cost)}" onchange="app.act('setRE',${i},'cost',this.value)"></div></div>
         <div class="row"><div class="field"><div class="lbl">ローン残</div><input type="text" data-fmt="int" value="${fmt(r.bal)}" onchange="app.act('setRE',${i},'bal',this.value)"></div>
         <div class="field"><div class="lbl">金利%</div><input type="number" step="0.1" value="${r.rate}" onchange="app.act('setRE',${i},'rate',this.value)"></div></div>
-        <div class="row"><div class="field"><div class="lbl">期間</div><input type="number" value="${r.term}" onchange="app.act('setRE',${i},'term',this.value)"></div>
-        <div class="field"><div class="lbl">開始</div><input type="number" value="${r.start}" onchange="app.act('setRE',${i},'start',this.value)"></div></div>`;
+        <div class="row"><div class="field"><div class="lbl">ローン期間</div><input type="number" value="${r.term}" onchange="app.act('setRE',${i},'term',this.value)"></div>
+        <div class="field"><div class="lbl">開始年齢</div><input type="number" placeholder="例:35" value="${r.start}" onchange="app.act('setRE',${i},'start',this.value)"></div></div>`;
       rBox.appendChild(el);
     });
 
@@ -795,8 +911,13 @@ window.app = (function() {
 
   // --- IO ---
   function bindInputs(){
-    const map = ['curAge','endAge','infl','taxRate','cashFloor','cashBal','cashRate','fundBal','fundR','saveFundM','stockBal','stockR','saveStockM','cryptoBal','cryptoR','saveCryptoM','dcBal','dcR','saveDcM','saveEndAge','penStartA','penAmtA','penStartB','penAmtB','livingM','specialY','rentM','homeTaxY','hlBal','hlRate','hlTerm','hlStart'];
+    const map = ['baseDate','selfBirth','spouseBirth','spouseWork','spouseIncY','spouseIncStart','spouseIncEnd','curAge','endAge','infl','taxRate','cashFloor','cashBal','cashRate','fundBal','fundR','saveFundM','stockBal','stockR','saveStockM','cryptoBal','cryptoR','saveCryptoM','dcBal','dcR','saveDcM','saveFundEndAge','saveStockEndAge','saveDcEndAge','saveCryptoEndAge','penStartA','penAmtA','penStartB','penAmtB','livingM','specialY','rentM','homeTaxY','hlBal','hlRate','hlTerm','hlStart'];
     map.forEach(k=>{ if($(k)) $(k).value = ($(k).dataset.fmt=='int' ? fmt(d[k]) : d[k]); });
+    // baseDate is always today (no UI)
+    d.baseDate = ymdToday();
+    // show start year if available
+    if($('hlStart')) $('hlStart').value = (d.hlStartY ? d.hlStartY : d.hlStart);
+
     if($('cashRate')) $('cashRate').value = (d.cashRate*100);
 
     if($('allowNegCash')) $('allowNegCash').checked = d.allowNegCash;
@@ -817,6 +938,13 @@ window.app = (function() {
   }
 
   function readInputs(){
+    d.baseDate = ymdToday();
+    if($('selfBirth')) d.selfBirth=$('selfBirth').value;
+    if($('spouseBirth')) d.spouseBirth=$('spouseBirth').value;
+    if($('spouseWork')) d.spouseWork=$('spouseWork').value;
+    if($('spouseIncY')) d.spouseIncY=toInt($('spouseIncY').value);
+    if($('spouseIncStart')) d.spouseIncStart=toInt($('spouseIncStart').value);
+    if($('spouseIncEnd')) d.spouseIncEnd=toInt($('spouseIncEnd').value);
     d.curAge=toInt($('curAge').value); d.endAge=toInt($('endAge').value);
     d.infl=toFloat($('infl').value); d.taxRate=toFloat($('taxRate').value); d.cashFloor=toInt($('cashFloor').value);
     d.allowNegCash=$('allowNegCash').checked; d.drawOrder=$('drawOrder').value;
@@ -825,12 +953,15 @@ window.app = (function() {
     d.stockBal=toInt($('stockBal').value); d.stockR=toFloat($('stockR').value); d.saveStockM=toInt($('saveStockM').value);
     d.cryptoBal=toInt($('cryptoBal').value); d.cryptoR=toFloat($('cryptoR').value); d.saveCryptoM=toInt($('saveCryptoM').value);
     d.dcBal=toInt($('dcBal').value); d.dcR=toFloat($('dcR').value); d.saveDcM=toInt($('saveDcM').value);
-    d.saveEndAge=toInt($('saveEndAge').value);
+    d.saveFundEndAge=toInt($('saveFundEndAge')?.value);
+    d.saveStockEndAge=toInt($('saveStockEndAge')?.value);
+    d.saveDcEndAge=toInt($('saveDcEndAge')?.value);
+    d.saveCryptoEndAge=toInt($('saveCryptoEndAge')?.value);
     d.penStartA=toInt($('penStartA').value); d.penAmtA=toInt($('penAmtA').value);
     d.useSpousePen=$('useSpousePen').checked; d.penStartB=toInt($('penStartB').value); d.penAmtB=toInt($('penAmtB').value);
     d.livingM=toInt($('livingM').value); d.specialY=toInt($('specialY').value);
     d.rentM=toInt($('rentM').value); d.homeTaxY=toInt($('homeTaxY').value);
-    d.useHomeLoan=$('useHomeLoan').checked; d.hlBal=toInt($('hlBal').value); d.hlRate=toFloat($('hlRate').value); d.hlTerm=toInt($('hlTerm').value); d.hlStart=toInt($('hlStart').value);
+    d.useHomeLoan=$('useHomeLoan').checked; d.hlBal=toInt($('hlBal').value); d.hlRate=toFloat($('hlRate').value); d.hlTerm=toInt($('hlTerm').value); d.hlStartY=toInt($('hlStart').value); d.hlStart=yearToStartAge(d.hlStartY);
     // Juku model (input)
     d.jukuM = d.jukuM || {pre:15000,e13:35000,e46:50000,jh:70000,hs:80000,ronin:120000};
     d.jukuM.pre   = toInt($('jukuPre').value);
@@ -845,8 +976,124 @@ window.app = (function() {
 
   function updateVis(){
     $('boxSpousePen').style.display = d.useSpousePen?'block':'none';
+    if($('boxSpouseIncome')) $('boxSpouseIncome').style.display = (d.spouseWork==='work') ? 'block' : 'none';
     $('boxHomeLoan').style.display = d.useHomeLoan?'block':'none';
   }
+
+
+  // --- Date/Age helpers ---
+  function ymdToday(){
+    const t = new Date();
+    const z = (n)=>String(n).padStart(2,'0');
+    return `${t.getFullYear()}-${z(t.getMonth()+1)}-${z(t.getDate())}`;
+  }
+  function parseYMD(s){
+    if(!s) return null;
+    const d0 = new Date(s);
+    if(isNaN(d0.getTime())) return null;
+    return d0;
+  }
+  function ageOn(birthStr, refStr){
+    const b = parseYMD(birthStr);
+    const r = parseYMD(refStr) || new Date();
+    if(!b) return null;
+    let a = r.getFullYear() - b.getFullYear();
+    const m = r.getMonth() - b.getMonth();
+    if(m < 0 || (m===0 && r.getDate() < b.getDate())) a--;
+    return a;
+  }
+  function birthYearGuess(){
+    // Prefer selfBirth; fallback to baseDate year - curAge
+    const by = parseYMD(d.selfBirth)?.getFullYear();
+    if(by) return by;
+    const y = (parseYMD(d.baseDate) || new Date()).getFullYear();
+    return y - toInt(d.curAge||0);
+  }
+  function yearToStartAge(val){
+    const v = toInt(val);
+    if(v >= 150){ // treat as year
+      const by = birthYearGuess();
+      return Math.max(0, v - by);
+    }
+    return v;
+  }
+
+  function kidAge(k){
+    const ref = d.baseDate || ymdToday();
+    const a = ageOn(k?.birth, ref);
+    if(a !== null) return a;
+    // fallback: old offset model
+    const off = toInt(k?.offset||0);
+    return Math.max(0, toInt(d.curAge||0) - off);
+  }
+  function kidOffset(k){
+    const ref = d.baseDate || ymdToday();
+    const sa = ageOn(d.selfBirth, ref);
+    const ka = ageOn(k?.birth, ref);
+    if(sa !== null && ka !== null) return Math.max(0, sa - ka);
+    if(ka !== null) return Math.max(0, toInt(d.curAge||0) - ka);
+    return toInt(k?.offset||0);
+  }
+
+  function syncAgeFromBirth(){
+    d.baseDate = ymdToday();
+    const a = ageOn(d.selfBirth, d.baseDate);
+    if(a !== null){
+      d.curAge = a;
+      if($('curAge')){
+        $('curAge').value = a;
+        $('curAge').disabled = true;
+        $('curAge').style.background = '#f8fafc';
+      }
+    } else {
+      if($('curAge')) $('curAge').disabled = false;
+    }
+  }
+
+
+  function syncSpouseAgeFromBirth(){
+    d.baseDate = ymdToday();
+    const a = ageOn(d.spouseBirth, d.baseDate);
+    if($('spouseAge')){
+      if(a !== null){
+        $('spouseAge').value = a;
+        $('spouseAge').disabled = true;
+        $('spouseAge').style.background = '#f8fafc';
+      } else {
+        $('spouseAge').value = '';
+        $('spouseAge').disabled = true;
+        $('spouseAge').style.background = '#f8fafc';
+      }
+    }
+    d._spouseAge = a;
+  }
+
+  function renderFamilyKids(){
+    const box = $('familyKids');
+    if(!box) return;
+    box.innerHTML = '';
+    if(!Array.isArray(d.kids) || d.kids.length===0){
+      box.innerHTML = '<div class="muted">未設定</div>';
+      return;
+    }
+    d.kids.forEach((k,i)=>{
+      const row = ce('div');
+      row.style.display='grid';
+      row.style.gridTemplateColumns='1.1fr 1.4fr .7fr .6fr';
+      row.style.gap='6px';
+      row.style.alignItems='center';
+      row.style.marginBottom='6px';
+      row.innerHTML = `
+        <div class="inp-box"><input type="text" value="${(k.name||'')}" placeholder="名前" onchange="app.act('setKid',${i},'name',this.value)"></div>
+        <div class="inp-box"><input type="date" value="${k.birth||''}" onchange="app.act('setKid',${i},'birth',this.value)"></div>
+        <div class="inp-box"><input type="number" value="${kidAge(k)??''}" disabled style="background:#f8fafc;" placeholder="年齢"></div>
+        <button class="btn" type="button" style="padding:6px 8px;border:1px solid #fecaca;background:#fff5f5;color:#b91c1c;" onclick="app.act('delKid',${i})">削除</button>
+`;
+      box.appendChild(row);
+    });
+  }
+
+
 
 
   // --- Drawdown order helpers ---
@@ -859,6 +1106,18 @@ window.app = (function() {
       if(age < 65) return ['dc','s','f','k'];         // 60-64
       return ['f','s','dc','k'];                      // 65+
     }
+
+    if(v === "custom"){
+      const raw = Array.isArray(d.drawCustomOrder) ? d.drawCustomOrder.slice() : ['f','s','dc','k'];
+      const m = {fund:'f',stock:'s',crypto:'k',dc:'dc',f:'f',s:'s',k:'k'};
+      const ord0 = raw.map(x=>m[x]||x).filter(x=>['f','s','k','dc'].includes(x));
+      const ord = [];
+      ord0.forEach(x=>{ if(!ord.includes(x)) ord.push(x); });
+      ['f','s','dc','k'].forEach(x=>{ if(!ord.includes(x)) ord.push(x); });
+      if(age < 60) return ord.filter(x=>x!=='dc');
+      return ord;
+    }
+
     if(v === "fund-stock-crypto") return ['f','s','k'];
     if(v === "stock-fund-crypto") return ['s','f','k'];
     // fallback
@@ -869,18 +1128,57 @@ window.app = (function() {
     return ord.map(x => DRAW_LABEL[x] || x).join(" → ");
   }
 
+
+  function renderDrawCustomList(){
+    const wrap = $('drawCustomWrap');
+    const list = $('drawCustomList');
+    if(!wrap || !list) return;
+    wrap.style.display = (d.drawOrder === 'custom') ? 'block' : 'none';
+    if(d.drawOrder !== 'custom') return;
+    if(!Array.isArray(d.drawCustomOrder)) d.drawCustomOrder = ['f','s','dc','k'];
+    // normalize
+    const base = ['f','s','dc','k'];
+    const ord0 = d.drawCustomOrder.filter(x=>base.includes(x));
+    const ord = [];
+    ord0.forEach(x=>{ if(!ord.includes(x)) ord.push(x); });
+    base.forEach(x=>{ if(!ord.includes(x)) ord.push(x); });
+    d.drawCustomOrder = ord;
+
+    list.innerHTML = '';
+    ord.forEach((code, i)=>{
+      const row = ce('div');
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = '1fr auto auto';
+      row.style.alignItems = 'center';
+      row.style.gap = '6px';
+      row.style.padding = '6px 8px';
+      row.style.border = '1px solid var(--line)';
+      row.style.borderRadius = '12px';
+      row.style.background = '#fff';
+      row.innerHTML = `
+        <div style="font-size:13px;">${DRAW_LABEL[code] || code}</div>
+        <button class="btn" type="button" style="padding:6px 8px;" onclick="app.act('moveDraw',${i},-1)">↑</button>
+        <button class="btn" type="button" style="padding:6px 8px;" onclick="app.act('moveDraw',${i},1)">↓</button>
+      `;
+      list.appendChild(row);
+    });
+  }
+
   function updateDrawOrderHint(){
     const el = $('drawOrderHint');
     if(!el) return;
     const age = d.curAge;
     const ord = resolveDrawOrder(age);
     el.textContent = "現在の売却順序（年齢 " + age + "）: " + orderToText(ord);
+    renderDrawCustomList();
   }
   // --- Calc ---
   function pmt(r,n,p){ if(r===0)return p/n; return (p*r)/(1-Math.pow(1+r,-n)); }
 
   function calc(){
     readInputs();
+    syncAgeFromBirth();
+    syncSpouseAgeFromBirth();
     updateDrawOrderHint(); // THIS WAS MISSING IN v11 causing crash
     if(d.useHomeLoan && d.hlBal>0) $('dispHlPay').innerText=fmt(pmt((d.hlRate/100)/12,d.hlTerm*12,d.hlBal))+"円"; else $('dispHlPay').innerText="-";
 
@@ -894,15 +1192,24 @@ window.app = (function() {
       const infl = Math.pow(1+d.infl/100, age-d.curAge);
       let job=0; d.jobs.forEach(j=>{ if(age>=j.start && age<j.end) job+=j.inc; if(age==j.sevAge) job+=j.sev; });
       let side=0; d.sideJobs.forEach(j=>{ if(age>=j.start && age<j.end) side+=j.inc; });
+      let spouseJob=0;
+      if(d.spouseWork==='work'){
+        const sCur = (d._spouseAge!==undefined ? d._spouseAge : ageOn(d.spouseBirth, d.baseDate));
+        if(sCur !== null){
+          const sAge = sCur + (age - d.curAge);
+          if(sAge >= d.spouseIncStart && sAge < d.spouseIncEnd) spouseJob += d.spouseIncY;
+        }
+      }
       let pen=0; if(age>=d.penStartA) pen+=d.penAmtA*12; if(d.useSpousePen && age>=d.penStartB) pen+=d.penAmtB*12;
-      let gross = job+side+pen;
+      let gross = job+side+spouseJob+pen;
       let tax = gross*(d.taxRate/100);
       let net = gross-tax;
 
       let reInc=0, reD=[], reRentTot=0, reCostTot=0, rePayTot=0, reTaxTot=0;
       rSims.forEach(r=>{
         let rent=r.rent*12*infl, cost=r.cost*infl, pay=0, intr=0;
-        if(r.bal>0 && age>=r.start){ intr=r.bal*(r.rate/100); let p=r.payY; if(r.bal<p)p=r.bal+intr; pay=p; r.bal=Math.max(0,r.bal-(p-intr)); }
+        const rStartA = yearToStartAge(r.start);
+        if(r.bal>0 && age>=rStartA){ intr=r.bal*(r.rate/100); let p=r.payY; if(r.bal<p)p=r.bal+intr; pay=p; r.bal=Math.max(0,r.bal-(p-intr)); }
         let profit=Math.max(0,rent-cost-intr), taxR=profit*(d.taxRate/100);
         
         reRentTot+=rent; reCostTot+=cost; rePayTot+=pay; reTaxTot+=taxR;
@@ -971,7 +1278,10 @@ let flow=rent-cost-pay-taxR; reInc+=flow; reD.push({bal:r.bal,flow,rent});
       if(d.useHomeLoan && hlBal>0 && age>=d.hlStart){ let i=hlBal*(d.hlRate/100); let p=hlPayY; if(hlBal<p)p=hlBal+i; homePay=p; home+=p; hlBal=Math.max(0,hlBal-(p-i)); }
       let ins = calcInsuranceY(age, infl);
 
-      let can=(age<d.saveEndAge), tF=can?d.saveFundM*12:0, tS=can?d.saveStockM*12:0, tK=can?d.saveCryptoM*12:0, tD=can?d.saveDcM*12:0;
+      let tF=(age<d.saveFundEndAge)?d.saveFundM*12:0;
+      let tS=(age<d.saveStockEndAge)?d.saveStockM*12:0;
+      let tK=(age<d.saveCryptoEndAge)?d.saveCryptoM*12:0;
+      let tD=(age<d.saveDcEndAge)?d.saveDcM*12:0;
       let cf = net+reInc-(basic+home+edu+ins)-(tF+tS+tK+tD);
       ass.c += cf; if(ass.c>0) ass.c*=(1+d.cashRate);
       ass.f=(ass.f+tF)*(1+d.fundR/100); ass.s=(ass.s+tS)*(1+d.stockR/100); ass.k=(ass.k+tK)*(1+d.cryptoR/100); ass.dc=(ass.dc+tD)*(1+d.dcR/100);
@@ -981,7 +1291,7 @@ let flow=rent-cost-pay-taxR; reInc+=flow; reD.push({bal:r.bal,flow,rent});
       if(!d.allowNegCash && ass.c<d.cashFloor){
         let def = d.cashFloor - ass.c;
         let ord = resolveDrawOrder(age);
-        ord.forEach(t=>{
+        ord.forEach(t=>{ if(t==='dc' && age<60) return;
           if(def>0 && ass[t]>0){
             let s = Math.min(def, ass[t]);
             ass[t]-=s; ass.c+=s; def-=s; draw+=s;
@@ -990,7 +1300,7 @@ let flow=rent-cost-pay-taxR; reInc+=flow; reD.push({bal:r.bal,flow,rent});
       }
 
       let nw = ass.c+ass.f+ass.s+ass.k+ass.dc - hlBal - rSims.reduce((a,r)=>a+r.bal,0);
-      rows.push({age,nw,cf,draw,ass:{...ass},reInc,net,income:(net+reInc),exp:(basic+home+edu+ins),inv:(tF+tS+tK+tD),edu,eduT,eduJ,home,homeRent,homeTax,homePay,ins,basic,hlBal,reD,eduD,eduKD,taxWage:tax,basicL,special,reRentTot,reCostTot,rePayTot,reTaxTot,jobNet:(job+side)*(1-d.taxRate/100),penNet:pen*(1-d.taxRate/100)});
+      rows.push({age,nw,cf,draw,ass:{...ass},reInc,net,income:(net+reInc),exp:(basic+home+edu+ins),inv:(tF+tS+tK+tD),edu,eduT,eduJ,home,homeRent,homeTax,homePay,ins,basic,hlBal,reD,eduD,eduKD,taxWage:tax,basicL,special,reRentTot,reCostTot,rePayTot,reTaxTot,jobNet:(job+side+spouseJob)*(1-d.taxRate/100),penNet:pen*(1-d.taxRate/100)});
     }
     
     lastRows = rows;
@@ -1490,9 +1800,20 @@ t.appendChild(tr);
     else if(type==='delSideJob') d.sideJobs.splice(idx,1);
     else if(type==='setSideJob') d.sideJobs[idx][key] = (key=='name'?val:toInt(val));
     else if(type==='delKid') d.kids.splice(idx,1);
-    else if(type==='setKid') d.kids[idx][key] = toInt(val);
+    else if(type==='setKid') d.kids[idx][key] = (key==='name' || key==='birth') ? val : toInt(val);
     else if(type==='setKidStage') d.kids[idx].s[key] = val;
     else if(type==='setKidOpt') d.kids[idx].opt[key] = (key=='send'?toInt(val):val);
+    else if(type==='moveDraw'){
+      const dir = toInt(key);
+      if(!Array.isArray(d.drawCustomOrder)) d.drawCustomOrder = ['f','s','dc','k'];
+      const j = idx + dir;
+      if(j>=0 && j<d.drawCustomOrder.length){
+        const tmp = d.drawCustomOrder[idx];
+        d.drawCustomOrder[idx] = d.drawCustomOrder[j];
+        d.drawCustomOrder[j] = tmp;
+      }
+    }
+
     else if(type==='delRE') d.res.splice(idx,1);
     else if(type==='setRE') d.res[idx][key] = (key=='name'?val:(key=='rate'?toFloat(val):toInt(val)));
     else if(type==='delIns') d.ins.splice(idx,1);
@@ -1514,8 +1835,18 @@ t.appendChild(tr);
     ['fundR','stockR','cryptoR'].forEach(k=>{ if(typeof d[k]==='number' && d[k]>0 && d[k]<1) d[k] = d[k]*100; });
     if(typeof d.saveCryptoM!=='number') d.saveCryptoM = 0;
     // validate drawOrder
-    const __validDrawOrders = {"auto-tiered":1,"fund-stock-crypto":1,"stock-fund-crypto":1};
+    const __validDrawOrders = {"auto-tiered":1,"fund-stock-crypto":1,"stock-fund-crypto":1,"custom":1};
     if(!__validDrawOrders[d.drawOrder]) d.drawOrder = "auto-tiered";
+
+    if(!d.baseDate) d.baseDate = ymdToday();
+    if(!Array.isArray(d.drawCustomOrder)) d.drawCustomOrder = ['f','s','dc','k'];
+
+    // migrate legacy single saveEndAge -> per-asset end ages
+    if(typeof d.saveFundEndAge!=="number") d.saveFundEndAge = (typeof d.saveEndAge==="number"?d.saveEndAge:60);
+    if(typeof d.saveStockEndAge!=="number") d.saveStockEndAge = (typeof d.saveEndAge==="number"?d.saveEndAge:60);
+    if(typeof d.saveDcEndAge!=="number") d.saveDcEndAge = (typeof d.saveEndAge==="number"?d.saveEndAge:60);
+    if(typeof d.saveCryptoEndAge!=="number") d.saveCryptoEndAge = (typeof d.saveEndAge==="number"?d.saveEndAge:60);
+
 
     if(!Array.isArray(d.ins)) d.ins = [];
     d.ins.forEach(p=>{ if(p && p.enabled===undefined) p.enabled = true; });
@@ -1526,6 +1857,9 @@ t.appendChild(tr);
     document.querySelectorAll('input, select').forEach(el => {
         if(!el.onchange && el.id && !el.closest('.item')) el.onchange = calc;
     });
+    // Family kids button
+    if($('btnAddKidFamily')) $('btnAddKidFamily').onclick = ()=>{ app.addKid(); calc(); };
+
       // Tabs: robust binding (touch/click)
     const tabsWrap = document.querySelector('.tabs');
     if(tabsWrap){
@@ -1635,6 +1969,19 @@ const adj = $('btnAdjustChart');
     bindInputs();
     updateDrawOrderHint();
     renderItems();
+    // Keep sections always open (no collapsible state)
+    document.querySelectorAll('details.sect').forEach(dtl=>{
+      dtl.open = true;
+      const sum = dtl.querySelector('summary');
+      if(sum){
+        sum.addEventListener('click', (e)=>{ e.preventDefault(); dtl.open = true; });
+      }
+      dtl.addEventListener('toggle', ()=>{ if(!dtl.open) dtl.open = true; });
+    });
+
+    // Age sync from birth (if available)
+    syncAgeFromBirth();
+    syncSpouseAgeFromBirth();
     calc(); // Force initial calc
   }
 
@@ -1701,7 +2048,7 @@ const adj = $('btnAdjustChart');
     exportData, openImport,
     addJob: ()=>{ d.jobs.push({name:"新",start:30,end:60,inc:0,sev:0,sevAge:60}); renderItems(); calc(); },
     addSideJob: ()=>{ d.sideJobs.push({name:"副",start:30,end:40,inc:0}); renderItems(); calc(); },
-    addKid: ()=>{ d.kids.push({name:"子",offset:30,s:{k:'pub',e:'pub',j:'pub',h:'pub',u:'pub'},opt:{ronin:false,grad:false,dormU:false,dormG:false,send:100000}}); renderItems(); calc(); },
+    addKid: ()=>{ d.kids.push({name:"",birth:"",offset:0,s:{k:'pub',e:'pub',j:'pub',h:'pub',u:'pub'},opt:{jukuE:false,jukuJ:false,jukuH:false,ronin:false,dormU:false,dormG:false,send:0}}); renderItems(); calc(); },
     addRE: ()=>{ d.res.push({name:"物",rent:0,cost:0,bal:0,rate:1.0,term:10,start:30}); renderItems(); calc(); },
     addIns: ()=>{ if(!Array.isArray(d.ins)) d.ins=[]; d.ins.push({name:"保険", type:"生命（死亡・収入保障）", insured:"本人", premM:0, start:d.curAge, end:d.endAge, memo:"", enabled:true}); renderItems(); calc(); },
     reset: ()=>{ if(confirm("初期化しますか？")){ localStorage.removeItem('lp_v12'); location.reload(); } }
