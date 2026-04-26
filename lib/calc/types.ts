@@ -81,7 +81,7 @@ export type DrawOrderMode =
   | "fund-stock-crypto"
   | "stock-fund-crypto";
 
-export type DrawAsset = "f" | "s" | "k" | "dc";
+export type DrawAsset = "f" | "s" | "k" | "dc" | "g";
 
 export interface JukuMonthly {
   pre: number;
@@ -157,6 +157,10 @@ export interface PlanInput {
   cryptoR: number;
   saveCryptoM: number;
   saveCryptoEndAge: number;
+  goldBal: number;
+  goldR: number;
+  saveGoldM: number;
+  saveGoldEndAge: number;
   dcBal: number;
   dcR: number;
   saveDcM: number;
@@ -225,6 +229,7 @@ export interface AssetSnapshot {
   s: number;
   k: number;
   dc: number;
+  g: number;
 }
 
 export interface RealEstateRowDetail {

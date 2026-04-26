@@ -1,11 +1,12 @@
 import type { DrawAsset, DrawOrderMode } from "./types";
 
-const DRAW_ASSETS: DrawAsset[] = ["f", "s", "dc", "k"];
+const DRAW_ASSETS: DrawAsset[] = ["f", "s", "dc", "k", "g"];
 
 export const DRAW_LABEL: Record<DrawAsset | "c", string> = {
   f: "投信",
   s: "株",
   k: "仮想通貨",
+  g: "金・コモディティ",
   dc: "確定拠出年金",
   c: "現金",
 };
@@ -16,9 +17,9 @@ export function resolveDrawOrder(
   age: number,
 ): DrawAsset[] {
   if (mode === "auto-tiered") {
-    if (age < 60) return ["f", "s", "k"];
-    if (age < 65) return ["dc", "s", "f", "k"];
-    return ["f", "s", "dc", "k"];
+    if (age < 60) return ["f", "s", "k", "g"];
+    if (age < 65) return ["dc", "s", "f", "k", "g"];
+    return ["f", "s", "dc", "k", "g"];
   }
 
   if (mode === "custom") {
@@ -37,14 +38,14 @@ export function resolveDrawOrder(
     return ord;
   }
 
-  if (mode === "fund-stock-crypto") return ["f", "s", "k"];
-  if (mode === "stock-fund-crypto") return ["s", "f", "k"];
+  if (mode === "fund-stock-crypto") return ["f", "s", "k", "g"];
+  if (mode === "stock-fund-crypto") return ["s", "f", "k", "g"];
 
   return age < 60
-    ? ["f", "s", "k"]
+    ? ["f", "s", "k", "g"]
     : age < 65
-      ? ["dc", "s", "f", "k"]
-      : ["f", "s", "dc", "k"];
+      ? ["dc", "s", "f", "k", "g"]
+      : ["f", "s", "dc", "k", "g"];
 }
 
 export function orderToText(ord: DrawAsset[]): string {

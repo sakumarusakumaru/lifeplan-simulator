@@ -10,6 +10,7 @@ const DRAW_LABEL: Record<DrawAsset, string> = {
   f: "投信",
   s: "株",
   k: "仮想通貨",
+  g: "金・コモディティ",
   dc: "確定拠出年金",
 };
 

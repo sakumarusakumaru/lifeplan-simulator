@@ -1,0 +1,625 @@
+"use client";
+
+import { CheckboxField } from "@/components/inputs/CheckboxField";
+import { DateField } from "@/components/inputs/DateField";
+import { NumberField } from "@/components/inputs/NumberField";
+import { PercentField } from "@/components/inputs/PercentField";
+import { SelectField } from "@/components/inputs/SelectField";
+import { TextField } from "@/components/inputs/TextField";
+import { AddButton, ListItemCard } from "@/components/ListItemCard";
+import { Section } from "@/components/Section";
+import { kidAge, kidOffset } from "@/lib/calc/age";
+import type {
+  CareEvent,
+  InheritanceEvent,
+  Insurance,
+  InsuranceType,
+  Insured,
+  Kid,
+  LifeExpenseEvent,
+  OtherLoan,
+  SchoolType,
+} from "@/lib/calc/types";
+import { usePlanStore } from "@/store/plan-store";
+
+const SCHOOL_OPTIONS = [
+  { value: "pub" as SchoolType, label: "公立" },
+  { value: "pri" as SchoolType, label: "私立" },
+] as const;
+
+const TYPE_OPTIONS: { value: InsuranceType; label: string }[] = [
+  { value: "生命（死亡・収入保障）", label: "生命（死亡・収入保障）" },
+  { value: "医療", label: "医療" },
+  { value: "がん・三大疾病", label: "がん・三大疾病" },
+  { value: "就業不能", label: "就業不能" },
+  { value: "介護", label: "介護" },
+  { value: "火災・地震", label: "火災・地震" },
+  { value: "自動車", label: "自動車" },
+  { value: "個人賠償・その他損保", label: "個人賠償・その他損保" },
+  { value: "貯蓄型", label: "貯蓄型" },
+  { value: "その他", label: "その他" },
+];
+
+const INSURED_OPTIONS: { value: Insured; label: string }[] = [
+  { value: "本人", label: "本人" },
+  { value: "配偶者", label: "配偶者" },
+  { value: "子", label: "子" },
+  { value: "その他", label: "その他" },
+];
+
+const NEW_KID = (): Kid => ({
+  name: "新しい子",
+  birth: "",
+  offset: 0,
+  s: { k: "pub", e: "pub", j: "pub", h: "pub", u: "pub" },
+  opt: { ronin: false, grad: false, dormU: false, dormG: false, send: 0 },
+});
+
+const NEW_LOAN = (): OtherLoan => ({
+  label: "自動車ローン",
+  monthlyPay: 30_000,
+  remainMonths: 60,
+});
+
+const NEW_INCOME = (): InheritanceEvent => ({
+  age: 70,
+  amount: 10_000_000,
+  label: "親からの相続",
+});
+
+const NEW_EXPENSE = (): LifeExpenseEvent => ({
+  age: 50,
+  amount: 2_000_000,
+  label: "リフォーム",
+});
+
+const NEW_CARE = (): CareEvent => ({
+  startAge: 60,
+  durationYears: 5,
+  monthlyCost: 80_000,
+  label: "親A 介護",
+});
+
+function SubGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">— {title}</div>
+      {children}
+    </div>
+  );
+}
+
+export function ExpenseMegaSection() {
+  const plan = usePlanStore((s) => s.plan);
+  const setField = usePlanStore((s) => s.setField);
+
+  const updateLoan = (i: number, patch: Partial<OtherLoan>) =>
+    setField("otherLoans", plan.otherLoans.map((ln, idx) => (idx === i ? { ...ln, ...patch } : ln)));
+  const addLoan = () => setField("otherLoans", [...plan.otherLoans, NEW_LOAN()]);
+  const removeLoan = (i: number) => setField("otherLoans", plan.otherLoans.filter((_, idx) => idx !== i));
+
+  const updateKid = (i: number, patch: Partial<Kid>) => {
+    const kids = plan.kids.map((k, idx) => (idx === i ? { ...k, ...patch } : k));
+    if (patch.birth !== undefined) {
+      kids[i] = { ...kids[i], offset: kidOffset(plan.selfBirth, plan.baseDate, patch.birth) };
+    }
+    setField("kids", kids);
+  };
+  const addKid = () => setField("kids", [...plan.kids, NEW_KID()]);
+  const removeKid = (i: number) => setField("kids", plan.kids.filter((_, idx) => idx !== i));
+
+  const updateStage = (i: number, key: keyof Kid["s"], value: SchoolType) => {
+    const kid = plan.kids[i];
+    updateKid(i, { s: { ...kid.s, [key]: value } });
+  };
+  const updateOpt = <K extends keyof Kid["opt"]>(i: number, key: K, value: Kid["opt"][K]) => {
+    const kid = plan.kids[i];
+    updateKid(i, { opt: { ...kid.opt, [key]: value } });
+  };
+
+  const updateIns = (i: number, patch: Partial<Insurance>) =>
+    setField("ins", plan.ins.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+  const addIns = () =>
+    setField("ins", [
+      ...plan.ins,
+      {
+        name: "新しい保険",
+        type: "生命（死亡・収入保障）" as InsuranceType,
+        insured: "本人" as Insured,
+        premM: 0,
+        start: plan.curAge,
+        end: plan.endAge,
+        memo: "",
+        enabled: true,
+      },
+    ]);
+  const removeIns = (i: number) => setField("ins", plan.ins.filter((_, idx) => idx !== i));
+
+  const updateIncome = (i: number, patch: Partial<InheritanceEvent>) =>
+    setField("inheritances", plan.inheritances.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)));
+  const addIncome = () => setField("inheritances", [...plan.inheritances, NEW_INCOME()]);
+  const removeIncome = (i: number) =>
+    setField("inheritances", plan.inheritances.filter((_, idx) => idx !== i));
+
+  const updateExpense = (i: number, patch: Partial<LifeExpenseEvent>) =>
+    setField("lifeExpenses", plan.lifeExpenses.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)));
+  const addExpense = () => setField("lifeExpenses", [...plan.lifeExpenses, NEW_EXPENSE()]);
+  const removeExpense = (i: number) =>
+    setField("lifeExpenses", plan.lifeExpenses.filter((_, idx) => idx !== i));
+
+  const updateCare = (i: number, patch: Partial<CareEvent>) =>
+    setField("careEvents", plan.careEvents.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)));
+  const addCare = () => setField("careEvents", [...plan.careEvents, NEW_CARE()]);
+  const removeCare = (i: number) =>
+    setField("careEvents", plan.careEvents.filter((_, idx) => idx !== i));
+
+  return (
+    <Section
+      id="ch-expense"
+      no="04"
+      title="支出"
+      description="生活費・住居・教育・保険・ライフイベント・介護"
+      status={plan.livingM > 0 ? "entered" : "default"}
+    >
+      <div className="flex flex-col gap-6">
+        <SubGroup title="基本生活費">
+          <div className="grid grid-cols-1 gap-2">
+            <NumberField
+              label="基本支出(月)"
+              value={plan.livingM}
+              onChange={(v) => setField("livingM", v)}
+              unit="円"
+            />
+            <NumberField
+              label="特別費(年)"
+              value={plan.specialY}
+              onChange={(v) => setField("specialY", v)}
+              unit="円"
+            />
+          </div>
+        </SubGroup>
+
+        <SubGroup title="住居">
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+              <NumberField
+                label="家賃/管理費(月)"
+                value={plan.rentM}
+                onChange={(v) => setField("rentM", v)}
+                unit="円"
+              />
+              <NumberField
+                label="固定資産税(年)"
+                value={plan.homeTaxY}
+                onChange={(v) => setField("homeTaxY", v)}
+                unit="円"
+              />
+            </div>
+            <CheckboxField
+              label="住宅ローンあり"
+              value={plan.useHomeLoan}
+              onChange={(v) => setField("useHomeLoan", v)}
+            />
+            {plan.useHomeLoan ? (
+              <div className="grid grid-cols-1 gap-2">
+                <NumberField
+                  label="残高"
+                  value={plan.hlBal}
+                  onChange={(v) => setField("hlBal", v)}
+                  unit="円"
+                />
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                  <PercentField
+                    label="金利"
+                    value={plan.hlRate}
+                    onChange={(v) => setField("hlRate", v)}
+                  />
+                  <NumberField
+                    label="期間"
+                    value={plan.hlTerm}
+                    onChange={(v) => setField("hlTerm", v)}
+                    unit="年"
+                  />
+                </div>
+                <NumberField
+                  label="返済開始年齢"
+                  value={plan.hlStart}
+                  onChange={(v) => setField("hlStart", v)}
+                  unit="歳"
+                />
+              </div>
+            ) : null}
+            <div>
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
+                — その他ローン（自動車・奨学金など）
+              </div>
+              <div className="flex flex-col gap-3">
+                {plan.otherLoans.map((ln, i) => (
+                  <ListItemCard
+                    key={i}
+                    kicker={`LOAN ${String(i + 1).padStart(2, "0")}`}
+                    onRemove={() => removeLoan(i)}
+                  >
+                    <div className="grid grid-cols-1 gap-2">
+                      <TextField
+                        label="名称"
+                        value={ln.label}
+                        onChange={(v) => updateLoan(i, { label: v })}
+                      />
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                        <NumberField
+                          label="月返済額"
+                          value={ln.monthlyPay}
+                          onChange={(v) => updateLoan(i, { monthlyPay: v })}
+                          unit="円"
+                        />
+                        <NumberField
+                          label="残り返済月数"
+                          value={ln.remainMonths}
+                          onChange={(v) => updateLoan(i, { remainMonths: v })}
+                          unit="ヶ月"
+                        />
+                      </div>
+                    </div>
+                  </ListItemCard>
+                ))}
+                <AddButton label="ローンを追加" onClick={addLoan} />
+              </div>
+            </div>
+          </div>
+        </SubGroup>
+
+        <SubGroup title="教育費">
+          <div className="flex flex-col gap-4">
+            <div>
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
+                — 塾の月額
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <NumberField
+                  label="幼児(3-5)"
+                  value={plan.jukuM.pre}
+                  onChange={(v) => setField("jukuM", { ...plan.jukuM, pre: v })}
+                  unit="円"
+                />
+                <NumberField
+                  label="小1-3"
+                  value={plan.jukuM.e13}
+                  onChange={(v) => setField("jukuM", { ...plan.jukuM, e13: v })}
+                  unit="円"
+                />
+                <NumberField
+                  label="小4-6"
+                  value={plan.jukuM.e46}
+                  onChange={(v) => setField("jukuM", { ...plan.jukuM, e46: v })}
+                  unit="円"
+                />
+                <NumberField
+                  label="中学"
+                  value={plan.jukuM.jh}
+                  onChange={(v) => setField("jukuM", { ...plan.jukuM, jh: v })}
+                  unit="円"
+                />
+                <NumberField
+                  label="高校"
+                  value={plan.jukuM.hs}
+                  onChange={(v) => setField("jukuM", { ...plan.jukuM, hs: v })}
+                  unit="円"
+                />
+                <NumberField
+                  label="浪人"
+                  value={plan.jukuM.ronin}
+                  onChange={(v) => setField("jukuM", { ...plan.jukuM, ronin: v })}
+                  unit="円"
+                />
+              </div>
+            </div>
+            <div>
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
+                — お子さま
+              </div>
+              <div className="flex flex-col gap-3">
+                {plan.kids.map((k, i) => {
+                  const ca = kidAge(k.birth, plan.baseDate);
+                  return (
+                    <ListItemCard
+                      key={i}
+                      kicker={`KID ${String(i + 1).padStart(2, "0")}`}
+                      onRemove={() => removeKid(i)}
+                    >
+                      <div className="grid grid-cols-1 gap-2">
+                        <TextField
+                          label="名前"
+                          value={k.name}
+                          onChange={(v) => updateKid(i, { name: v })}
+                        />
+                        <DateField
+                          label="生年月日"
+                          value={k.birth}
+                          onChange={(v) => updateKid(i, { birth: v })}
+                        />
+                        <NumberField
+                          label="現在年齢"
+                          value={ca ?? 0}
+                          onChange={() => {}}
+                          unit="歳"
+                          hint="生年月日から自動"
+                        />
+                        <NumberField
+                          label="仕送り(月)"
+                          value={k.opt.send}
+                          onChange={(v) => updateOpt(i, "send", v)}
+                          unit="円"
+                        />
+                      </div>
+                      <div className="mt-4">
+                        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
+                          — 進学プラン
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          <SelectField
+                            label="幼"
+                            value={k.s.k}
+                            onChange={(v) => updateStage(i, "k", v)}
+                            options={SCHOOL_OPTIONS}
+                          />
+                          <SelectField
+                            label="小"
+                            value={k.s.e}
+                            onChange={(v) => updateStage(i, "e", v)}
+                            options={SCHOOL_OPTIONS}
+                          />
+                          <SelectField
+                            label="中"
+                            value={k.s.j}
+                            onChange={(v) => updateStage(i, "j", v)}
+                            options={SCHOOL_OPTIONS}
+                          />
+                          <SelectField
+                            label="高"
+                            value={k.s.h}
+                            onChange={(v) => updateStage(i, "h", v)}
+                            options={SCHOOL_OPTIONS}
+                          />
+                          <SelectField
+                            label="大"
+                            value={k.s.u}
+                            onChange={(v) => updateStage(i, "u", v)}
+                            options={SCHOOL_OPTIONS}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
+                          — オプション
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          <CheckboxField
+                            label="浪人"
+                            value={k.opt.ronin}
+                            onChange={(v) => updateOpt(i, "ronin", v)}
+                          />
+                          <CheckboxField
+                            label="大学院"
+                            value={k.opt.grad}
+                            onChange={(v) => updateOpt(i, "grad", v)}
+                          />
+                          <CheckboxField
+                            label="下宿(大)"
+                            value={k.opt.dormU}
+                            onChange={(v) => updateOpt(i, "dormU", v)}
+                          />
+                          <CheckboxField
+                            label="下宿(院)"
+                            value={k.opt.dormG}
+                            onChange={(v) => updateOpt(i, "dormG", v)}
+                          />
+                        </div>
+                      </div>
+                    </ListItemCard>
+                  );
+                })}
+                <AddButton label="お子さまを追加" onClick={addKid} />
+              </div>
+            </div>
+          </div>
+        </SubGroup>
+
+        <SubGroup title="保険">
+          <div className="flex flex-col gap-3">
+            {plan.ins.map((p, i) => (
+              <ListItemCard
+                key={i}
+                kicker={`POLICY ${String(i + 1).padStart(2, "0")}${p.enabled ? "" : " · OFF"}`}
+                onRemove={() => removeIns(i)}
+              >
+                <div className="mb-3">
+                  <CheckboxField
+                    label="この保険を計算に含める"
+                    value={p.enabled}
+                    onChange={(v) => updateIns(i, { enabled: v })}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <TextField
+                    label="保険名"
+                    value={p.name}
+                    onChange={(v) => updateIns(i, { name: v })}
+                  />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                    <SelectField
+                      label="種類"
+                      value={p.type}
+                      onChange={(v) => updateIns(i, { type: v })}
+                      options={TYPE_OPTIONS}
+                    />
+                    <SelectField
+                      label="被保険者"
+                      value={p.insured}
+                      onChange={(v) => updateIns(i, { insured: v })}
+                      options={INSURED_OPTIONS}
+                    />
+                  </div>
+                  <NumberField
+                    label="月額保険料"
+                    value={p.premM}
+                    onChange={(v) => updateIns(i, { premM: v })}
+                    unit="円"
+                  />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                    <NumberField
+                      label="払込開始"
+                      value={p.start}
+                      onChange={(v) => updateIns(i, { start: v })}
+                      unit="歳"
+                    />
+                    <NumberField
+                      label="払込終了"
+                      value={p.end}
+                      onChange={(v) => updateIns(i, { end: v })}
+                      unit="歳"
+                    />
+                  </div>
+                  <TextField
+                    label="メモ（計算非対象）"
+                    value={p.memo}
+                    onChange={(v) => updateIns(i, { memo: v })}
+                  />
+                </div>
+              </ListItemCard>
+            ))}
+            <AddButton label="保険を追加" onClick={addIns} />
+          </div>
+        </SubGroup>
+
+        <SubGroup title="ライフイベント（一時収支）">
+          <div className="flex flex-col gap-5">
+            <div>
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
+                — 一時収入（相続・贈与・保険金）
+              </div>
+              <div className="flex flex-col gap-3">
+                {plan.inheritances.map((ev, i) => (
+                  <ListItemCard
+                    key={i}
+                    kicker={`INCOME ${String(i + 1).padStart(2, "0")}`}
+                    onRemove={() => removeIncome(i)}
+                  >
+                    <div className="grid grid-cols-1 gap-2">
+                      <TextField
+                        label="名称"
+                        value={ev.label}
+                        onChange={(v) => updateIncome(i, { label: v })}
+                      />
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                        <NumberField
+                          label="受け取る年齢"
+                          value={ev.age}
+                          onChange={(v) => updateIncome(i, { age: v })}
+                          unit="歳"
+                        />
+                        <NumberField
+                          label="金額"
+                          value={ev.amount}
+                          onChange={(v) => updateIncome(i, { amount: v })}
+                          unit="円"
+                        />
+                      </div>
+                    </div>
+                  </ListItemCard>
+                ))}
+                <AddButton label="一時収入を追加" onClick={addIncome} />
+              </div>
+            </div>
+            <div>
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
+                — 一時支出（リフォーム・車・慶弔など）
+              </div>
+              <p className="mb-2 px-1 text-[11px] leading-relaxed text-[#0a0a0a]/55">
+                参考: リフォーム 100〜500万 / 車買替 200〜400万 / 結婚式 300万 / 葬儀 200万
+              </p>
+              <div className="flex flex-col gap-3">
+                {plan.lifeExpenses.map((ev, i) => (
+                  <ListItemCard
+                    key={i}
+                    kicker={`EXPENSE ${String(i + 1).padStart(2, "0")}`}
+                    onRemove={() => removeExpense(i)}
+                  >
+                    <div className="grid grid-cols-1 gap-2">
+                      <TextField
+                        label="名称"
+                        value={ev.label}
+                        onChange={(v) => updateExpense(i, { label: v })}
+                      />
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                        <NumberField
+                          label="支出年齢"
+                          value={ev.age}
+                          onChange={(v) => updateExpense(i, { age: v })}
+                          unit="歳"
+                        />
+                        <NumberField
+                          label="金額"
+                          value={ev.amount}
+                          onChange={(v) => updateExpense(i, { amount: v })}
+                          unit="円"
+                        />
+                      </div>
+                    </div>
+                  </ListItemCard>
+                ))}
+                <AddButton label="一時支出を追加" onClick={addExpense} />
+              </div>
+            </div>
+          </div>
+        </SubGroup>
+
+        <SubGroup title="介護費用">
+          {plan.careEvents.length === 0 ? (
+            <p className="mb-2 px-1 text-[11px] leading-relaxed text-[#0a0a0a]/55">
+              参考: 在宅介護 月平均8万円 / 施設介護 月平均13万円 / 介護期間平均 約5年
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-3">
+            {plan.careEvents.map((ev, i) => (
+              <ListItemCard
+                key={i}
+                kicker={`CARE ${String(i + 1).padStart(2, "0")}`}
+                onRemove={() => removeCare(i)}
+              >
+                <div className="grid grid-cols-1 gap-2">
+                  <TextField
+                    label="名称"
+                    value={ev.label}
+                    onChange={(v) => updateCare(i, { label: v })}
+                  />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                    <NumberField
+                      label="開始年齢（本人基準）"
+                      value={ev.startAge}
+                      onChange={(v) => updateCare(i, { startAge: v })}
+                      unit="歳"
+                    />
+                    <NumberField
+                      label="期間"
+                      value={ev.durationYears}
+                      onChange={(v) => updateCare(i, { durationYears: v })}
+                      unit="年"
+                    />
+                  </div>
+                  <NumberField
+                    label="月額"
+                    value={ev.monthlyCost}
+                    onChange={(v) => updateCare(i, { monthlyCost: v })}
+                    unit="円"
+                  />
+                </div>
+              </ListItemCard>
+            ))}
+            <AddButton label="介護イベントを追加" onClick={addCare} />
+          </div>
+        </SubGroup>
+      </div>
+    </Section>
+  );
+}

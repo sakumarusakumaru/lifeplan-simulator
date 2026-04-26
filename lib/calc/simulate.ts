@@ -23,6 +23,7 @@ export function simulate(input: PlanInput): SimulationSummary {
     f: input.fundBal,
     s: input.stockBal,
     k: input.cryptoBal,
+    g: input.goldBal,
     dc: input.dcBal,
   };
 
@@ -245,15 +246,17 @@ export function simulate(input: PlanInput): SimulationSummary {
     const tF = age < input.saveFundEndAge ? input.saveFundM * 12 : 0;
     const tS = age < input.saveStockEndAge ? input.saveStockM * 12 : 0;
     const tK = age < input.saveCryptoEndAge ? input.saveCryptoM * 12 : 0;
+    const tG = age < input.saveGoldEndAge ? input.saveGoldM * 12 : 0;
     const tD = age < input.saveDcEndAge ? input.saveDcM * 12 : 0;
 
-    const cf = net + reInc + inherit - (basic + home + edu + ins + care + lifeExp + otherLoanPay) - (tF + tS + tK + tD);
+    const cf = net + reInc + inherit - (basic + home + edu + ins + care + lifeExp + otherLoanPay) - (tF + tS + tK + tG + tD);
 
     ass.c += cf;
     if (ass.c > 0) ass.c *= 1 + input.cashRate;
     ass.f = (ass.f + tF) * (1 + input.fundR / 100);
     ass.s = (ass.s + tS) * (1 + input.stockR / 100);
     ass.k = (ass.k + tK) * (1 + input.cryptoR / 100);
+    ass.g = (ass.g + tG) * (1 + input.goldR / 100);
     ass.dc = (ass.dc + tD) * (1 + input.dcR / 100);
 
     let draw = 0;
@@ -277,7 +280,7 @@ export function simulate(input: PlanInput): SimulationSummary {
       const remaining = Math.max(0, ln.remainMonths - (age - input.curAge) * 12);
       return acc + ln.monthlyPay * remaining;
     }, 0);
-    const nw = ass.c + ass.f + ass.s + ass.k + ass.dc - hlBal - reLoanRemain - otherLoanRemain;
+    const nw = ass.c + ass.f + ass.s + ass.k + ass.g + ass.dc - hlBal - reLoanRemain - otherLoanRemain;
 
     rows.push({
       age,

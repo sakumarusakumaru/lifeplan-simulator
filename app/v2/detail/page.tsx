@@ -3,18 +3,10 @@
 import { useMemo } from "react";
 
 import { ResultsPanel } from "@/components/ResultsPanel";
-import { AssetsSection } from "@/components/sections/AssetsSection";
-import { BasicSection } from "@/components/sections/BasicSection";
-import { CareSection } from "@/components/sections/CareSection";
-import { EducationSection } from "@/components/sections/EducationSection";
-import { ExpenseSection } from "@/components/sections/ExpenseSection";
-import { HousingSection } from "@/components/sections/HousingSection";
-import { IncomeSection } from "@/components/sections/IncomeSection";
-import { LifeEventSection } from "@/components/sections/LifeEventSection";
-import { InsuranceSection } from "@/components/sections/InsuranceSection";
-import { PensionSection } from "@/components/sections/PensionSection";
-import { RealEstateSection } from "@/components/sections/RealEstateSection";
-import { TaxDetailSection } from "@/components/sections/TaxDetailSection";
+import { AssetsMegaSection } from "@/components/sections/mega/AssetsMegaSection";
+import { ExpenseMegaSection } from "@/components/sections/mega/ExpenseMegaSection";
+import { IncomeMegaSection } from "@/components/sections/mega/IncomeMegaSection";
+import { SettingsMegaSection } from "@/components/sections/mega/SettingsMegaSection";
 import { simulate } from "@/lib/calc/simulate";
 import { usePlanStore } from "@/store/plan-store";
 
@@ -53,7 +45,7 @@ export default function DetailPage() {
             </p>
             <h1 className="mt-1 text-lg font-bold text-[#0a0a0a]">FP相談級 詳細入力</h1>
             <p className="mt-1 text-xs text-[#0a0a0a]/55">
-              ver1の全項目 + 累進税計算・相続予定・介護費用を統合。すべての変更がリアルタイムで反映されます。
+              収入・資産・支出の全項目 + 累進税計算・相続・介護費用を統合。すべての変更がリアルタイムで反映されます。
             </p>
           </div>
           <KpiStrip
@@ -68,39 +60,10 @@ export default function DetailPage() {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
           <div className="flex flex-col gap-2">
-            {/* 既存ver1セクション */}
-            <BasicSection />
-            <IncomeSection />
-            <PensionSection />
-            <AssetsSection />
-            <ExpenseSection />
-            <HousingSection />
-            <EducationSection />
-            <RealEstateSection />
-            <InsuranceSection />
-
-            {/* ver2新セクション */}
-            <div className="mt-3 flex items-center gap-2">
-              <span className="h-px flex-1" style={{ background: "#0a0a0a30" }} />
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.18em] text-white"
-                style={{
-                  height: 22,
-                  padding: "0 10px",
-                  background: "#c8383a",
-                  border: "2px solid #0a0a0a",
-                  borderRadius: 8,
-                  display: "inline-flex",
-                  alignItems: "center",
-                }}
-              >
-                VER 2 ONLY
-              </span>
-              <span className="h-px flex-1" style={{ background: "#0a0a0a30" }} />
-            </div>
-            <TaxDetailSection />
-            <LifeEventSection />
-            <CareSection />
+            <SettingsMegaSection />
+            <IncomeMegaSection />
+            <AssetsMegaSection />
+            <ExpenseMegaSection />
           </div>
 
           <aside className="sm:sticky sm:top-[56px] sm:max-h-[calc(100vh-56px)] sm:self-start sm:overflow-y-auto sm:pr-1">
