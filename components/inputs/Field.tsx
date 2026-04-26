@@ -9,10 +9,16 @@ interface FieldProps {
 
 export function Field({ label, hint, children, className }: FieldProps) {
   return (
-    <label className={`flex flex-col gap-1 ${className ?? ""}`}>
-      <span className="text-xs font-medium text-zinc-600">{label}</span>
+    <label className={`group flex flex-col gap-1.5 ${className ?? ""}`}>
+      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a] transition-colors group-focus-within:text-[#c8383a]">
+        {label}
+      </span>
       {children}
-      {hint ? <span className="text-[11px] text-zinc-400">{hint}</span> : null}
+      {hint ? (
+        <span className="text-[11px] font-medium text-[#0a0a0a]/55">
+          {hint}
+        </span>
+      ) : null}
     </label>
   );
 }

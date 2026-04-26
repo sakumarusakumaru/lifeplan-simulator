@@ -33,11 +33,14 @@ export function PercentField({
 
   return (
     <Field label={label} hint={hint} className={className}>
-      <div className="flex items-stretch overflow-hidden rounded-lg border border-zinc-200 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
+      <div
+        className="flex overflow-hidden bg-white focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#c8383a]"
+        style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
+      >
         <input
           type="number"
           step={step}
-          className="w-full px-3 py-2 text-right tabular-nums outline-none"
+          className="w-full px-2 py-1.5 text-right text-xs font-bold tabular-nums outline-none"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onBlur={() => {
@@ -49,7 +52,10 @@ export function PercentField({
             onChange(n);
           }}
         />
-        <span className="flex items-center bg-zinc-50 px-2 text-xs text-zinc-500">
+        <span
+          className="flex items-center px-2 text-[10px] font-bold uppercase tracking-[0.1em]"
+          style={{ borderLeft: "2px solid #0a0a0a", background: "#f0f0ee", color: "#0a0a0a" }}
+        >
           %
         </span>
       </div>

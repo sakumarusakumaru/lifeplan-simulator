@@ -151,6 +151,12 @@ export interface PlanInput {
   kids: Kid[];
   res: RealEstate[];
   ins: Insurance[];
+  lifeEvents: LifeEvent[];
+}
+
+export interface LifeEvent {
+  label: string;
+  age: number;
 }
 
 export interface AssetSnapshot {

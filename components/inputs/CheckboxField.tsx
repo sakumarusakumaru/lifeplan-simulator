@@ -9,16 +9,24 @@ interface CheckboxFieldProps {
 
 export function CheckboxField({ label, value, onChange, hint }: CheckboxFieldProps) {
   return (
-    <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm hover:border-zinc-300">
+    <label
+      className="flex cursor-pointer items-start gap-3 px-3 py-2 text-xs font-bold transition-colors"
+      style={{
+        border: `2px solid ${value ? "#c8383a" : "#0a0a0a"}`,
+        borderRadius: 8,
+        background: "#f0f0ee",
+        color: "#0a0a0a",
+      }}
+    >
       <input
         type="checkbox"
-        className="mt-0.5 h-4 w-4 accent-blue-600"
+        className="mt-0.5 h-3.5 w-3.5 accent-[#c8383a]"
         checked={value}
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className="flex flex-col gap-0.5">
-        <span className="text-zinc-800">{label}</span>
-        {hint ? <span className="text-[11px] text-zinc-400">{hint}</span> : null}
+        <span>{label}</span>
+        {hint ? <span className="text-[10px] font-medium opacity-60">{hint}</span> : null}
       </span>
     </label>
   );

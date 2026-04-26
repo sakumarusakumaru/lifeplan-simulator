@@ -15,7 +15,8 @@ export function DateField({ label, value, onChange, hint, className }: DateField
     <Field label={label} hint={hint} className={className}>
       <input
         type="date"
-        className="rounded-lg border border-zinc-200 bg-white px-3 py-2 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+        className="w-full bg-white px-2 py-1.5 text-xs font-bold outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#c8383a]"
+        style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
       />

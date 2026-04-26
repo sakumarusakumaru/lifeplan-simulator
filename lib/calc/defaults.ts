@@ -9,7 +9,7 @@ export const DEFAULT_PLAN: PlanInput = {
   spouseIncStart: 30,
   spouseIncEnd: 60,
   curAge: 35,
-  endAge: 95,
+  endAge: 100,
   infl: 1.0,
   taxRate: 20,
   cashFloor: 2_000_000,
@@ -58,6 +58,7 @@ export const DEFAULT_PLAN: PlanInput = {
   hlTerm: 30,
   hlStart: 35,
 
+  lifeEvents: [],
   kids: [],
   res: [
     { name: "物件1", rent: 80000, cost: 150000, bal: 15_000_000, rate: 2.0, term: 20, start: 35 },

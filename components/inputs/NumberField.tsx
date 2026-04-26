@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Field } from "./Field";
 
@@ -12,10 +12,9 @@ interface NumberFieldProps {
   hint?: string;
   min?: number;
   max?: number;
+  step?: number;
   className?: string;
 }
-
-const fmt = (n: number) => Math.round(n).toLocaleString();
 
 export function NumberField({
   label,
@@ -25,37 +24,72 @@ export function NumberField({
   hint,
   min,
   max,
+  step,
   className,
 }: NumberFieldProps) {
-  const [text, setText] = useState(() => fmt(value));
+  const [focused, setFocused] = useState(false);
+  const [text, setText] = useState("");
 
-  useEffect(() => {
-    setText(fmt(value));
-  }, [value]);
+  const clamp = (n: number) => {
+    let v = n;
+    if (min !== undefined && v < min) v = min;
+    if (max !== undefined && v > max) v = max;
+    return v;
+  };
+
+  const displayValue = focused ? text : value.toLocaleString("ja-JP");
 
   return (
     <Field label={label} hint={hint} className={className}>
-      <div className="flex items-stretch overflow-hidden rounded-lg border border-zinc-200 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
+      <div
+        className="flex overflow-hidden bg-white focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#c8383a]"
+        style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
+      >
         <input
           type="text"
           inputMode="numeric"
-          className="w-full px-3 py-2 text-right tabular-nums outline-none"
-          value={text}
-          onChange={(e) => {
-            const raw = e.target.value.replace(/[^\-0-9]/g, "");
-            setText(raw === "" ? "" : Number(raw).toLocaleString());
+          className="w-full px-2 py-1.5 text-right text-xs font-bold tabular-nums outline-none"
+          value={displayValue}
+          onFocus={(e) => {
+            const raw = value === 0 ? "" : String(value);
+            setText(raw);
+            setFocused(true);
+            // 全選択して上書しやすくする
+            requestAnimationFrame(() => e.target.select());
           }}
-          onBlur={() => {
-            const raw = text.replace(/[^\-0-9]/g, "");
-            let n = raw === "" || raw === "-" ? 0 : Number(raw);
-            if (min !== undefined && n < min) n = min;
-            if (max !== undefined && n > max) n = max;
-            setText(fmt(n));
-            onChange(n);
+          onChange={(e) => {
+            const raw = e.target.value.replace(/[^0-9\-]/g, "");
+            setText(raw);
+            const n = Number(raw);
+            if (raw !== "" && raw !== "-" && Number.isFinite(n)) {
+              onChange(clamp(n));
+            }
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            const n = Number(e.target.value.replace(/,/g, ""));
+            if (Number.isFinite(n)) onChange(clamp(n));
+          }}
+          onKeyDown={(e) => {
+            const effStep = step ?? (unit === "円" ? 10000 : 1);
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              onChange(clamp(value + effStep));
+            } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              onChange(clamp(value - effStep));
+            }
           }}
         />
         {unit ? (
-          <span className="flex items-center bg-zinc-50 px-2 text-xs text-zinc-500">
+          <span
+            className="flex items-center px-2 text-[10px] font-bold uppercase tracking-[0.1em]"
+            style={{
+              borderLeft: "2px solid #0a0a0a",
+              background: "#f0f0ee",
+              color: "#0a0a0a",
+            }}
+          >
             {unit}
           </span>
         ) : null}
