@@ -14,6 +14,8 @@ export const DEFAULT_PLAN: PlanInput = {
   taxRate: 20,
   taxMode: "simple",
   inheritances: [],
+  lifeExpenses: [],
+  otherLoans: [],
   careEvents: [],
   cashFloor: 2_000_000,
   allowNegCash: false,

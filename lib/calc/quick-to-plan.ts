@@ -64,6 +64,8 @@ export function quickToPlan(q: QuickInput): PlanInput {
     taxRate: TAX_RATE,
     taxMode: "simple",
     inheritances: [],
+    lifeExpenses: [],
+    otherLoans: [],
     careEvents: [],
     infl: 1.0,
     cashFloor: 2_000_000,

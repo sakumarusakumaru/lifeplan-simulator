@@ -120,6 +120,22 @@ export function simulate(input: PlanInput): SimulationSummary {
       if (ev.age === age) inherit += ev.amount;
     }
 
+    // ライフイベント一時支出（リフォーム・車買替など）
+    let lifeExp = 0;
+    for (const ev of input.lifeExpenses) {
+      if (ev.age === age) lifeExp += ev.amount;
+    }
+
+    // その他ローン返済（自動車・奨学金など）
+    let otherLoanPay = 0;
+    for (const ln of input.otherLoans) {
+      const monthsAlreadyPaid = (age - input.curAge) * 12;
+      if (monthsAlreadyPaid < ln.remainMonths) {
+        const monthsThisYear = Math.min(12, ln.remainMonths - monthsAlreadyPaid);
+        otherLoanPay += ln.monthlyPay * monthsThisYear;
+      }
+    }
+
     // 介護費用（指定年齢から指定年数間、月額×12にインフレ適用）
     let care = 0;
     for (const ev of input.careEvents) {
@@ -231,7 +247,7 @@ export function simulate(input: PlanInput): SimulationSummary {
     const tK = age < input.saveCryptoEndAge ? input.saveCryptoM * 12 : 0;
     const tD = age < input.saveDcEndAge ? input.saveDcM * 12 : 0;
 
-    const cf = net + reInc + inherit - (basic + home + edu + ins + care) - (tF + tS + tK + tD);
+    const cf = net + reInc + inherit - (basic + home + edu + ins + care + lifeExp + otherLoanPay) - (tF + tS + tK + tD);
 
     ass.c += cf;
     if (ass.c > 0) ass.c *= 1 + input.cashRate;
@@ -257,7 +273,11 @@ export function simulate(input: PlanInput): SimulationSummary {
     }
 
     const reLoanRemain = rSims.reduce((a, r) => a + r.bal, 0);
-    const nw = ass.c + ass.f + ass.s + ass.k + ass.dc - hlBal - reLoanRemain;
+    const otherLoanRemain = input.otherLoans.reduce((acc, ln) => {
+      const remaining = Math.max(0, ln.remainMonths - (age - input.curAge) * 12);
+      return acc + ln.monthlyPay * remaining;
+    }, 0);
+    const nw = ass.c + ass.f + ass.s + ass.k + ass.dc - hlBal - reLoanRemain - otherLoanRemain;
 
     rows.push({
       age,
@@ -268,7 +288,7 @@ export function simulate(input: PlanInput): SimulationSummary {
       reInc,
       net,
       income: net + reInc + inherit,
-      exp: basic + home + edu + ins + care,
+      exp: basic + home + edu + ins + care + lifeExp + otherLoanPay,
       inv: tF + tS + tK + tD,
       edu,
       eduT,
@@ -293,6 +313,8 @@ export function simulate(input: PlanInput): SimulationSummary {
       jobNet: (job + side + spouseJob) * (1 - input.taxRate / 100),
       penNet: pen * (1 - input.taxRate / 100),
       inherit,
+      lifeExp,
+      otherLoanPay,
       care,
       socialIns,
     });

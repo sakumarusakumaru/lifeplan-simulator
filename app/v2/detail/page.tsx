@@ -10,7 +10,7 @@ import { EducationSection } from "@/components/sections/EducationSection";
 import { ExpenseSection } from "@/components/sections/ExpenseSection";
 import { HousingSection } from "@/components/sections/HousingSection";
 import { IncomeSection } from "@/components/sections/IncomeSection";
-import { InheritanceSection } from "@/components/sections/InheritanceSection";
+import { LifeEventSection } from "@/components/sections/LifeEventSection";
 import { InsuranceSection } from "@/components/sections/InsuranceSection";
 import { PensionSection } from "@/components/sections/PensionSection";
 import { RealEstateSection } from "@/components/sections/RealEstateSection";
@@ -99,7 +99,7 @@ export default function DetailPage() {
               <span className="h-px flex-1" style={{ background: "#0a0a0a30" }} />
             </div>
             <TaxDetailSection />
-            <InheritanceSection />
+            <LifeEventSection />
             <CareSection />
           </div>
 

@@ -98,6 +98,18 @@ export interface InheritanceEvent {
   label: string;
 }
 
+export interface LifeExpenseEvent {
+  age: number;       // 支出年齢（本人基準）
+  amount: number;    // 円（一時支出）
+  label: string;     // 例「リフォーム」「車買替」
+}
+
+export interface OtherLoan {
+  label: string;         // 例「自動車ローン」「奨学金」
+  monthlyPay: number;    // 月々の返済額（円）
+  remainMonths: number;  // 残り返済月数
+}
+
 export interface CareEvent {
   startAge: number;        // 介護開始時の本人年齢
   durationYears: number;   // 介護期間
@@ -121,6 +133,8 @@ export interface PlanInput {
   taxRate: number;
   taxMode: TaxMode;
   inheritances: InheritanceEvent[];
+  lifeExpenses: LifeExpenseEvent[];
+  otherLoans: OtherLoan[];
   careEvents: CareEvent[];
   cashFloor: number;
   allowNegCash: boolean;
@@ -264,6 +278,8 @@ export interface YearlyResult {
   jobNet: number;
   penNet: number;
   inherit: number;       // 当年に受け取った相続（一時収入）
+  lifeExp: number;       // 当年のライフイベント一時支出
+  otherLoanPay: number;  // 当年のその他ローン返済額
   care: number;          // 当年の介護支出
   socialIns: number;     // 社会保険料合計（詳細税モードのみ）
 }
