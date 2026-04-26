@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Field } from "./Field";
 
@@ -28,7 +28,14 @@ export function NumberField({
   className,
 }: NumberFieldProps) {
   const [focused, setFocused] = useState(false);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(() => (value === 0 ? "" : String(value)));
+
+  // value が外部から変わったとき（フォーカス外）にテキストを同期
+  useEffect(() => {
+    if (!focused) {
+      setText(value === 0 ? "" : String(value));
+    }
+  }, [value, focused]);
 
   const clamp = (n: number) => {
     let v = n;
@@ -37,7 +44,7 @@ export function NumberField({
     return v;
   };
 
-  const displayValue = focused ? text : value.toLocaleString("ja-JP");
+  const displayValue = focused ? text : value === 0 ? "0" : value.toLocaleString("ja-JP");
 
   return (
     <Field label={label} hint={hint} className={className}>
@@ -54,7 +61,6 @@ export function NumberField({
             const raw = value === 0 ? "" : String(value);
             setText(raw);
             setFocused(true);
-            // 全選択して上書しやすくする
             requestAnimationFrame(() => e.target.select());
           }}
           onChange={(e) => {
@@ -74,10 +80,14 @@ export function NumberField({
             const effStep = step ?? (unit === "円" ? 10000 : 1);
             if (e.key === "ArrowUp") {
               e.preventDefault();
-              onChange(clamp(value + effStep));
+              const newVal = clamp(value + effStep);
+              onChange(newVal);
+              setText(String(newVal));
             } else if (e.key === "ArrowDown") {
               e.preventDefault();
-              onChange(clamp(value - effStep));
+              const newVal = clamp(value - effStep);
+              onChange(newVal);
+              setText(String(newVal));
             }
           }}
         />

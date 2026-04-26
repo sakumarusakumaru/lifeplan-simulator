@@ -144,7 +144,7 @@ export function AssetsMegaSection() {
             setSaveEnd={(v) => setField("saveDcEndAge", v)}
           />
           <div className="mt-2 text-[11px] font-medium text-[#0a0a0a]/55">
-            ※ 60歳までは取り崩しの対象外
+            ※ 65歳までは取り崩しの対象外
           </div>
         </CollapsibleSubGroup>
 
