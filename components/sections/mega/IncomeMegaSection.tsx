@@ -5,6 +5,7 @@ import { NumberField } from "@/components/inputs/NumberField";
 import { SelectField } from "@/components/inputs/SelectField";
 import { TextField } from "@/components/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/ListItemCard";
+import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
 import { Section } from "@/components/Section";
 import { calcPension } from "@/lib/calc/pension";
 import type {
@@ -47,17 +48,6 @@ const NEW_SIDE_JOB = (): SideJob => ({
   end: 60,
   inc: 0,
 });
-
-function SubGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-        — {title}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 interface PensionEditorProps {
   kicker: string;
@@ -229,8 +219,8 @@ export function IncomeMegaSection() {
       description="給与・副業・年金（現役期〜老後）"
       status={plan.jobs.length > 0 || plan.selfPension.koseiAvgIncome > 0 ? "entered" : "default"}
     >
-      <div className="flex flex-col gap-6">
-        <SubGroup title="給与・勤務先">
+      <div className="flex flex-col gap-2">
+        <CollapsibleSubGroup title="給与・勤務先">
           <div className="flex flex-col gap-3">
             {plan.jobs.map((j, i) => (
               <ListItemCard
@@ -254,9 +244,9 @@ export function IncomeMegaSection() {
             ))}
             <AddButton label="勤務先を追加" onClick={addJob} />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="副業">
+        <CollapsibleSubGroup title="副業" defaultOpen={false}>
           <div className="flex flex-col gap-3">
             {plan.sideJobs.map((j, i) => (
               <ListItemCard
@@ -276,9 +266,9 @@ export function IncomeMegaSection() {
             ))}
             <AddButton label="副業を追加" onClick={addSide} />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="年金">
+        <CollapsibleSubGroup title="年金">
           <div className="flex flex-col gap-3">
             <CheckboxField
               label="配偶者分も年金収入に含める"
@@ -304,7 +294,7 @@ export function IncomeMegaSection() {
               />
             ) : null}
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
       </div>
     </Section>
   );

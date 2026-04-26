@@ -4,6 +4,7 @@ import { NumberField } from "@/components/inputs/NumberField";
 import { PercentField } from "@/components/inputs/PercentField";
 import { TextField } from "@/components/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/ListItemCard";
+import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
 import { Section } from "@/components/Section";
 import type { DrawAsset, RealEstate } from "@/lib/calc/types";
 import { usePlanStore } from "@/store/plan-store";
@@ -25,15 +26,6 @@ const NEW_RE = (): RealEstate => ({
   term: 20,
   start: 35,
 });
-
-function SubGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">— {title}</div>
-      {children}
-    </div>
-  );
-}
 
 function Quad({
   bal,
@@ -97,8 +89,8 @@ export function AssetsMegaSection() {
       description="現金・投信・株・DC・仮想通貨・金 / 不動産投資"
       status={totalBal > 0 ? "entered" : "default"}
     >
-      <div className="flex flex-col gap-6">
-        <SubGroup title="現金・預金">
+      <div className="flex flex-col gap-2">
+        <CollapsibleSubGroup title="現金・預金">
           <div className="grid grid-cols-1 gap-2">
             <NumberField
               label="残高"
@@ -112,9 +104,9 @@ export function AssetsMegaSection() {
               onChange={(v) => setField("cashRate", v / 100)}
             />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="投信">
+        <CollapsibleSubGroup title="投信">
           <Quad
             bal={plan.fundBal}
             setBal={(v) => setField("fundBal", v)}
@@ -125,9 +117,9 @@ export function AssetsMegaSection() {
             saveEnd={plan.saveFundEndAge}
             setSaveEnd={(v) => setField("saveFundEndAge", v)}
           />
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="株">
+        <CollapsibleSubGroup title="株" defaultOpen={false}>
           <Quad
             bal={plan.stockBal}
             setBal={(v) => setField("stockBal", v)}
@@ -138,9 +130,9 @@ export function AssetsMegaSection() {
             saveEnd={plan.saveStockEndAge}
             setSaveEnd={(v) => setField("saveStockEndAge", v)}
           />
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="確定拠出年金 (DC)">
+        <CollapsibleSubGroup title="確定拠出年金 (DC)" defaultOpen={false}>
           <Quad
             bal={plan.dcBal}
             setBal={(v) => setField("dcBal", v)}
@@ -154,9 +146,9 @@ export function AssetsMegaSection() {
           <div className="mt-2 text-[11px] font-medium text-[#0a0a0a]/55">
             ※ 60歳までは取り崩しの対象外
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="仮想通貨">
+        <CollapsibleSubGroup title="仮想通貨" defaultOpen={false}>
           <Quad
             bal={plan.cryptoBal}
             setBal={(v) => setField("cryptoBal", v)}
@@ -167,9 +159,9 @@ export function AssetsMegaSection() {
             saveEnd={plan.saveCryptoEndAge}
             setSaveEnd={(v) => setField("saveCryptoEndAge", v)}
           />
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="金・コモディティ">
+        <CollapsibleSubGroup title="金・コモディティ" defaultOpen={false}>
           <Quad
             bal={plan.goldBal}
             setBal={(v) => setField("goldBal", v)}
@@ -183,9 +175,9 @@ export function AssetsMegaSection() {
           <div className="mt-2 text-[11px] font-medium text-[#0a0a0a]/55">
             金ETF・現物金・コモディティファンドなど。参考: 長期年利3〜5%
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="不動産投資">
+        <CollapsibleSubGroup title="不動産投資" defaultOpen={false}>
           <div className="flex flex-col gap-3">
             {plan.res.map((r, i) => (
               <ListItemCard
@@ -243,10 +235,10 @@ export function AssetsMegaSection() {
             ))}
             <AddButton label="物件を追加" onClick={addRe} />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
         {plan.drawOrder === "custom" ? (
-          <SubGroup title="取り崩し順序（カスタム）">
+          <CollapsibleSubGroup title="取り崩し順序（カスタム）">
             <div className="flex flex-col gap-2">
               {plan.drawCustomOrder.map((code, i) => (
                 <div
@@ -295,7 +287,7 @@ export function AssetsMegaSection() {
                 </div>
               ))}
             </div>
-          </SubGroup>
+          </CollapsibleSubGroup>
         ) : null}
       </div>
     </Section>

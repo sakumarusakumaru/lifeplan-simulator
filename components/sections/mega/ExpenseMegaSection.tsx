@@ -7,6 +7,7 @@ import { PercentField } from "@/components/inputs/PercentField";
 import { SelectField } from "@/components/inputs/SelectField";
 import { TextField } from "@/components/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/ListItemCard";
+import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
 import { Section } from "@/components/Section";
 import { kidAge, kidOffset } from "@/lib/calc/age";
 import type {
@@ -80,15 +81,6 @@ const NEW_CARE = (): CareEvent => ({
   label: "親A 介護",
 });
 
-function SubGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">— {title}</div>
-      {children}
-    </div>
-  );
-}
-
 export function ExpenseMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
@@ -161,8 +153,8 @@ export function ExpenseMegaSection() {
       description="生活費・住居・教育・保険・ライフイベント・介護"
       status={plan.livingM > 0 ? "entered" : "default"}
     >
-      <div className="flex flex-col gap-6">
-        <SubGroup title="基本生活費">
+      <div className="flex flex-col gap-2">
+        <CollapsibleSubGroup title="基本生活費">
           <div className="grid grid-cols-1 gap-2">
             <NumberField
               label="基本支出(月)"
@@ -177,9 +169,9 @@ export function ExpenseMegaSection() {
               unit="円"
             />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="住居">
+        <CollapsibleSubGroup title="住居">
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
               <NumberField
@@ -267,9 +259,9 @@ export function ExpenseMegaSection() {
               </div>
             </div>
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="教育費">
+        <CollapsibleSubGroup title="教育費" defaultOpen={false}>
           <div className="flex flex-col gap-4">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
@@ -423,9 +415,9 @@ export function ExpenseMegaSection() {
               </div>
             </div>
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="保険">
+        <CollapsibleSubGroup title="保険" defaultOpen={false}>
           <div className="flex flex-col gap-3">
             {plan.ins.map((p, i) => (
               <ListItemCard
@@ -490,9 +482,9 @@ export function ExpenseMegaSection() {
             ))}
             <AddButton label="保険を追加" onClick={addIns} />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="ライフイベント（一時収支）">
+        <CollapsibleSubGroup title="ライフイベント（一時収支）" defaultOpen={false}>
           <div className="flex flex-col gap-5">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
@@ -572,9 +564,9 @@ export function ExpenseMegaSection() {
               </div>
             </div>
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="介護費用">
+        <CollapsibleSubGroup title="介護費用" defaultOpen={false}>
           {plan.careEvents.length === 0 ? (
             <p className="mb-2 px-1 text-[11px] leading-relaxed text-[#0a0a0a]/55">
               参考: 在宅介護 月平均8万円 / 施設介護 月平均13万円 / 介護期間平均 約5年
@@ -618,7 +610,7 @@ export function ExpenseMegaSection() {
             ))}
             <AddButton label="介護イベントを追加" onClick={addCare} />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
       </div>
     </Section>
   );

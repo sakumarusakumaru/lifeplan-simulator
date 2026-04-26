@@ -7,6 +7,7 @@ import { DateField } from "@/components/inputs/DateField";
 import { NumberField } from "@/components/inputs/NumberField";
 import { PercentField } from "@/components/inputs/PercentField";
 import { SelectField } from "@/components/inputs/SelectField";
+import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
 import { Section } from "@/components/Section";
 import { ageOn } from "@/lib/calc/age";
 import type { DrawOrderMode } from "@/lib/calc/types";
@@ -42,17 +43,6 @@ function AgeDisplay({ birth }: { birth: string }) {
       >
         {age !== null ? `${age} 歳` : "—"}
       </div>
-    </div>
-  );
-}
-
-function SubGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-        — {title}
-      </div>
-      {children}
     </div>
   );
 }
@@ -111,8 +101,8 @@ export function SettingsMegaSection() {
       description="本人・配偶者・シミュレーション条件・税金"
       status={plan.selfBirth ? "entered" : "default"}
     >
-      <div className="flex flex-col gap-6">
-        <SubGroup title="本人">
+      <div className="flex flex-col gap-2">
+        <CollapsibleSubGroup title="本人">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
             <DateField
               label="生年月日"
@@ -121,9 +111,9 @@ export function SettingsMegaSection() {
             />
             <AgeDisplay birth={plan.selfBirth} />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="配偶者">
+        <CollapsibleSubGroup title="配偶者">
           <div className="grid grid-cols-1 gap-2">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
               <DateField
@@ -160,9 +150,9 @@ export function SettingsMegaSection() {
               />
             </div>
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="シミュレーション設定">
+        <CollapsibleSubGroup title="シミュレーション設定" defaultOpen={false}>
           <div className="grid grid-cols-1 gap-2">
             <NumberField
               label="シミュレーション最終年齢"
@@ -195,9 +185,9 @@ export function SettingsMegaSection() {
               onChange={(v) => setField("allowNegCash", v)}
             />
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
 
-        <SubGroup title="税金・社会保険（VER2）">
+        <CollapsibleSubGroup title="税金・社会保険（VER2）" defaultOpen={false}>
           <div className="flex flex-col gap-3">
             <div
               className="grid grid-cols-2 gap-0 overflow-hidden"
@@ -294,7 +284,7 @@ export function SettingsMegaSection() {
               </>
             )}
           </div>
-        </SubGroup>
+        </CollapsibleSubGroup>
       </div>
     </Section>
   );
