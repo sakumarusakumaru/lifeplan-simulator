@@ -5,9 +5,8 @@ import Link from "next/link";
 
 import { AssetsChart } from "@/components/charts/AssetsChart";
 import { CashflowChart } from "@/components/charts/CashflowChart";
-import { quickToPlan } from "@/lib/calc/quick-to-plan";
 import { simulate } from "@/lib/calc/simulate";
-import { useQuickStore } from "@/store/quick-store";
+import { usePlanStore } from "@/store/plan-store";
 
 const fmt = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
@@ -53,19 +52,23 @@ function verdict(shortfallAge: number | null, nw: number, endAge: number) {
 }
 
 export default function ResultPage() {
-  const { q } = useQuickStore();
-  const plan = useMemo(() => quickToPlan(q), [q]);
+  const plan = usePlanStore((s) => s.plan);
   const result = useMemo(() => simulate(plan), [plan]);
 
   const v = verdict(result.shortfallAge, result.finalNetWorth, plan.endAge);
-  const retireRow = result.rows.find((r) => r.age === q.workEndAge);
+
+  const lastJobEndAge =
+    plan.jobs.length > 0
+      ? Math.max(...plan.jobs.map((j) => j.end))
+      : plan.penStartA;
+  const retireRow = result.rows.find((r) => r.age === lastJobEndAge);
   const nwAt65 = result.rows.find((r) => r.age === 65)?.nw ?? 0;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
-      {/* Verdict card */}
+      {/* Verdict */}
       <div
-        className="mb-6 rounded-2xl p-6"
+        className="mb-6 rounded-2xl p-5"
         style={{
           background: v.alert ? "#fff0f0" : "#f0fff4",
           border: `2.5px solid ${v.alert ? "#c8383a" : "#22863a"}`,
@@ -78,31 +81,52 @@ export default function ResultPage() {
           診断結果
         </p>
         <p className="text-xl font-bold text-[#0a0a0a]">{v.headline}</p>
-        <p className="mt-2 text-xs leading-relaxed text-[#0a0a0a]/70">{v.body}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-[#0a0a0a]/70">{v.body}</p>
       </div>
 
-      {/* KPI row */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="最終純資産" value={fmt(result.finalNetWorth)} alert={result.finalNetWorth < 0} />
-        <KpiCard label="資金ショート" value={result.shortfallAge ? `${result.shortfallAge}歳` : "なし"} alert={!!result.shortfallAge} />
-        <KpiCard label="退職時の資産" value={retireRow ? fmt(retireRow.nw) : "-"} />
-        <KpiCard label="65歳時の純資産" value={fmt(nwAt65)} alert={nwAt65 < 0} />
+      {/* KPI */}
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard
+          label="最終純資産"
+          value={fmt(result.finalNetWorth)}
+          alert={result.finalNetWorth < 0}
+        />
+        <KpiCard
+          label="資金ショート"
+          value={result.shortfallAge ? `${result.shortfallAge}歳` : "なし"}
+          alert={!!result.shortfallAge}
+        />
+        <KpiCard
+          label="退職時の資産"
+          value={retireRow ? fmt(retireRow.nw) : "-"}
+        />
+        <KpiCard
+          label="65歳の純資産"
+          value={fmt(nwAt65)}
+          alert={nwAt65 < 0}
+        />
       </div>
 
       {/* Assets chart */}
-      <ChartCard title="資産推移">
-        <AssetsChart rows={result.rows} lifeEvents={plan.lifeEvents} />
-      </ChartCard>
+      <div className="mb-6">
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">
+          資産推移
+        </p>
+        <AssetsChart rows={result.rows} />
+      </div>
 
       {/* Cashflow chart */}
-      <ChartCard title="年間キャッシュフロー">
+      <div className="mb-8">
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">
+          年間キャッシュフロー
+        </p>
         <CashflowChart rows={result.rows} />
-      </ChartCard>
+      </div>
 
-      {/* Action row */}
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+      {/* Actions */}
+      <div className="flex flex-col gap-3 sm:flex-row">
         <Link
-          href="/v2/quick"
+          href="/v2/suggest"
           className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
           style={{
             border: "2.5px solid #0a0a0a",
@@ -110,18 +134,18 @@ export default function ResultPage() {
             color: "#0a0a0a",
           }}
         >
-          ← 条件を変更する
+          改善提案を見る →
         </Link>
         <Link
           href="/v2/detail"
-          className="flex-1 py-3 text-center text-xs font-bold text-white transition-colors hover:bg-[#0a0a0a]/80"
+          className="flex-1 py-3 text-center text-xs font-bold text-white transition-colors hover:opacity-80"
           style={{
             background: "#0a0a0a",
             border: "2.5px solid #0a0a0a",
             borderRadius: 10,
           }}
         >
-          詳細入力で精度を上げる →
+          詳細入力を修正する →
         </Link>
       </div>
 
@@ -155,20 +179,6 @@ function KpiCard({
       >
         {value}
       </span>
-    </div>
-  );
-}
-
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div
-      className="mb-4 rounded-2xl p-4"
-      style={{ border: "2px solid #0a0a0a22", background: "#fff" }}
-    >
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-[#0a0a0a]/60">
-        {title}
-      </p>
-      <div className="h-52">{children}</div>
     </div>
   );
 }

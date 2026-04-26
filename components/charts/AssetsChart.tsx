@@ -40,6 +40,7 @@ const FILLS = {
   cash: "#64748b",
   fund: "#94a3b8",
   stock: "#b8c6d4",
+  gold: "#c9aa7c",
   dc: "#dde6ef",
   nw: "#c8383a",
 };
@@ -50,6 +51,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
     現金: Math.round(r.ass.c),
     投信: Math.round(r.ass.f),
     株: Math.round(r.ass.s),
+    金: Math.round(r.ass.g || 0),
     DC: Math.round(r.ass.dc),
     純資産: Math.round(r.nw),
   }));
@@ -93,8 +95,10 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
             <Tooltip
               content={({ payload, label }) => {
                 if (!payload?.length) return null;
-                const ORDER = ["現金", "投信", "株", "DC", "純資産"];
-                const sorted = ORDER.map((k) => payload.find((p) => p.dataKey === k)).filter(Boolean) as typeof payload;
+                const ORDER = ["現金", "投信", "株", "金", "DC", "純資産"];
+                const sorted = ORDER.map((k) =>
+                  payload.find((p) => p.dataKey === k),
+                ).filter(Boolean) as typeof payload;
                 return (
                   <div
                     style={{
@@ -106,9 +110,14 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                       padding: "8px 12px",
                     }}
                   >
-                    <p style={{ color: "#0a0a0a", fontWeight: 700, margin: "0 0 4px" }}>{label}歳</p>
+                    <p style={{ color: "#0a0a0a", fontWeight: 700, margin: "0 0 4px" }}>
+                      {label}歳
+                    </p>
                     {sorted.map((entry) => (
-                      <p key={entry.dataKey as string} style={{ color: entry.color as string, margin: "2px 0" }}>
+                      <p
+                        key={entry.dataKey as string}
+                        style={{ color: entry.color as string, margin: "2px 0" }}
+                      >
                         {entry.name} : {yenToOkuMan(Number(entry.value) || 0)}
                       </p>
                     ))}
@@ -128,6 +137,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
               iconType="square"
             />
             <Area type="linear" dataKey="DC"   stackId="bb" stroke={FILLS.dc}    strokeWidth={0.5} fill={FILLS.dc}    fillOpacity={1} />
+            <Area type="linear" dataKey="金"   stackId="bb" stroke={FILLS.gold}  strokeWidth={0.5} fill={FILLS.gold}  fillOpacity={1} />
             <Area type="linear" dataKey="株"   stackId="bb" stroke={FILLS.stock} strokeWidth={0.5} fill={FILLS.stock} fillOpacity={1} />
             <Area type="linear" dataKey="投信" stackId="bb" stroke={FILLS.fund}  strokeWidth={0.5} fill={FILLS.fund}  fillOpacity={1} />
             <Area type="linear" dataKey="現金" stackId="bb" stroke={FILLS.cash}  strokeWidth={0.5} fill={FILLS.cash}  fillOpacity={1} />

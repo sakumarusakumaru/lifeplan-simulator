@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/v2/quick", label: "かんたん診断" },
   { href: "/v2/detail", label: "詳細入力" },
   { href: "/v2/result", label: "結果" },
   { href: "/v2/suggest", label: "改善提案" },
