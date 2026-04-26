@@ -92,6 +92,21 @@ export interface JukuMonthly {
   ronin: number;
 }
 
+export interface InheritanceEvent {
+  age: number;       // 受け取る年齢（本人基準）
+  amount: number;    // 円（一時収入）
+  label: string;
+}
+
+export interface CareEvent {
+  startAge: number;        // 介護開始時の本人年齢
+  durationYears: number;   // 介護期間
+  monthlyCost: number;     // 月額（円）
+  label: string;           // 例「親A介護」
+}
+
+export type TaxMode = "simple" | "detailed";
+
 export interface PlanInput {
   baseDate: string;
   selfBirth: string;
@@ -104,6 +119,9 @@ export interface PlanInput {
   endAge: number;
   infl: number;
   taxRate: number;
+  taxMode: TaxMode;
+  inheritances: InheritanceEvent[];
+  careEvents: CareEvent[];
   cashFloor: number;
   allowNegCash: boolean;
   drawOrder: DrawOrderMode;
@@ -245,6 +263,9 @@ export interface YearlyResult {
   reTaxTot: number;
   jobNet: number;
   penNet: number;
+  inherit: number;       // 当年に受け取った相続（一時収入）
+  care: number;          // 当年の介護支出
+  socialIns: number;     // 社会保険料合計（詳細税モードのみ）
 }
 
 export interface SimulationSummary {

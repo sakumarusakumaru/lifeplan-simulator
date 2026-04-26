@@ -2,6 +2,7 @@ import { ageOn, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
 import { EDU, calcInsuranceY, pmt } from "./finance";
 import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable } from "./pension";
+import { calcDetailedTaxV2 } from "./tax";
 import type {
   AssetSnapshot,
   EduSplitDetail,
@@ -80,8 +81,52 @@ export function simulate(input: PlanInput): SimulationSummary {
     }
 
     const gross = job + side + spouseJob + pen;
-    const tax = gross * (input.taxRate / 100);
+    const selfPenY = age >= input.penStartA ? selfPenMonthly * 12 : 0;
+    const spousePenY = input.useSpousePen && age >= input.penStartB ? spousePenMonthly * 12 : 0;
+
+    let tax = 0;
+    let socialIns = 0;
+    if (input.taxMode === "detailed") {
+      // 子どもの当年齢
+      const kidAgesNow: number[] = input.kids.map((k) => age - k.offset).filter((a) => a >= 0);
+      const taxResult = calcDetailedTaxV2(
+        {
+          selfWageY: job + side,
+          spouseWageY: spouseJob,
+          selfPenY,
+          spousePenY,
+          selfAge: age,
+          spouseAge: spouseCurAge !== null ? spouseCurAge + (age - input.curAge) : age,
+          hasSpouse: spouseCurAge !== null && input.spouseWork !== undefined,
+          numKidsForFuyo: 0,
+          selfWorking: job + side > 0,
+          spouseWorking: input.spouseWork === "work" && spouseJob > 0,
+        },
+        kidAgesNow,
+      );
+      tax = taxResult.total;
+      socialIns =
+        taxResult.shahoSelf + taxResult.shahoSpouse +
+        taxResult.kokuhoSelf + taxResult.kokuhoSpouse +
+        taxResult.kaigoSelf + taxResult.kaigoSpouse;
+    } else {
+      tax = gross * (input.taxRate / 100);
+    }
     const net = gross - tax;
+
+    // 相続（一時収入・当年到達時のみ加算、インフレ補正なし）
+    let inherit = 0;
+    for (const ev of input.inheritances) {
+      if (ev.age === age) inherit += ev.amount;
+    }
+
+    // 介護費用（指定年齢から指定年数間、月額×12にインフレ適用）
+    let care = 0;
+    for (const ev of input.careEvents) {
+      if (age >= ev.startAge && age < ev.startAge + ev.durationYears) {
+        care += ev.monthlyCost * 12 * infl;
+      }
+    }
 
     let reInc = 0;
     let reRentTot = 0;
@@ -186,7 +231,7 @@ export function simulate(input: PlanInput): SimulationSummary {
     const tK = age < input.saveCryptoEndAge ? input.saveCryptoM * 12 : 0;
     const tD = age < input.saveDcEndAge ? input.saveDcM * 12 : 0;
 
-    const cf = net + reInc - (basic + home + edu + ins) - (tF + tS + tK + tD);
+    const cf = net + reInc + inherit - (basic + home + edu + ins + care) - (tF + tS + tK + tD);
 
     ass.c += cf;
     if (ass.c > 0) ass.c *= 1 + input.cashRate;
@@ -222,8 +267,8 @@ export function simulate(input: PlanInput): SimulationSummary {
       ass: { ...ass },
       reInc,
       net,
-      income: net + reInc,
-      exp: basic + home + edu + ins,
+      income: net + reInc + inherit,
+      exp: basic + home + edu + ins + care,
       inv: tF + tS + tK + tD,
       edu,
       eduT,
@@ -247,6 +292,9 @@ export function simulate(input: PlanInput): SimulationSummary {
       reTaxTot,
       jobNet: (job + side + spouseJob) * (1 - input.taxRate / 100),
       penNet: pen * (1 - input.taxRate / 100),
+      inherit,
+      care,
+      socialIns,
     });
   }
 
