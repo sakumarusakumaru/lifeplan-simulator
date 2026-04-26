@@ -47,6 +47,22 @@ export const DEFAULT_PLAN: PlanInput = {
   useSpousePen: true,
   penStartB: 65,
   penAmtB: 60000,
+  selfPension: {
+    mode: "auto",
+    category: "kosei",
+    koseiYears: 38,
+    koseiAvgIncome: 6_000_000,
+    kokuminMonths: 480,
+    manualMonth: 150_000,
+  },
+  spousePension: {
+    mode: "auto",
+    category: "dependent",
+    koseiYears: 0,
+    koseiAvgIncome: 0,
+    kokuminMonths: 480,
+    manualMonth: 60_000,
+  },
 
   livingM: 200000,
   specialY: 500000,

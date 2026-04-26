@@ -137,6 +137,8 @@ export interface PlanInput {
   useSpousePen: boolean;
   penStartB: number;
   penAmtB: number;
+  selfPension: PensionInput;
+  spousePension: PensionInput;
 
   livingM: number;
   specialY: number;
@@ -157,6 +159,32 @@ export interface PlanInput {
 export interface LifeEvent {
   label: string;
   age: number;
+}
+
+// 年金被保険者区分
+//   kosei : 2号 (会社員・公務員 / 厚生年金 + 国民年金)
+//   kokumin : 1号 (自営業・無職 / 国民年金のみ・自分で納付)
+//   dependent : 3号 (会社員配偶者の被扶養者 / 国民年金のみ・保険料免除)
+export type PensionCategory = "kosei" | "kokumin" | "dependent";
+
+export type PensionMode = "auto" | "manual";
+
+export interface PensionInput {
+  mode: PensionMode;
+  category: PensionCategory;
+  // --- 自動計算用 ---
+  koseiYears: number;          // 厚生年金加入年数(2号のみ)
+  koseiAvgIncome: number;      // 厚生年金加入時の平均年収(賞与込み・円)
+  kokuminMonths: number;       // 国民年金 納付済月数 (0-480, 満額=480)
+  // --- 手動入力用 ---
+  manualMonth: number;         // 月額(円)。modeがmanualの時に使用
+}
+
+export interface PensionBreakdown {
+  monthly: number;             // 合計 月額(円)
+  basicMonthly: number;        // 老齢基礎年金 月額(円)
+  koseiMonthly: number;        // 老齢厚生年金 月額(円)
+  adjustment: number;          // 繰上げ・繰下げ係数 (1.0=本来)
 }
 
 export interface AssetSnapshot {

@@ -1,6 +1,7 @@
 import { ageOn, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
 import { EDU, calcInsuranceY, pmt } from "./finance";
+import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable } from "./pension";
 import type {
   AssetSnapshot,
   EduSplitDetail,
@@ -39,6 +40,12 @@ export function simulate(input: PlanInput): SimulationSummary {
 
   const spouseCurAge = ageOn(input.spouseBirth, input.baseDate);
 
+  // 年金月額(老齢基礎+老齢厚生)を事前計算。インフレ補正なしの実額。
+  const selfPenBreakdown = calcPension(input.selfPension, input.penStartA);
+  const spousePenBreakdown = calcPension(input.spousePension, input.penStartB);
+  const selfPenMonthly = selfPenBreakdown.monthly;
+  const spousePenMonthly = spousePenBreakdown.monthly;
+
   for (let age = input.curAge; age <= input.endAge; age++) {
     const infl = Math.pow(1 + input.infl / 100, age - input.curAge);
 
@@ -60,8 +67,17 @@ export function simulate(input: PlanInput): SimulationSummary {
     }
 
     let pen = 0;
-    if (age >= input.penStartA) pen += input.penAmtA * 12;
-    if (input.useSpousePen && age >= input.penStartB) pen += input.penAmtB * 12;
+    if (age >= input.penStartA) pen += selfPenMonthly * 12;
+    if (input.useSpousePen && age >= input.penStartB) pen += spousePenMonthly * 12;
+    // 加給年金: 本人65歳到達時、厚生年金20年以上、配偶者65歳未満で加算
+    const spouseAgeNow =
+      spouseCurAge !== null ? spouseCurAge + (age - input.curAge) : null;
+    if (
+      input.useSpousePen &&
+      isKakyuuApplicable(input.selfPension, age, input.penStartA, spouseAgeNow)
+    ) {
+      pen += KAKYUU_NENKIN_ANNUAL;
+    }
 
     const gross = job + side + spouseJob + pen;
     const tax = gross * (input.taxRate / 100);
