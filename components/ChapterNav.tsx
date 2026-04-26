@@ -13,14 +13,20 @@ interface NavItem {
 
 export function ChapterNav() {
   const plan = usePlanStore((s) => s.plan);
+  const pensionEntered =
+    plan.selfPension.mode === "manual"
+      ? plan.selfPension.manualMonth > 0
+      : plan.selfPension.koseiAvgIncome > 0 || plan.selfPension.kokuminMonths > 0;
   const items: NavItem[] = [
     { id: "ch-01", no: "01", title: "基本情報", status: plan.selfBirth ? "entered" : "default" },
     { id: "ch-02", no: "02", title: "収入", status: plan.jobs.length > 0 ? "entered" : "default" },
-    { id: "ch-03", no: "03", title: "資産", status: plan.cashBal + plan.fundBal + plan.stockBal + plan.cryptoBal + plan.dcBal > 0 ? "entered" : "default" },
-    { id: "ch-04", no: "04", title: "支出・住居", status: plan.livingM > 0 || plan.rentM > 0 ? "entered" : "default" },
-    { id: "ch-05", no: "05", title: "教育費", status: plan.kids.length > 0 ? "entered" : "default" },
-    { id: "ch-06", no: "06", title: "不動産投資", status: plan.res.length > 0 ? "entered" : "default" },
-    { id: "ch-07", no: "07", title: "保険", status: plan.ins.length > 0 ? "entered" : "default" },
+    { id: "ch-03", no: "03", title: "年金", status: pensionEntered ? "entered" : "default" },
+    { id: "ch-04", no: "04", title: "資産", status: plan.cashBal + plan.fundBal + plan.stockBal + plan.cryptoBal + plan.dcBal > 0 ? "entered" : "default" },
+    { id: "ch-05", no: "05", title: "支出", status: plan.livingM > 0 ? "entered" : "default" },
+    { id: "ch-06", no: "06", title: "住居", status: plan.rentM > 0 || plan.useHomeLoan ? "entered" : "default" },
+    { id: "ch-07", no: "07", title: "教育費", status: plan.kids.length > 0 ? "entered" : "default" },
+    { id: "ch-08", no: "08", title: "不動産投資", status: plan.res.length > 0 ? "entered" : "default" },
+    { id: "ch-09", no: "09", title: "保険", status: plan.ins.length > 0 ? "entered" : "default" },
   ];
 
   const [active, setActive] = useState<string>(items[0].id);

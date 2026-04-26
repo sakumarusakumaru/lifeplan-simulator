@@ -29,8 +29,8 @@ export function RealEstateSection() {
 
   return (
     <Section
-      id="ch-06"
-      no="06"
+      id="ch-08"
+      no="08"
       title="不動産投資"
       description="物件ごとの家賃・経費・ローン"
       status={plan.res.length > 0 ? "entered" : "default"}

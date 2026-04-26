@@ -49,8 +49,8 @@ export function EducationSection() {
 
   return (
     <Section
-      id="ch-05"
-      no="05"
+      id="ch-07"
+      no="07"
       title="教育費"
       description="学校・塾・大学・下宿"
       status={plan.kids.length > 0 ? "entered" : "default"}

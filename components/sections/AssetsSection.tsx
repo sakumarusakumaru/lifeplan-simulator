@@ -27,8 +27,8 @@ export function AssetsSection() {
 
   return (
     <Section
-      id="ch-03"
-      no="03"
+      id="ch-04"
+      no="04"
       title="資産"
       description="現金・投信・株・暗号資産・確定拠出年金（DC）"
       status={

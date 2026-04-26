@@ -51,8 +51,8 @@ export function InsuranceSection() {
 
   return (
     <Section
-      id="ch-07"
-      no="07"
+      id="ch-09"
+      no="09"
       title="保険"
       description="生命・医療・損保・貯蓄型 etc"
       status={plan.ins.length > 0 ? "entered" : "default"}

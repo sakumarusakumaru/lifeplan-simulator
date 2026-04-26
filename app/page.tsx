@@ -7,9 +7,11 @@ import { ResultsPanel } from "@/components/ResultsPanel";
 import { AssetsSection } from "@/components/sections/AssetsSection";
 import { BasicSection } from "@/components/sections/BasicSection";
 import { EducationSection } from "@/components/sections/EducationSection";
-import { ExpenseHousingSection } from "@/components/sections/ExpenseHousingSection";
+import { ExpenseSection } from "@/components/sections/ExpenseSection";
+import { HousingSection } from "@/components/sections/HousingSection";
 import { IncomeSection } from "@/components/sections/IncomeSection";
 import { InsuranceSection } from "@/components/sections/InsuranceSection";
+import { PensionSection } from "@/components/sections/PensionSection";
 import { RealEstateSection } from "@/components/sections/RealEstateSection";
 import { simulate } from "@/lib/calc/simulate";
 import { usePlanStore } from "@/store/plan-store";
@@ -103,8 +105,10 @@ export default function Home() {
             <div className="flex flex-col gap-2">
               <BasicSection />
               <IncomeSection />
+              <PensionSection />
               <AssetsSection />
-              <ExpenseHousingSection />
+              <ExpenseSection />
+              <HousingSection />
               <EducationSection />
               <RealEstateSection />
               <InsuranceSection />
