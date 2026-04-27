@@ -2,12 +2,39 @@
 
 import { NumberField } from "@/components/inputs/NumberField";
 import { PercentField } from "@/components/inputs/PercentField";
+import { SelectField } from "@/components/inputs/SelectField";
 import { TextField } from "@/components/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
 import { Section } from "@/components/Section";
-import type { DrawAsset, RealEstate } from "@/lib/calc/types";
+import { computeRealEstateValue } from "@/lib/calc/finance";
+import type {
+  BuildingStructure,
+  DrawAsset,
+  RealEstate,
+  RealEstateType,
+} from "@/lib/calc/types";
 import { usePlanStore } from "@/store/plan-store";
+
+const PROP_TYPE_OPTIONS: { value: RealEstateType; label: string }[] = [
+  { value: "mansion", label: "マンション（区分所有）" },
+  { value: "house", label: "戸建て" },
+  { value: "land", label: "土地のみ" },
+];
+
+const STRUCTURE_OPTIONS: { value: BuildingStructure; label: string }[] = [
+  { value: "wood", label: "木造（耐用22年）" },
+  { value: "lightSteel", label: "軽量鉄骨（27年）" },
+  { value: "heavySteel", label: "重量鉄骨（34年）" },
+  { value: "rc", label: "RC造（47年）" },
+  { value: "src", label: "SRC造（47年）" },
+];
+
+const fmtMan = (yen: number) => {
+  const sign = yen < 0 ? "-" : "";
+  const abs = Math.abs(Math.round(yen / 10000));
+  return `${sign}${abs.toLocaleString()}万円`;
+};
 
 const DRAW_LABEL: Record<DrawAsset, string> = {
   f: "投信",
@@ -26,6 +53,12 @@ const NEW_RE = (): RealEstate => ({
   rate: 1.0,
   term: 20,
   start: 35,
+  propType: "mansion",
+  structure: "rc",
+  builtYear: new Date().getFullYear() - 5,
+  purchasePrice: 0,
+  landRatio: 30,
+  currentValueOverride: 0,
 });
 
 function Quad({
@@ -180,35 +213,130 @@ export function AssetsMegaSection() {
 
         <CollapsibleSubGroup title="不動産投資" defaultOpen={false}>
           <div className="flex flex-col gap-3">
-            {plan.res.map((r, i) => (
-              <ListItemCard
-                key={i}
-                kicker={`PROPERTY ${String(i + 1).padStart(2, "0")}`}
-                onRemove={() => removeRe(i)}
-              >
-                <div className="flex flex-col gap-2">
-                  <TextField
-                    label="名称"
-                    value={r.name}
-                    onChange={(v) => updateRe(i, { name: v })}
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <NumberField
-                      label="家賃収入(月)"
-                      value={r.rent}
-                      onChange={(v) => updateRe(i, { rent: v })}
-                      unit="円"
-                      hint="物件全体の月額家賃"
+            {plan.res.map((r, i) => {
+              const currentYear = new Date().getFullYear();
+              const estimatedValue = computeRealEstateValue(r, currentYear);
+              const propType = r.propType ?? "mansion";
+              const isHouse = propType === "house";
+              const isLand = propType === "land";
+              const useOverride = (r.currentValueOverride ?? 0) > 0;
+              return (
+                <ListItemCard
+                  key={i}
+                  kicker={`PROPERTY ${String(i + 1).padStart(2, "0")}`}
+                  onRemove={() => removeRe(i)}
+                >
+                  <div className="flex flex-col gap-2">
+                    <TextField
+                      label="名称"
+                      value={r.name}
+                      onChange={(v) => updateRe(i, { name: v })}
                     />
-                    <NumberField
-                      label="管理費＋修繕積立費(年)"
-                      value={r.cost}
-                      onChange={(v) => updateRe(i, { cost: v })}
-                      unit="円"
-                      hint="区分マンション等の管理組合費"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
+
+                    {/* 物件種別・構造 */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <SelectField
+                        label="物件種別"
+                        value={propType}
+                        onChange={(v) => updateRe(i, { propType: v })}
+                        options={PROP_TYPE_OPTIONS}
+                      />
+                      {isHouse ? (
+                        <SelectField
+                          label="建物構造"
+                          value={r.structure ?? "rc"}
+                          onChange={(v) => updateRe(i, { structure: v })}
+                          options={STRUCTURE_OPTIONS}
+                        />
+                      ) : (
+                        <div />
+                      )}
+                    </div>
+
+                    {/* 評価額算定 */}
+                    {!isLand && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <NumberField
+                          label="築年（西暦）"
+                          value={r.builtYear ?? currentYear}
+                          onChange={(v) => updateRe(i, { builtYear: v })}
+                          unit="年"
+                          hint={`築${Math.max(0, currentYear - (r.builtYear ?? currentYear))}年`}
+                        />
+                        <NumberField
+                          label="購入価格"
+                          value={r.purchasePrice ?? 0}
+                          onChange={(v) => updateRe(i, { purchasePrice: v })}
+                          unit="円"
+                          hint="諸費用込みの取得時総額"
+                        />
+                      </div>
+                    )}
+                    {isLand && (
+                      <NumberField
+                        label="購入価格"
+                        value={r.purchasePrice ?? 0}
+                        onChange={(v) => updateRe(i, { purchasePrice: v })}
+                        unit="円"
+                        hint="土地の購入価格"
+                      />
+                    )}
+
+                    {isHouse && (
+                      <NumberField
+                        label="土地価格比率"
+                        value={r.landRatio ?? 30}
+                        onChange={(v) => updateRe(i, { landRatio: v })}
+                        unit="%"
+                        hint="購入価格のうち土地が占める割合（残りが建物）"
+                      />
+                    )}
+
+                    {/* 推定評価額表示 + 手動上書き */}
+                    <div
+                      className="rounded-lg p-2"
+                      style={{ background: useOverride ? "#fff8e7" : "#f0fff4", border: `1.5px solid ${useOverride ? "#d4a017" : "#22863a"}40` }}
+                    >
+                      <div className="mb-1.5 flex items-baseline justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: useOverride ? "#a07900" : "#22863a" }}>
+                          {useOverride ? "現在評価額（手動指定）" : "推定現在評価額"}
+                        </span>
+                        <span className="text-sm font-bold tabular-nums" style={{ color: useOverride ? "#a07900" : "#22863a" }}>
+                          {fmtMan(estimatedValue)}
+                        </span>
+                      </div>
+                      <NumberField
+                        label="現在評価額（手動上書き・空欄=自動）"
+                        value={r.currentValueOverride ?? 0}
+                        onChange={(v) => updateRe(i, { currentValueOverride: v })}
+                        unit="円"
+                        hint={
+                          isLand
+                            ? "土地は経年劣化なし。市場変動を反映したい場合のみ入力"
+                            : isHouse
+                              ? "戸建ての場合、土地は維持・建物は構造別の耐用年数で減価"
+                              : "マンションは実勢相場ベースの減価カーブ（築40年で40%、その後30%が床）"
+                        }
+                      />
+                    </div>
+
+                    {/* 収支 */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <NumberField
+                        label="家賃収入(月)"
+                        value={r.rent}
+                        onChange={(v) => updateRe(i, { rent: v })}
+                        unit="円"
+                        hint="物件全体の月額家賃"
+                      />
+                      <NumberField
+                        label="管理費＋修繕積立費(年)"
+                        value={r.cost}
+                        onChange={(v) => updateRe(i, { cost: v })}
+                        unit="円"
+                        hint="区分マンション等の管理組合費"
+                      />
+                    </div>
                     <NumberField
                       label="固定資産税(年)"
                       value={r.propTax ?? 0}
@@ -216,36 +344,40 @@ export function AssetsMegaSection() {
                       unit="円"
                       hint="土地＋家屋の年間固定資産税・都市計画税"
                     />
-                    <NumberField
-                      label="ローン残高"
-                      value={r.bal}
-                      onChange={(v) => updateRe(i, { bal: v })}
-                      unit="円"
-                    />
+
+                    {/* ローン */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <NumberField
+                        label="ローン残高"
+                        value={r.bal}
+                        onChange={(v) => updateRe(i, { bal: v })}
+                        unit="円"
+                      />
+                      <PercentField
+                        label="金利"
+                        value={r.rate}
+                        onChange={(v) => updateRe(i, { rate: v })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <NumberField
+                        label="ローン期間"
+                        value={r.term}
+                        onChange={(v) => updateRe(i, { term: v })}
+                        unit="年"
+                      />
+                      <NumberField
+                        label="開始年齢"
+                        value={typeof r.start === "number" ? r.start : Number(r.start) || 0}
+                        onChange={(v) => updateRe(i, { start: v })}
+                        unit="歳"
+                        hint="運用開始年齢"
+                      />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <PercentField
-                      label="金利"
-                      value={r.rate}
-                      onChange={(v) => updateRe(i, { rate: v })}
-                    />
-                    <NumberField
-                      label="ローン期間"
-                      value={r.term}
-                      onChange={(v) => updateRe(i, { term: v })}
-                      unit="年"
-                    />
-                  </div>
-                  <NumberField
-                    label="開始年齢"
-                    value={typeof r.start === "number" ? r.start : Number(r.start) || 0}
-                    onChange={(v) => updateRe(i, { start: v })}
-                    unit="歳"
-                    hint="本人がこの物件の運用を開始する年齢"
-                  />
-                </div>
-              </ListItemCard>
-            ))}
+                </ListItemCard>
+              );
+            })}
             <AddButton label="物件を追加" onClick={addRe} />
           </div>
         </CollapsibleSubGroup>

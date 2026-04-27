@@ -44,6 +44,9 @@ export interface SideJob {
   inc: number;
 }
 
+export type RealEstateType = "house" | "mansion" | "land";
+export type BuildingStructure = "wood" | "lightSteel" | "heavySteel" | "rc" | "src";
+
 export interface RealEstate {
   name: string;
   rent: number;       // 月額家賃収入（円・物件全体）
@@ -53,6 +56,13 @@ export interface RealEstate {
   rate: number;       // 金利（%）
   term: number;       // ローン期間（年）
   start: number | string;
+  // 評価額算定（簿価計算）用
+  propType: RealEstateType;       // 物件種別
+  structure: BuildingStructure;   // 建物構造（戸建てのみ意味あり）
+  builtYear: number;              // 築年（西暦）
+  purchasePrice: number;          // 購入価格（円）
+  landRatio: number;              // 土地価格比率(%)（戸建てのみ意味あり、0-100）
+  currentValueOverride: number;   // 現在評価額の手動上書き（0なら自動計算）
 }
 
 export type InsuranceType =

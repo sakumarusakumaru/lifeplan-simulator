@@ -60,10 +60,17 @@ export const usePlanStore = create<PlanStore>()(
           return obj;
         });
 
-        // RealEstate フィールドの自動マイグレーション (propTax追加)
+        // RealEstate フィールドの自動マイグレーション (propTax + 評価額算定用フィールド追加)
+        const currentYear = new Date().getFullYear();
         const migratedRes = (persistedPlan.res ?? DEFAULT_PLAN.res).map((r) => {
           const obj = { ...r } as Record<string, unknown>;
           if (obj.propTax === undefined) obj.propTax = 0;
+          if (obj.propType === undefined) obj.propType = "mansion";
+          if (obj.structure === undefined) obj.structure = "rc";
+          if (obj.builtYear === undefined) obj.builtYear = currentYear - 5;
+          if (obj.purchasePrice === undefined) obj.purchasePrice = obj.bal || 0;
+          if (obj.landRatio === undefined) obj.landRatio = 30;
+          if (obj.currentValueOverride === undefined) obj.currentValueOverride = 0;
           return obj;
         });
 

@@ -17,6 +17,12 @@ const NEW_RE = (): RealEstate => ({
   rate: 1.0,
   term: 20,
   start: 35,
+  propType: "mansion",
+  structure: "rc",
+  builtYear: new Date().getFullYear() - 5,
+  purchasePrice: 0,
+  landRatio: 30,
+  currentValueOverride: 0,
 });
 
 export function RealEstateSection() {

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AssetsChart } from "@/components/charts/AssetsChart";
 import { CashflowChart } from "@/components/charts/CashflowChart";
 import { ageOn, kidAge } from "@/lib/calc/age";
+import { computeRealEstateValue } from "@/lib/calc/finance";
 import { simulate } from "@/lib/calc/simulate";
 import { usePlanStore } from "@/store/plan-store";
 
@@ -94,15 +95,19 @@ export default function ResultPage() {
     plan.cryptoBal +
     plan.goldBal +
     plan.dcBal;
-  const realEstateBal = plan.res.reduce((acc, r) => acc + r.bal, 0);
+  const realEstateLoan = plan.res.reduce((acc, r) => acc + r.bal, 0);
+  const realEstateValue = useMemo(() => {
+    const yr = new Date().getFullYear();
+    return plan.res.reduce((acc, r) => acc + computeRealEstateValue(r, yr), 0);
+  }, [plan.res]);
   const otherLoanBal = plan.otherLoans.reduce(
     (acc, ln) => acc + ln.monthlyPay * ln.remainMonths,
     0,
   );
-  // 不動産（簿価）はローン残高と同額として計上：金融資産＋不動産簿価＝資産合計
-  const totalAssetsNow = financialAssets + realEstateBal;
+  // 不動産（簿価）= 物件種別と築年数から推定した現在評価額（手動上書き優先）
+  const totalAssetsNow = financialAssets + realEstateValue;
   const totalLiabilitiesNow =
-    (plan.useHomeLoan ? plan.hlBal : 0) + realEstateBal + otherLoanBal;
+    (plan.useHomeLoan ? plan.hlBal : 0) + realEstateLoan + otherLoanBal;
   const netWorthNow = totalAssetsNow - totalLiabilitiesNow;
 
   // 年金月額の試算
@@ -225,14 +230,14 @@ export default function ResultPage() {
               { label: "仮想通貨", value: plan.cryptoBal, color: "#a78bfa", category: "current" },
               { label: "金・コモディティ", value: plan.goldBal, color: "#c9aa7c", category: "current" },
               { label: "DC", value: plan.dcBal, color: "#dde6ef", category: "fixed" },
-              { label: "不動産（簿価）", value: realEstateBal, color: "#8b6f4e", category: "fixed" },
+              { label: "不動産（評価額）", value: realEstateValue, color: "#8b6f4e", category: "fixed" },
             ] as const
           ).filter((a) => a.value > 0)}
           liabilities={(
             [
               { label: "その他ローン残高", value: otherLoanBal, color: "#d4a017", category: "current" },
               { label: "住宅ローン残高", value: plan.useHomeLoan ? plan.hlBal : 0, color: "#c8383a", category: "fixed" },
-              { label: "不動産ローン残高", value: realEstateBal, color: "#e88a8c", category: "fixed" },
+              { label: "不動産ローン残高", value: realEstateLoan, color: "#e88a8c", category: "fixed" },
             ] as const
           ).filter((l) => l.value > 0)}
           netWorth={netWorthNow}
