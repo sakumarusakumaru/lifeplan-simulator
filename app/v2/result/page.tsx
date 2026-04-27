@@ -437,7 +437,13 @@ interface BSItem {
   category: "current" | "fixed"; // 流動 or 固定
 }
 
-type BSView = "taccount" | "formal" | "hybrid" | "table";
+interface BSSegment extends BSItem {
+  heightPx: number;
+  striped?: boolean;
+}
+
+const BS_BAR_HEIGHT = 280;
+const BS_BAR_WIDTH = 112;
 
 function BalanceSheetVis({
   assets,
@@ -448,83 +454,113 @@ function BalanceSheetVis({
   liabilities: BSItem[];
   netWorth: number;
 }) {
-  const [view, setView] = useState<BSView>("taccount");
   const totalAssets = assets.reduce((a, b) => a + b.value, 0);
   const totalLiabilities = liabilities.reduce((a, b) => a + b.value, 0);
   const isAlert = netWorth < 0;
+  const totalHeight = Math.max(totalAssets, totalLiabilities, 1);
+
+  const [hovered, setHovered] = useState<string | null>(null);
+
+  const buildSegments = (items: BSItem[]): BSSegment[] =>
+    items
+      .filter((it) => it.value > 0)
+      .map((it) => ({
+        ...it,
+        heightPx: (it.value / totalHeight) * BS_BAR_HEIGHT,
+      }));
+
+  const currentA = buildSegments(assets.filter((a) => a.category === "current"));
+  const fixedA = buildSegments(assets.filter((a) => a.category === "fixed"));
+  const currentL = buildSegments(liabilities.filter((l) => l.category === "current"));
+  const fixedL = buildSegments(liabilities.filter((l) => l.category === "fixed"));
+  const nwHeightPx = (Math.abs(netWorth) / totalHeight) * BS_BAR_HEIGHT;
 
   return (
     <div
       className="mt-3 rounded-xl p-4"
       style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/60">
-          BALANCE SHEET ／ 資産・負債バランス
-        </p>
-        <div className="flex gap-0.5 overflow-x-auto rounded-md" style={{ border: "1.5px solid #0a0a0a30" }}>
-          {(
-            [
-              { key: "taccount", label: "T勘定" },
-              { key: "formal", label: "A 公式表" },
-              { key: "hybrid", label: "B ハイブリッド" },
-              { key: "table", label: "C 表のみ" },
-            ] as { key: BSView; label: string }[]
-          ).map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setView(t.key)}
-              className="whitespace-nowrap px-2.5 py-1 text-[10px] font-bold transition-colors"
-              style={{
-                background: view === t.key ? "#0a0a0a" : "transparent",
-                color: view === t.key ? "#ffffff" : "#0a0a0a",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/60">
+        BALANCE SHEET ／ 資産・負債バランス
+      </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        {/* 左: 資産（凡例 → バー） */}
+        <div>
+          <div
+            className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1"
+            style={{ borderColor: "#22863a" }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
+              資産 ASSETS
+            </span>
+            <span className="text-sm font-bold tabular-nums text-[#22863a]">
+              {fmtMan(totalAssets)}
+            </span>
+          </div>
+          <BSColumnGrouped
+            barSide="right"
+            groups={[
+              { label: "流動資産", segments: currentA },
+              { label: "固定資産", segments: fixedA },
+            ]}
+            extraSegment={
+              isAlert
+                ? {
+                    label: "純資産マイナス",
+                    value: Math.abs(netWorth),
+                    color: "#c8383a",
+                    heightPx: nwHeightPx,
+                    striped: true,
+                    category: "current",
+                  }
+                : null
+            }
+            heightPx={BS_BAR_HEIGHT}
+            hovered={hovered}
+            setHovered={setHovered}
+          />
+        </div>
+
+        {/* 右: 負債+純資産（バー → 凡例） */}
+        <div>
+          <div
+            className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1"
+            style={{ borderColor: "#c8383a" }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
+              {isAlert ? "負債" : "負債 + 純資産"}
+            </span>
+            <span className="text-sm font-bold tabular-nums text-[#c8383a]">
+              {fmtMan(isAlert ? totalLiabilities : totalLiabilities + Math.max(0, netWorth))}
+            </span>
+          </div>
+          <BSColumnGrouped
+            barSide="left"
+            groups={[
+              { label: "流動負債", segments: currentL },
+              { label: "固定負債", segments: fixedL },
+            ]}
+            extraSegment={
+              !isAlert && netWorth > 0
+                ? {
+                    label: "純資産（NET）",
+                    value: netWorth,
+                    color: "#22863a",
+                    heightPx: nwHeightPx,
+                    striped: false,
+                    category: "current",
+                  }
+                : null
+            }
+            heightPx={BS_BAR_HEIGHT}
+            hovered={hovered}
+            setHovered={setHovered}
+          />
         </div>
       </div>
 
-      {view === "taccount" && (
-        <BSViewTAccount
-          assets={assets}
-          liabilities={liabilities}
-          netWorth={netWorth}
-          totalAssets={totalAssets}
-          totalLiabilities={totalLiabilities}
-        />
-      )}
-      {view === "formal" && (
-        <BSViewFormal
-          assets={assets}
-          liabilities={liabilities}
-          netWorth={netWorth}
-          totalAssets={totalAssets}
-          totalLiabilities={totalLiabilities}
-        />
-      )}
-      {view === "hybrid" && (
-        <BSViewHybrid
-          assets={assets}
-          liabilities={liabilities}
-          netWorth={netWorth}
-          totalAssets={totalAssets}
-          totalLiabilities={totalLiabilities}
-        />
-      )}
-      {view === "table" && (
-        <BSViewPureTable
-          assets={assets}
-          liabilities={liabilities}
-          netWorth={netWorth}
-          totalAssets={totalAssets}
-          totalLiabilities={totalLiabilities}
-        />
-      )}
-
-      {/* 純資産サマリー（共通） */}
+      {/* 純資産サマリー */}
       <div
         className="mt-4 flex items-center justify-between rounded-lg px-4 py-2.5"
         style={{
@@ -554,618 +590,203 @@ function BalanceSheetVis({
   );
 }
 
-interface BSViewProps {
-  assets: BSItem[];
-  liabilities: BSItem[];
-  netWorth: number;
-  totalAssets: number;
-  totalLiabilities: number;
-}
-
-// ─────────────────────────────────────────────
-// 現行: T勘定型（縦バー + 凡例）
-// ─────────────────────────────────────────────
-function BSViewTAccount({ assets, liabilities, netWorth, totalAssets, totalLiabilities }: BSViewProps) {
-  const isAlert = netWorth < 0;
-  const totalHeight = Math.max(totalAssets, totalLiabilities, 1);
-  const BAR_HEIGHT = 280;
-  const assetSegments = assets.filter((a) => a.value > 0).map((a) => ({
-    ...a,
-    heightPx: (a.value / totalHeight) * BAR_HEIGHT,
-  }));
-  const liabilitySegments = liabilities.filter((l) => l.value > 0).map((l) => ({
-    ...l,
-    heightPx: (l.value / totalHeight) * BAR_HEIGHT,
-  }));
-  const nwHeightPx = (Math.abs(netWorth) / totalHeight) * BAR_HEIGHT;
-
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <div>
-        <div className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1" style={{ borderColor: "#22863a" }}>
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
-            {isAlert ? "資産 + 純資産マイナス" : "資産 ASSETS"}
-          </span>
-          <span className="text-sm font-bold tabular-nums text-[#22863a]">
-            {fmtMan(isAlert ? totalAssets + Math.abs(netWorth) : totalAssets)}
-          </span>
-        </div>
-        <BSColumn
-          segments={assetSegments}
-          extraSegment={
-            isAlert
-              ? { label: "純資産マイナス", value: Math.abs(netWorth), color: "#c8383a", heightPx: nwHeightPx, striped: true, category: "current" }
-              : null
-          }
-          heightPx={BAR_HEIGHT}
-          align="left"
-        />
-      </div>
-      <div>
-        <div className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1" style={{ borderColor: "#c8383a" }}>
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
-            {isAlert ? "負債" : "負債 + 純資産"}
-          </span>
-          <span className="text-sm font-bold tabular-nums text-[#c8383a]">
-            {fmtMan(isAlert ? totalLiabilities : totalLiabilities + Math.max(0, netWorth))}
-          </span>
-        </div>
-        <BSColumn
-          segments={liabilitySegments}
-          extraSegment={
-            !isAlert && netWorth > 0
-              ? { label: "純資産（NET）", value: netWorth, color: "#22863a", heightPx: nwHeightPx, striped: false, category: "current" }
-              : null
-          }
-          heightPx={BAR_HEIGHT}
-          align="right"
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// A: 公式フォーマット（流動/固定セクション付き表）
-// ─────────────────────────────────────────────
-function BSViewFormal({ assets, liabilities, netWorth, totalAssets, totalLiabilities }: BSViewProps) {
-  const isAlert = netWorth < 0;
-  const currentAssets = assets.filter((a) => a.category === "current");
-  const fixedAssets = assets.filter((a) => a.category === "fixed");
-  const currentLiab = liabilities.filter((l) => l.category === "current");
-  const fixedLiab = liabilities.filter((l) => l.category === "fixed");
-  const sumCurrentA = currentAssets.reduce((s, a) => s + a.value, 0);
-  const sumFixedA = fixedAssets.reduce((s, a) => s + a.value, 0);
-  const sumCurrentL = currentLiab.reduce((s, l) => s + l.value, 0);
-  const sumFixedL = fixedLiab.reduce((s, l) => s + l.value, 0);
-
-  // 公式の貸借対照表: 資産合計 = 負債合計 + 純資産（負の場合は減算）
-  // 両側とも totalAssets で一致する
-  const grandTotal = totalAssets;
-
-  return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      {/* 左: 資産の部 */}
-      <div style={{ border: "1.5px solid #0a0a0a", borderRadius: 6 }}>
-        <div className="px-3 py-1.5 text-center text-[11px] font-bold tracking-[0.12em] text-white" style={{ background: "#22863a" }}>
-          資産の部
-        </div>
-        <table className="w-full text-[11px]">
-          <tbody>
-            {currentAssets.length > 0 && (
-              <>
-                <tr style={{ background: "#f0fff4" }}>
-                  <td className="px-3 py-1 font-bold text-[#0a0a0a]/70">流動資産</td>
-                  <td></td>
-                </tr>
-                {currentAssets.map((a) => (
-                  <tr key={a.label} style={{ borderTop: "1px solid #0a0a0a10" }}>
-                    <td className="px-3 py-1 pl-6">
-                      <span className="inline-block h-2 w-2 mr-1.5 align-middle" style={{ background: a.color, border: "1px solid #0a0a0a30" }} />
-                      {a.label}
-                    </td>
-                    <td className="px-3 py-1 text-right tabular-nums">{fmtMan(a.value)}</td>
-                  </tr>
-                ))}
-                <tr style={{ borderTop: "1px solid #0a0a0a30" }}>
-                  <td className="px-3 py-1 pl-6 text-[#0a0a0a]/65">小計</td>
-                  <td className="px-3 py-1 text-right font-bold tabular-nums">{fmtMan(sumCurrentA)}</td>
-                </tr>
-              </>
-            )}
-            {fixedAssets.length > 0 && (
-              <>
-                <tr style={{ background: "#f0fff4", borderTop: "1.5px solid #0a0a0a" }}>
-                  <td className="px-3 py-1 font-bold text-[#0a0a0a]/70">固定資産</td>
-                  <td></td>
-                </tr>
-                {fixedAssets.map((a) => (
-                  <tr key={a.label} style={{ borderTop: "1px solid #0a0a0a10" }}>
-                    <td className="px-3 py-1 pl-6">
-                      <span className="inline-block h-2 w-2 mr-1.5 align-middle" style={{ background: a.color, border: "1px solid #0a0a0a30" }} />
-                      {a.label}
-                    </td>
-                    <td className="px-3 py-1 text-right tabular-nums">{fmtMan(a.value)}</td>
-                  </tr>
-                ))}
-                <tr style={{ borderTop: "1px solid #0a0a0a30" }}>
-                  <td className="px-3 py-1 pl-6 text-[#0a0a0a]/65">小計</td>
-                  <td className="px-3 py-1 text-right font-bold tabular-nums">{fmtMan(sumFixedA)}</td>
-                </tr>
-              </>
-            )}
-            <tr style={{ borderTop: "2.5px double #0a0a0a", background: "#0a0a0a" }}>
-              <td className="px-3 py-1.5 font-bold uppercase tracking-[0.1em] text-white">資産合計</td>
-              <td className="px-3 py-1.5 text-right font-bold tabular-nums text-white">
-                {fmtMan(grandTotal)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* 右: 負債及び純資産の部 */}
-      <div style={{ border: "1.5px solid #0a0a0a", borderRadius: 6 }}>
-        <div className="px-3 py-1.5 text-center text-[11px] font-bold tracking-[0.12em] text-white" style={{ background: "#c8383a" }}>
-          負債及び純資産の部
-        </div>
-        <table className="w-full text-[11px]">
-          <tbody>
-            {currentLiab.length > 0 && (
-              <>
-                <tr style={{ background: "#fff0f0" }}>
-                  <td className="px-3 py-1 font-bold text-[#0a0a0a]/70">流動負債</td>
-                  <td></td>
-                </tr>
-                {currentLiab.map((l) => (
-                  <tr key={l.label} style={{ borderTop: "1px solid #0a0a0a10" }}>
-                    <td className="px-3 py-1 pl-6">
-                      <span className="inline-block h-2 w-2 mr-1.5 align-middle" style={{ background: l.color, border: "1px solid #0a0a0a30" }} />
-                      {l.label}
-                    </td>
-                    <td className="px-3 py-1 text-right tabular-nums">{fmtMan(l.value)}</td>
-                  </tr>
-                ))}
-                <tr style={{ borderTop: "1px solid #0a0a0a30" }}>
-                  <td className="px-3 py-1 pl-6 text-[#0a0a0a]/65">小計</td>
-                  <td className="px-3 py-1 text-right font-bold tabular-nums">{fmtMan(sumCurrentL)}</td>
-                </tr>
-              </>
-            )}
-            {fixedLiab.length > 0 && (
-              <>
-                <tr style={{ background: "#fff0f0", borderTop: "1.5px solid #0a0a0a" }}>
-                  <td className="px-3 py-1 font-bold text-[#0a0a0a]/70">固定負債</td>
-                  <td></td>
-                </tr>
-                {fixedLiab.map((l) => (
-                  <tr key={l.label} style={{ borderTop: "1px solid #0a0a0a10" }}>
-                    <td className="px-3 py-1 pl-6">
-                      <span className="inline-block h-2 w-2 mr-1.5 align-middle" style={{ background: l.color, border: "1px solid #0a0a0a30" }} />
-                      {l.label}
-                    </td>
-                    <td className="px-3 py-1 text-right tabular-nums">{fmtMan(l.value)}</td>
-                  </tr>
-                ))}
-                <tr style={{ borderTop: "1px solid #0a0a0a30" }}>
-                  <td className="px-3 py-1 pl-6 text-[#0a0a0a]/65">小計</td>
-                  <td className="px-3 py-1 text-right font-bold tabular-nums">{fmtMan(sumFixedL)}</td>
-                </tr>
-              </>
-            )}
-            <tr style={{ borderTop: "1.5px solid #0a0a0a", background: "#fff0f0" }}>
-              <td className="px-3 py-1 font-bold text-[#0a0a0a]">負債合計</td>
-              <td className="px-3 py-1 text-right font-bold tabular-nums text-[#c8383a]">{fmtMan(totalLiabilities)}</td>
-            </tr>
-            <tr style={{ background: "#f0fff4", borderTop: "1.5px solid #0a0a0a" }}>
-              <td className="px-3 py-1 font-bold text-[#0a0a0a]/70">純資産の部</td>
-              <td></td>
-            </tr>
-            <tr style={{ borderTop: "1px solid #0a0a0a10" }}>
-              <td className="px-3 py-1 pl-6">純資産</td>
-              <td className="px-3 py-1 text-right font-bold tabular-nums" style={{ color: isAlert ? "#c8383a" : "#22863a" }}>
-                {fmtMan(netWorth)}
-              </td>
-            </tr>
-            <tr style={{ borderTop: "2.5px double #0a0a0a", background: "#0a0a0a" }}>
-              <td className="px-3 py-1.5 font-bold uppercase tracking-[0.1em] text-white">負債純資産合計</td>
-              <td className="px-3 py-1.5 text-right font-bold tabular-nums text-white">
-                {fmtMan(totalLiabilities + netWorth)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// B: ハイブリッド（T勘定 + 流動/固定 区切り）
-// ─────────────────────────────────────────────
-function BSViewHybrid({ assets, liabilities, netWorth, totalAssets, totalLiabilities }: BSViewProps) {
-  const isAlert = netWorth < 0;
-  const totalHeight = Math.max(totalAssets, totalLiabilities, 1);
-  const BAR_HEIGHT = 280;
-
-  const buildSegments = (items: BSItem[]) =>
-    items.filter((it) => it.value > 0).map((it) => ({
-      ...it,
-      heightPx: (it.value / totalHeight) * BAR_HEIGHT,
-    }));
-
-  const currentA = buildSegments(assets.filter((a) => a.category === "current"));
-  const fixedA = buildSegments(assets.filter((a) => a.category === "fixed"));
-  const currentL = buildSegments(liabilities.filter((l) => l.category === "current"));
-  const fixedL = buildSegments(liabilities.filter((l) => l.category === "fixed"));
-  const nwHeightPx = (Math.abs(netWorth) / totalHeight) * BAR_HEIGHT;
-
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <div>
-        <div className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1" style={{ borderColor: "#22863a" }}>
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">資産 ASSETS</span>
-          <span className="text-sm font-bold tabular-nums text-[#22863a]">{fmtMan(totalAssets)}</span>
-        </div>
-        <BSColumnGrouped
-          groups={[
-            { label: "流動資産", segments: currentA },
-            { label: "固定資産", segments: fixedA },
-          ]}
-          extraSegment={
-            isAlert
-              ? { label: "純資産マイナス", value: Math.abs(netWorth), color: "#c8383a", heightPx: nwHeightPx, striped: true, category: "current" }
-              : null
-          }
-          heightPx={BAR_HEIGHT}
-        />
-      </div>
-      <div>
-        <div className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1" style={{ borderColor: "#c8383a" }}>
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
-            {isAlert ? "負債" : "負債 + 純資産"}
-          </span>
-          <span className="text-sm font-bold tabular-nums text-[#c8383a]">
-            {fmtMan(isAlert ? totalLiabilities : totalLiabilities + Math.max(0, netWorth))}
-          </span>
-        </div>
-        <BSColumnGrouped
-          groups={[
-            { label: "流動負債", segments: currentL },
-            { label: "固定負債", segments: fixedL },
-          ]}
-          extraSegment={
-            !isAlert && netWorth > 0
-              ? { label: "純資産（NET）", value: netWorth, color: "#22863a", heightPx: nwHeightPx, striped: false, category: "current" }
-              : null
-          }
-          heightPx={BAR_HEIGHT}
-        />
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// C: 表のみ（austere・縦単一カラム）
-// ─────────────────────────────────────────────
-function BSViewPureTable({ assets, liabilities, netWorth, totalAssets, totalLiabilities }: BSViewProps) {
-  const isAlert = netWorth < 0;
-  const currentA = assets.filter((a) => a.category === "current");
-  const fixedA = assets.filter((a) => a.category === "fixed");
-  const currentL = liabilities.filter((l) => l.category === "current");
-  const fixedL = liabilities.filter((l) => l.category === "fixed");
-  const sumCurrentA = currentA.reduce((s, a) => s + a.value, 0);
-  const sumFixedA = fixedA.reduce((s, a) => s + a.value, 0);
-  const sumCurrentL = currentL.reduce((s, l) => s + l.value, 0);
-  const sumFixedL = fixedL.reduce((s, l) => s + l.value, 0);
-
-  return (
-    <div style={{ border: "1.5px solid #0a0a0a" }}>
-      <table className="w-full text-[11px]">
-        <thead>
-          <tr style={{ background: "#0a0a0a", color: "#ffffff" }}>
-            <th className="px-3 py-2 text-left font-bold uppercase tracking-[0.1em]">勘定科目</th>
-            <th className="px-3 py-2 text-right font-bold uppercase tracking-[0.1em]">金額</th>
-          </tr>
-        </thead>
-        <tbody className="text-[#0a0a0a]">
-          {/* 資産の部 */}
-          <tr style={{ background: "#f0fff4", borderBottom: "1px solid #0a0a0a30" }}>
-            <td className="px-3 py-1 font-bold text-[#22863a]" colSpan={2}>【資産の部】</td>
-          </tr>
-          {currentA.length > 0 && (
-            <>
-              <tr style={{ borderBottom: "1px solid #0a0a0a10" }}>
-                <td className="px-3 py-1 pl-4 font-bold text-[#0a0a0a]/70">流動資産</td>
-                <td></td>
-              </tr>
-              {currentA.map((a) => (
-                <tr key={a.label} style={{ borderBottom: "1px solid #0a0a0a08" }}>
-                  <td className="px-3 py-1 pl-7 text-[#0a0a0a]/80">{a.label}</td>
-                  <td className="px-3 py-1 text-right tabular-nums">{fmtMan(a.value)}</td>
-                </tr>
-              ))}
-              <tr style={{ borderBottom: "1px solid #0a0a0a30" }}>
-                <td className="px-3 py-1 pl-4 italic text-[#0a0a0a]/55">流動資産合計</td>
-                <td className="px-3 py-1 text-right font-bold tabular-nums">{fmtMan(sumCurrentA)}</td>
-              </tr>
-            </>
-          )}
-          {fixedA.length > 0 && (
-            <>
-              <tr style={{ borderBottom: "1px solid #0a0a0a10" }}>
-                <td className="px-3 py-1 pl-4 font-bold text-[#0a0a0a]/70">固定資産</td>
-                <td></td>
-              </tr>
-              {fixedA.map((a) => (
-                <tr key={a.label} style={{ borderBottom: "1px solid #0a0a0a08" }}>
-                  <td className="px-3 py-1 pl-7 text-[#0a0a0a]/80">{a.label}</td>
-                  <td className="px-3 py-1 text-right tabular-nums">{fmtMan(a.value)}</td>
-                </tr>
-              ))}
-              <tr style={{ borderBottom: "1px solid #0a0a0a30" }}>
-                <td className="px-3 py-1 pl-4 italic text-[#0a0a0a]/55">固定資産合計</td>
-                <td className="px-3 py-1 text-right font-bold tabular-nums">{fmtMan(sumFixedA)}</td>
-              </tr>
-            </>
-          )}
-          <tr style={{ borderBottom: "2px double #0a0a0a", background: "#0a0a0a", color: "#ffffff" }}>
-            <td className="px-3 py-1.5 font-bold">資産合計</td>
-            <td className="px-3 py-1.5 text-right font-bold tabular-nums">{fmtMan(totalAssets)}</td>
-          </tr>
-
-          {/* 負債の部 */}
-          <tr style={{ background: "#fff0f0", borderBottom: "1px solid #0a0a0a30" }}>
-            <td className="px-3 py-1 font-bold text-[#c8383a]" colSpan={2}>【負債の部】</td>
-          </tr>
-          {currentL.length > 0 && (
-            <>
-              <tr style={{ borderBottom: "1px solid #0a0a0a10" }}>
-                <td className="px-3 py-1 pl-4 font-bold text-[#0a0a0a]/70">流動負債</td>
-                <td></td>
-              </tr>
-              {currentL.map((l) => (
-                <tr key={l.label} style={{ borderBottom: "1px solid #0a0a0a08" }}>
-                  <td className="px-3 py-1 pl-7 text-[#0a0a0a]/80">{l.label}</td>
-                  <td className="px-3 py-1 text-right tabular-nums">{fmtMan(l.value)}</td>
-                </tr>
-              ))}
-              <tr style={{ borderBottom: "1px solid #0a0a0a30" }}>
-                <td className="px-3 py-1 pl-4 italic text-[#0a0a0a]/55">流動負債合計</td>
-                <td className="px-3 py-1 text-right font-bold tabular-nums">{fmtMan(sumCurrentL)}</td>
-              </tr>
-            </>
-          )}
-          {fixedL.length > 0 && (
-            <>
-              <tr style={{ borderBottom: "1px solid #0a0a0a10" }}>
-                <td className="px-3 py-1 pl-4 font-bold text-[#0a0a0a]/70">固定負債</td>
-                <td></td>
-              </tr>
-              {fixedL.map((l) => (
-                <tr key={l.label} style={{ borderBottom: "1px solid #0a0a0a08" }}>
-                  <td className="px-3 py-1 pl-7 text-[#0a0a0a]/80">{l.label}</td>
-                  <td className="px-3 py-1 text-right tabular-nums">{fmtMan(l.value)}</td>
-                </tr>
-              ))}
-              <tr style={{ borderBottom: "1px solid #0a0a0a30" }}>
-                <td className="px-3 py-1 pl-4 italic text-[#0a0a0a]/55">固定負債合計</td>
-                <td className="px-3 py-1 text-right font-bold tabular-nums">{fmtMan(sumFixedL)}</td>
-              </tr>
-            </>
-          )}
-          <tr style={{ borderBottom: "2px double #0a0a0a", background: "#0a0a0a", color: "#ffffff" }}>
-            <td className="px-3 py-1.5 font-bold">負債合計</td>
-            <td className="px-3 py-1.5 text-right font-bold tabular-nums">{fmtMan(totalLiabilities)}</td>
-          </tr>
-
-          {/* 純資産の部 */}
-          <tr style={{ background: "#f0fff4", borderBottom: "1px solid #0a0a0a30" }}>
-            <td className="px-3 py-1 font-bold text-[#22863a]" colSpan={2}>【純資産の部】</td>
-          </tr>
-          <tr style={{ borderBottom: "1px solid #0a0a0a08" }}>
-            <td className="px-3 py-1 pl-7 text-[#0a0a0a]/80">純資産</td>
-            <td
-              className="px-3 py-1 text-right font-bold tabular-nums"
-              style={{ color: isAlert ? "#c8383a" : "#22863a" }}
-            >
-              {fmtMan(netWorth)}
-            </td>
-          </tr>
-          <tr style={{ background: "#0a0a0a", color: "#ffffff" }}>
-            <td className="px-3 py-2 font-bold uppercase tracking-[0.1em]">負債純資産合計</td>
-            <td className="px-3 py-2 text-right font-bold tabular-nums">
-              {fmtMan(totalLiabilities + netWorth)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ハイブリッド用: 流動/固定の区切り付きカラム
+// ハイブリッド型カラム: 流動/固定の区切り + ホバーインタラクション
 function BSColumnGrouped({
+  barSide,
   groups,
   extraSegment,
   heightPx,
+  hovered,
+  setHovered,
 }: {
+  barSide: "left" | "right";
   groups: { label: string; segments: BSSegment[] }[];
   extraSegment: BSSegment | null;
   heightPx: number;
+  hovered: string | null;
+  setHovered: (s: string | null) => void;
 }) {
-  const allSegments: { label: string; segment: BSSegment; isGroupTop: boolean; groupLabel: string }[] = [];
+  // 縦積み用に flat 化（最初のグループの最初がバーの最下部、グループ境目に太線を入れる）
+  const flatSegments: { segment: BSSegment; isGroupTop: boolean; groupLabel: string }[] = [];
   groups.forEach((g) => {
     g.segments.forEach((s, i) => {
-      allSegments.push({ label: s.label, segment: s, isGroupTop: i === 0, groupLabel: g.label });
+      flatSegments.push({ segment: s, isGroupTop: i === 0, groupLabel: g.label });
     });
   });
 
+  // バー（flat-segments を下から上へ表示、extraSegment はその上）
+  const Bar = (
+    <div
+      className="flex flex-col-reverse overflow-hidden"
+      style={{
+        width: BS_BAR_WIDTH,
+        height: heightPx,
+        border: "1.5px solid #0a0a0a30",
+        borderRadius: 4,
+        flexShrink: 0,
+      }}
+    >
+      {extraSegment && (
+        <div
+          onMouseEnter={() => setHovered(extraSegment.label)}
+          onMouseLeave={() => setHovered(null)}
+          className="cursor-pointer transition-all"
+          style={{
+            height: extraSegment.heightPx,
+            minHeight: 2,
+            background: extraSegment.color,
+            borderTop: flatSegments.length > 0 ? "2px dashed #ffffff80" : "none",
+            backgroundImage: extraSegment.striped
+              ? "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.25) 4px, rgba(255,255,255,0.25) 8px)"
+              : "none",
+            filter: hovered === extraSegment.label ? "brightness(1.15)" : "none",
+          }}
+          title={`${extraSegment.label}: ${fmtMan(extraSegment.value)}`}
+        />
+      )}
+      {[...flatSegments].reverse().map((s, idx, arr) => (
+        <div
+          key={s.segment.label}
+          onMouseEnter={() => setHovered(s.segment.label)}
+          onMouseLeave={() => setHovered(null)}
+          className="cursor-pointer transition-all"
+          style={{
+            height: s.segment.heightPx,
+            minHeight: 2,
+            background: s.segment.color,
+            borderTop:
+              idx === 0
+                ? "none"
+                : arr[idx - 1].isGroupTop
+                  ? "2px solid #0a0a0a"
+                  : "1px solid #ffffff60",
+            filter: hovered === s.segment.label ? "brightness(1.15)" : "none",
+          }}
+          title={`[${s.groupLabel}] ${s.segment.label}: ${fmtMan(s.segment.value)}`}
+        />
+      ))}
+    </div>
+  );
+
+  // 凡例（バーと同じ視覚的順序: 下から上）
+  const Legend = (
+    <ul
+      className={`flex flex-1 flex-col-reverse text-[10px] ${
+        barSide === "right" ? "items-end text-right" : "items-start text-left"
+      }`}
+    >
+      {extraSegment && (
+        <BSLegendItem
+          segment={extraSegment}
+          groupLabel={null}
+          showGroup={false}
+          barSide={barSide}
+          hovered={hovered}
+          setHovered={setHovered}
+        />
+      )}
+      {groups.map((g) => (
+        <li key={g.label} className="flex flex-col-reverse w-full">
+          {g.segments.map((s, i) => (
+            <BSLegendItem
+              key={s.label}
+              segment={s}
+              groupLabel={g.label}
+              showGroup={i === 0}
+              barSide={barSide}
+              hovered={hovered}
+              setHovered={setHovered}
+            />
+          ))}
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <div className="flex gap-2">
-      <div
-        className="flex flex-col-reverse overflow-hidden"
-        style={{ width: 56, height: heightPx, border: "1.5px solid #0a0a0a30", borderRadius: 4 }}
-      >
-        {extraSegment && (
-          <div
-            className="flex items-center justify-center"
-            style={{
-              height: extraSegment.heightPx,
-              minHeight: 2,
-              background: extraSegment.color,
-              borderTop: allSegments.length > 0 ? "2px dashed #ffffff80" : "none",
-              backgroundImage: extraSegment.striped
-                ? "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.25) 4px, rgba(255,255,255,0.25) 8px)"
-                : "none",
-            }}
-            title={`${extraSegment.label}: ${fmtMan(extraSegment.value)}`}
-          />
-        )}
-        {[...allSegments].reverse().map((s, idx) => (
-          <div
-            key={s.label}
-            className="flex items-center justify-center"
-            style={{
-              height: s.segment.heightPx,
-              minHeight: 2,
-              background: s.segment.color,
-              borderTop: idx > 0 ? (s.isGroupTop ? "2px solid #0a0a0a" : "1px solid #ffffff60") : "none",
-            }}
-            title={`[${s.groupLabel}] ${s.label}: ${fmtMan(s.segment.value)}`}
-          />
-        ))}
-      </div>
-      <ul className="flex flex-1 flex-col-reverse text-[10px]">
-        {extraSegment && (
-          <li className="flex items-center gap-1.5 py-0.5" style={{ minHeight: Math.max(extraSegment.heightPx, 18) }}>
-            <span
-              className="inline-block h-2.5 w-2.5 shrink-0"
-              style={{
-                background: extraSegment.color,
-                border: "1px solid #0a0a0a30",
-                backgroundImage: extraSegment.striped
-                  ? "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 4px)"
-                  : "none",
-              }}
-            />
-            <div className="min-w-0">
-              <p className="leading-tight text-[#0a0a0a]/70">{extraSegment.label}</p>
-              <p className="font-bold tabular-nums leading-tight text-[#0a0a0a]">{fmtMan(extraSegment.value)}</p>
-            </div>
-          </li>
-        )}
-        {groups.map((g) => (
-          <li key={g.label} className="flex flex-col-reverse">
-            {g.segments.map((s, i) => (
-              <div
-                key={s.label}
-                className="flex items-center gap-1.5 py-0.5"
-                style={{ minHeight: Math.max(s.heightPx, 18) }}
-              >
-                <span
-                  className="inline-block h-2.5 w-2.5 shrink-0"
-                  style={{ background: s.color, border: "1px solid #0a0a0a30" }}
-                />
-                <div className="min-w-0">
-                  <p className="leading-tight text-[#0a0a0a]/70">
-                    {i === 0 ? (
-                      <span className="text-[8px] font-bold uppercase tracking-wide text-[#0a0a0a]/40 mr-1">
-                        [{g.label}]
-                      </span>
-                    ) : null}
-                    {s.label}
-                  </p>
-                  <p className="font-bold tabular-nums leading-tight text-[#0a0a0a]">{fmtMan(s.value)}</p>
-                </div>
-              </div>
-            ))}
-          </li>
-        ))}
-      </ul>
+      {barSide === "right" ? (
+        <>
+          {Legend}
+          {Bar}
+        </>
+      ) : (
+        <>
+          {Bar}
+          {Legend}
+        </>
+      )}
     </div>
   );
 }
 
-interface BSSegment extends BSItem {
-  heightPx: number;
-  striped?: boolean;
-}
-
-function BSColumn({
-  segments,
-  extraSegment,
-  heightPx,
-  align,
+function BSLegendItem({
+  segment,
+  groupLabel,
+  showGroup,
+  barSide,
+  hovered,
+  setHovered,
 }: {
-  segments: BSSegment[];
-  extraSegment: BSSegment | null;
-  heightPx: number;
-  align: "left" | "right";
+  segment: BSSegment;
+  groupLabel: string | null;
+  showGroup: boolean;
+  barSide: "left" | "right";
+  hovered: string | null;
+  setHovered: (s: string | null) => void;
 }) {
-  const allSegments: BSSegment[] = extraSegment
-    ? [...segments, extraSegment]
-    : segments;
+  const isHovered = hovered === segment.label;
+  const swatch = (
+    <span
+      className="inline-block h-2.5 w-2.5 shrink-0"
+      style={{
+        background: segment.color,
+        border: "1px solid #0a0a0a30",
+        backgroundImage: segment.striped
+          ? "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 4px)"
+          : "none",
+      }}
+    />
+  );
 
   return (
-    <div className="flex gap-2">
-      {/* バー本体（縦積み） */}
+    <li
+      onMouseEnter={() => setHovered(segment.label)}
+      onMouseLeave={() => setHovered(null)}
+      className={`flex items-center gap-1.5 py-0.5 cursor-pointer transition-all ${
+        barSide === "right" ? "flex-row-reverse" : ""
+      }`}
+      style={{
+        minHeight: Math.max(segment.heightPx, 22),
+      }}
+    >
+      {swatch}
       <div
-        className="flex flex-col-reverse overflow-hidden"
+        className="min-w-0 transition-all"
         style={{
-          width: 56,
-          height: heightPx,
-          border: "1.5px solid #0a0a0a30",
-          borderRadius: 4,
+          transform: isHovered ? "scale(1.15)" : "scale(1)",
+          transformOrigin: barSide === "right" ? "right center" : "left center",
         }}
       >
-        {allSegments.map((s) => (
-          <div
-            key={s.label}
-            className="flex items-center justify-center"
-            style={{
-              height: s.heightPx,
-              minHeight: 2,
-              background: s.color,
-              borderTop: s !== allSegments[0] ? "1px solid #ffffff60" : "none",
-              backgroundImage: s.striped
-                ? "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.25) 4px, rgba(255,255,255,0.25) 8px)"
-                : "none",
-            }}
-            title={`${s.label}: ${fmtMan(s.value)}`}
-          />
-        ))}
+        {showGroup && groupLabel && (
+          <p className="text-[8px] font-bold uppercase tracking-wide text-[#0a0a0a]/40 leading-none mb-0.5">
+            [{groupLabel}]
+          </p>
+        )}
+        <p className="leading-tight text-[#0a0a0a]/70">{segment.label}</p>
+        <p
+          className="font-bold tabular-nums leading-tight"
+          style={{
+            color: isHovered ? segment.color : "#0a0a0a",
+            fontSize: isHovered ? "13px" : "11px",
+            transition: "all 0.15s",
+            filter: isHovered ? "brightness(0.7)" : "none",
+          }}
+        >
+          {fmtMan(segment.value)}
+        </p>
       </div>
-
-      {/* 凡例（縦並び） */}
-      <ul className={`flex-1 flex flex-col-reverse ${align === "right" ? "items-start" : "items-start"} text-[10px]`}>
-        {allSegments.map((s) => (
-          <li
-            key={s.label}
-            className="flex items-center gap-1.5 py-0.5"
-            style={{ minHeight: Math.max(s.heightPx, 18) }}
-          >
-            <span
-              className="inline-block h-2.5 w-2.5 shrink-0"
-              style={{
-                background: s.color,
-                border: "1px solid #0a0a0a30",
-                backgroundImage: s.striped
-                  ? "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 4px)"
-                  : "none",
-              }}
-            />
-            <div className="min-w-0">
-              <p className="leading-tight text-[#0a0a0a]/70">{s.label}</p>
-              <p className="font-bold tabular-nums leading-tight text-[#0a0a0a]">
-                {fmtMan(s.value)}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    </li>
   );
 }
 
