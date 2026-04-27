@@ -25,27 +25,8 @@ export default function DetailPage() {
   }
 
   return (
-    <main className="pb-24">
-      {/* Hero - scrolls away */}
-      <div className="mx-auto max-w-7xl px-4 pb-3 pt-6 sm:px-8">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
-          VER 2 / DETAIL INPUT
-        </p>
-        <h1 className="mt-1 text-lg font-bold text-[#0a0a0a]">FP相談級 詳細入力</h1>
-        <p className="mt-1 text-xs text-[#0a0a0a]/55">
-          収入・資産・支出の全項目 + 累進税計算・相続・介護費用を統合。すべての変更がリアルタイムで反映されます。
-        </p>
-      </div>
-
-      {/* Sticky health header (compacts on scroll) */}
-      <HealthHeader
-        result={result}
-        plan={plan}
-        taxModeDetailed={plan.taxMode === "detailed"}
-      />
-
-      {/* Main content */}
-      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-8">
+    <main className="px-4 py-6 pb-24 sm:px-8">
+      <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
           <div className="flex flex-col gap-2">
             <SettingsMegaSection />
@@ -54,7 +35,12 @@ export default function DetailPage() {
             <ExpenseMegaSection />
           </div>
 
-          <aside className="sm:sticky sm:top-[112px] sm:max-h-[calc(100vh-112px)] sm:self-start sm:overflow-y-auto sm:pr-1">
+          <aside className="flex flex-col gap-4 sm:sticky sm:top-[64px] sm:max-h-[calc(100vh-72px)] sm:self-start sm:overflow-y-auto sm:pr-1">
+            <HealthHeader
+              result={result}
+              plan={plan}
+              taxModeDetailed={plan.taxMode === "detailed"}
+            />
             <ResultsPanel />
           </aside>
         </div>

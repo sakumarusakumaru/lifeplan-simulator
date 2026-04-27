@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import type { PlanInput, SimulationSummary } from "@/lib/calc/types";
 
 type AlertLevel = "good" | "warn" | "bad";
@@ -120,110 +118,105 @@ export function HealthHeader({
   plan: PlanInput;
   taxModeDetailed: boolean;
 }) {
-  const [stuck, setStuck] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setStuck(window.scrollY > 80);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const health = computeHealth(result, plan);
+  const c = ALERT_COLORS[health.alert];
   const nwSeries = result.rows.map((r) => r.nw);
 
   const totalCare = result.rows.reduce((a, r) => a + r.care, 0);
   const totalInherit = result.rows.reduce((a, r) => a + r.inherit, 0);
   const totalSocialIns = result.rows.reduce((a, r) => a + r.socialIns, 0);
-
   const shortfallText = result.shortfallAge ? `${result.shortfallAge}歳` : "なし";
-  const shortfallStatus: BadgeStatus = result.shortfallAge ? "alert" : "ok";
 
   return (
     <div
-      className="sticky top-[44px] z-40 transition-all"
-      style={{
-        background: stuck ? "rgba(240, 240, 238, 0.95)" : "#f0f0ee",
-        backdropFilter: stuck ? "blur(8px)" : "none",
-        WebkitBackdropFilter: stuck ? "blur(8px)" : "none",
-        borderBottom: stuck ? "1.5px solid #0a0a0a20" : "1.5px solid transparent",
-        boxShadow: stuck ? "0 4px 16px -10px rgba(0,0,0,0.2)" : "none",
-      }}
+      className="rounded-xl"
+      style={{ background: "#ffffff", border: "2.5px solid #0a0a0a" }}
     >
+      {/* スコア + 診断 */}
       <div
-        className={`mx-auto max-w-7xl px-4 sm:px-8 ${stuck ? "py-2" : "py-3"} transition-[padding] duration-150`}
+        className="flex items-center gap-3 rounded-t-[10px] px-4 py-3"
+        style={{ background: c.light, borderBottom: `2px solid ${c.main}` }}
       >
-        <div className="flex flex-wrap items-center gap-3">
-          <HealthGauge health={health} compact={stuck} />
-          <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1.5">
-            <NwKpi
-              value={fmt(result.finalNetWorth)}
-              series={nwSeries}
-              alert={result.finalNetWorth < 0}
-              compact={stuck}
-            />
-            <KpiBadge label="資金ショート" value={shortfallText} status={shortfallStatus} />
-            <KpiBadge
-              label="生涯介護"
-              value={totalCare > 0 ? fmt(totalCare) : "0万"}
-              status={totalCare > 0 ? "warn" : "neutral"}
-            />
-            <KpiBadge
-              label="生涯相続"
-              value={totalInherit > 0 ? fmt(totalInherit) : "0万"}
-              status={totalInherit > 0 ? "ok" : "neutral"}
-            />
-            <KpiBadge
-              label="生涯社保"
-              value={taxModeDetailed ? fmt(totalSocialIns) : "—"}
-              status="neutral"
-            />
+        <div className="flex shrink-0 flex-col items-center">
+          <div
+            className="flex items-center justify-center"
+            style={{
+              background: c.main,
+              borderRadius: "50%",
+              width: 48,
+              height: 48,
+            }}
+          >
+            <span className="text-base font-bold text-white tabular-nums">
+              {health.score}
+            </span>
           </div>
+          <span
+            className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.12em]"
+            style={{ color: c.text }}
+          >
+            /100
+          </span>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function HealthGauge({ health, compact }: { health: Health; compact: boolean }) {
-  const c = ALERT_COLORS[health.alert];
-  return (
-    <div
-      className="flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all"
-      style={{ background: c.light, border: `2px solid ${c.main}` }}
-    >
-      <div
-        className="flex shrink-0 items-center justify-center"
-        style={{
-          background: c.main,
-          borderRadius: "50%",
-          width: compact ? 32 : 40,
-          height: compact ? 32 : 40,
-          transition: "all 0.15s",
-        }}
-      >
-        <span
-          className="font-bold text-white tabular-nums"
-          style={{ fontSize: compact ? 12 : 15 }}
-        >
-          {health.score}
-        </span>
-      </div>
-      <div className="min-w-0 max-w-[300px]">
-        <p
-          className="text-[9px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: c.text }}
-        >
-          診断スコア / {compact ? "" : "100"}
-        </p>
-        <p className="truncate text-[12px] font-bold leading-tight text-[#0a0a0a]">
-          {health.headline}
-        </p>
-        {!compact && (
-          <p className="mt-0.5 truncate text-[10px] leading-tight text-[#0a0a0a]/60">
+        <div className="min-w-0 flex-1">
+          <p
+            className="text-[9px] font-bold uppercase tracking-[0.18em]"
+            style={{ color: c.text }}
+          >
+            診断スコア
+          </p>
+          <p className="mt-0.5 text-sm font-bold leading-tight text-[#0a0a0a]">
+            {health.headline}
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#0a0a0a]/65">
             {health.sub}
           </p>
-        )}
+        </div>
+      </div>
+
+      {/* 主要KPI */}
+      <div className="px-4 py-3">
+        <div className="mb-2 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
+              最終純資産（{plan.endAge}歳）
+            </p>
+            <p
+              className="text-lg font-bold tabular-nums"
+              style={{ color: result.finalNetWorth < 0 ? "#c8383a" : "#0a0a0a" }}
+            >
+              {fmt(result.finalNetWorth)}
+            </p>
+          </div>
+          <Sparkline
+            values={nwSeries}
+            positive={result.finalNetWorth >= 0}
+            width={110}
+            height={36}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          <KpiBadge
+            label="資金ショート"
+            value={shortfallText}
+            status={result.shortfallAge ? "alert" : "ok"}
+          />
+          <KpiBadge
+            label="生涯介護"
+            value={totalCare > 0 ? fmt(totalCare) : "0万"}
+            status={totalCare > 0 ? "warn" : "neutral"}
+          />
+          <KpiBadge
+            label="生涯相続"
+            value={totalInherit > 0 ? fmt(totalInherit) : "0万"}
+            status={totalInherit > 0 ? "ok" : "neutral"}
+          />
+          <KpiBadge
+            label="生涯社保"
+            value={taxModeDetailed ? fmt(totalSocialIns) : "—"}
+            status="neutral"
+          />
+        </div>
       </div>
     </div>
   );
@@ -231,8 +224,8 @@ function HealthGauge({ health, compact }: { health: Health; compact: boolean }) 
 
 function Sparkline({
   values,
-  width = 80,
-  height = 24,
+  width = 110,
+  height = 36,
   positive = true,
 }: {
   values: number[];
@@ -256,13 +249,14 @@ function Sparkline({
     "",
   );
 
-  // 0-line indicator if range crosses zero
+  // ゼロ線
   const zeroY =
     min < 0 && max > 0 ? height - 2 - ((0 - min) / range) * (height - 4) : null;
 
   const lastPoint = points[points.length - 1];
   const lineColor = positive ? "#0a0a0a" : "#c8383a";
-  const lastColor = values[values.length - 1] >= 0 ? "#22863a" : "#c8383a";
+  const lastValue = values[values.length - 1];
+  const lastColor = lastValue >= 0 ? "#22863a" : "#c8383a";
 
   return (
     <svg
@@ -291,43 +285,9 @@ function Sparkline({
         strokeLinecap="round"
       />
       {lastPoint && (
-        <circle cx={lastPoint[0]} cy={lastPoint[1]} r={2.2} fill={lastColor} />
+        <circle cx={lastPoint[0]} cy={lastPoint[1]} r={2.5} fill={lastColor} />
       )}
     </svg>
-  );
-}
-
-function NwKpi({
-  value,
-  series,
-  alert,
-  compact,
-}: {
-  value: string;
-  series: number[];
-  alert: boolean;
-  compact: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex flex-col">
-        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
-          最終純資産
-        </span>
-        <span
-          className="text-base font-bold tabular-nums"
-          style={{ color: alert ? "#c8383a" : "#0a0a0a" }}
-        >
-          {value}
-        </span>
-      </div>
-      <Sparkline
-        values={series}
-        positive={!alert}
-        width={compact ? 60 : 80}
-        height={compact ? 22 : 28}
-      />
-    </div>
   );
 }
 
@@ -356,22 +316,20 @@ function KpiBadge({
       ? "✓"
       : status === "alert"
         ? "⚠"
-        : status === "warn"
-          ? "•"
-          : "•";
+        : "";
   return (
     <div className="flex items-baseline gap-1.5">
       <span
         className="inline-flex h-3 w-3 shrink-0 items-center justify-center text-[8px] font-bold leading-none text-white"
         style={{ background: dotColor, borderRadius: "50%", lineHeight: "12px" }}
       >
-        {status === "ok" || status === "alert" ? icon : ""}
+        {icon}
       </span>
       <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
         {label}
       </span>
       <span
-        className="text-sm font-bold tabular-nums"
+        className="ml-auto text-sm font-bold tabular-nums"
         style={{ color: valueColor }}
       >
         {value}
