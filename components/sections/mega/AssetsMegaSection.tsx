@@ -185,13 +185,13 @@ export function AssetsMegaSection() {
                 kicker={`PROPERTY ${String(i + 1).padStart(2, "0")}`}
                 onRemove={() => removeRe(i)}
               >
-                <div className="grid grid-cols-1 gap-2">
+                <div className="flex flex-col gap-2">
                   <TextField
                     label="名称"
                     value={r.name}
                     onChange={(v) => updateRe(i, { name: v })}
                   />
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <NumberField
                       label="家賃(月)"
                       value={r.rent}
@@ -205,17 +205,25 @@ export function AssetsMegaSection() {
                       unit="円"
                     />
                   </div>
-                  <NumberField
-                    label="ローン残高"
-                    value={r.bal}
-                    onChange={(v) => updateRe(i, { bal: v })}
-                    unit="円"
-                  />
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField
+                      label="ローン残高"
+                      value={r.bal}
+                      onChange={(v) => updateRe(i, { bal: v })}
+                      unit="円"
+                    />
                     <PercentField
                       label="金利"
                       value={r.rate}
                       onChange={(v) => updateRe(i, { rate: v })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField
+                      label="開始年齢"
+                      value={typeof r.start === "number" ? r.start : Number(r.start) || 0}
+                      onChange={(v) => updateRe(i, { start: v })}
+                      unit="歳"
                     />
                     <NumberField
                       label="ローン期間"
@@ -224,12 +232,6 @@ export function AssetsMegaSection() {
                       unit="年"
                     />
                   </div>
-                  <NumberField
-                    label="開始年齢"
-                    value={typeof r.start === "number" ? r.start : Number(r.start) || 0}
-                    onChange={(v) => updateRe(i, { start: v })}
-                    unit="歳"
-                  />
                 </div>
               </ListItemCard>
             ))}

@@ -45,37 +45,37 @@ interface JukuPreset {
 }
 
 // 出典: 文部科学省 学校外活動費 / Benesse教育研究所 / 大手塾相場
-// 月額(円)・幼児〜浪人。家庭の教育投資レベル別の典型値
+// 月額(円)・幼児〜浪人。塾＋習い事（英語・スイミング・ピアノ等）を合算した家庭別の典型値
 const JUKU_PRESETS: JukuPreset[] = [
   {
     key: "none",
-    label: "通塾なし",
-    desc: "通信教育・公文等もなし",
+    label: "通塾・習い事なし",
+    desc: "塾も習い事もなし",
     values: { pre: 0, e13: 0, e46: 0, jh: 0, hs: 0, ronin: 0 },
   },
   {
     key: "modest",
     label: "控えめ層",
-    desc: "公文・通信教育中心",
-    values: { pre: 0, e13: 3_000, e46: 8_000, jh: 15_000, hs: 20_000, ronin: 50_000 },
+    desc: "習い事1〜2個＋通信教育・公文中心",
+    values: { pre: 5_000, e13: 12_000, e46: 20_000, jh: 25_000, hs: 35_000, ronin: 80_000 },
   },
   {
     key: "average",
     label: "全国平均層",
-    desc: "受験対策や習い事を含む全国平均",
-    values: { pre: 2_000, e13: 8_000, e46: 20_000, jh: 25_000, hs: 30_000, ronin: 80_000 },
+    desc: "習い事複数＋平均的な進学塾を併用",
+    values: { pre: 12_000, e13: 18_000, e46: 40_000, jh: 35_000, hs: 50_000, ronin: 100_000 },
   },
   {
     key: "keen",
     label: "教育熱心層",
-    desc: "中受・大受対策を本格化",
-    values: { pre: 8_000, e13: 20_000, e46: 50_000, jh: 40_000, hs: 50_000, ronin: 100_000 },
+    desc: "中受・大受対策の進学塾＋習い事を多めに",
+    values: { pre: 25_000, e13: 35_000, e46: 80_000, jh: 60_000, hs: 80_000, ronin: 150_000 },
   },
   {
     key: "tokyo",
     label: "東京熱心層",
-    desc: "有名塾フル活用（鉄緑会・SAPIX等）",
-    values: { pre: 15_000, e13: 35_000, e46: 80_000, jh: 60_000, hs: 80_000, ronin: 150_000 },
+    desc: "SAPIX・鉄緑会等の有名塾＋複数の習い事",
+    values: { pre: 40_000, e13: 60_000, e46: 120_000, jh: 90_000, hs: 120_000, ronin: 200_000 },
   },
 ];
 
@@ -206,29 +206,27 @@ export function ExpenseMegaSection() {
       status={plan.livingM > 0 ? "entered" : "default"}
     >
       <div className="flex flex-col gap-2">
-        <CollapsibleSubGroup title="基本生活費">
-          <button
-            type="button"
-            onClick={() => setShowLivingGuide(!showLivingGuide)}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[#fff8e7]"
-            style={{ border: "1.5px solid #d4a017", background: showLivingGuide ? "#fff8e7" : "#fffdf6" }}
-          >
-            <span
-              className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[11px] font-bold text-white"
-              style={{ background: "#d4a017", borderRadius: "50%" }}
+        <CollapsibleSubGroup
+          title="基本生活費"
+          headerExtra={
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLivingGuide(!showLivingGuide);
+              }}
+              aria-label="含めるもの／含めないものを確認"
+              title="含めるもの／含めないものを確認"
+              className="inline-flex h-6 w-6 items-center justify-center text-[12px] font-bold text-white transition-colors hover:opacity-80"
+              style={{
+                background: showLivingGuide ? "#a07900" : "#d4a017",
+                borderRadius: "50%",
+              }}
             >
               !
-            </span>
-            <span className="flex-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#a07900]">
-              ここに含めるもの／含めないものを確認
-            </span>
-            <span
-              className="text-[10px] font-bold text-[#a07900] transition-transform"
-              style={{ display: "inline-block", transform: showLivingGuide ? "rotate(180deg)" : "none" }}
-            >
-              ▾
-            </span>
-          </button>
+            </button>
+          }
+        >
           {showLivingGuide && (
             <div
               className="rounded-lg p-3"
@@ -307,32 +305,34 @@ export function ExpenseMegaSection() {
               onChange={(v) => setField("useHomeLoan", v)}
             />
             {plan.useHomeLoan ? (
-              <div className="grid grid-cols-1 gap-2">
-                <NumberField
-                  label="残高"
-                  value={plan.hlBal}
-                  onChange={(v) => setField("hlBal", v)}
-                  unit="円"
-                />
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <NumberField
+                    label="ローン残高"
+                    value={plan.hlBal}
+                    onChange={(v) => setField("hlBal", v)}
+                    unit="円"
+                  />
                   <PercentField
                     label="金利"
                     value={plan.hlRate}
                     onChange={(v) => setField("hlRate", v)}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <NumberField
-                    label="期間"
+                    label="返済開始"
+                    value={plan.hlStart}
+                    onChange={(v) => setField("hlStart", v)}
+                    unit="歳"
+                  />
+                  <NumberField
+                    label="ローン期間"
                     value={plan.hlTerm}
                     onChange={(v) => setField("hlTerm", v)}
                     unit="年"
                   />
                 </div>
-                <NumberField
-                  label="返済開始年齢"
-                  value={plan.hlStart}
-                  onChange={(v) => setField("hlStart", v)}
-                  unit="歳"
-                />
               </div>
             ) : null}
             <div>
@@ -379,7 +379,7 @@ export function ExpenseMegaSection() {
           <div className="flex flex-col gap-4">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-                — 塾の月額（モデルケースから選んで自動入力）
+                — 塾・習い事の月額（モデルケースから選んで自動入力）
               </div>
               <div className="mb-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                 {JUKU_PRESETS.map((p) => {
