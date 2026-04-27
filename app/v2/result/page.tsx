@@ -8,6 +8,7 @@ import { CashflowChart } from "@/components/charts/CashflowChart";
 import { ageOn, kidAge } from "@/lib/calc/age";
 import { computeRealEstateValue } from "@/lib/calc/finance";
 import { simulate } from "@/lib/calc/simulate";
+import type { PlanInput, SimulationSummary } from "@/lib/calc/types";
 import { usePlanStore } from "@/store/plan-store";
 
 const fmt = (yen: number) => {
@@ -23,47 +24,164 @@ const fmtMan = (yen: number) => {
   return `${sign}${abs.toLocaleString()}万円`;
 };
 
-function verdict(shortfallAge: number | null, nw: number, endAge: number, curAge: number) {
-  if (shortfallAge) {
-    const yearsLeft = shortfallAge - curAge;
-    return {
-      headline: `${shortfallAge}歳で資金不足`,
-      body: `あと${yearsLeft}年で資産が枯渇する見込みです。固定費の見直しによる支出削減、副業・配偶者就労による収入多角化、NISA・iDeCo等の非課税枠を活用した積立投資の強化、退職時期の延長による就労期間の確保を組み合わせることで改善可能です。具体的な改善効果は「改善提案」タブで複数シナリオ別に試算できます。`,
-      alert: true,
-    };
+interface Verdict {
+  score: number;
+  level: "good" | "warn" | "bad";
+  headline: string;
+  body: string; // 改行（\n\n）でパラグラフ分け
+}
+
+function buildVerdict(
+  plan: PlanInput,
+  result: SimulationSummary,
+): Verdict {
+  const nw = result.finalNetWorth;
+  const sa = result.shortfallAge;
+  const endAge = plan.endAge;
+  const curAge = plan.curAge;
+
+  // 各種指標を取得（コメントで参照）
+  const cur = result.rows[0];
+  const curIncome = Math.round((cur?.income ?? 0) / 10000);
+  const curExp = Math.round((cur?.exp ?? 0) / 10000);
+  const monthlyDeficit = Math.round((curExp - curIncome) / 12);
+  const totalCashAssets = Math.round(
+    (plan.cashBal + plan.fundBal + plan.stockBal) / 10000,
+  );
+  const monthlyExp = Math.round(curExp / 12);
+  const livingDefenseMonths =
+    monthlyExp > 0 ? Math.round((totalCashAssets / monthlyExp) * 10) / 10 : 0;
+  const totalSaveM =
+    plan.saveFundM + plan.saveStockM + plan.saveDcM + plan.saveCryptoM + plan.saveGoldM;
+  const annualSave = Math.round((totalSaveM * 12) / 10000);
+  const koseiYears = plan.selfPension?.koseiYears ?? 0;
+  const penStartA = plan.penStartA;
+  const lastJobEndAge =
+    plan.jobs.length > 0 ? Math.max(...plan.jobs.map((j) => j.end)) : penStartA;
+  const fmtMan = (yen: number) => {
+    const sign = yen < 0 ? "-" : "";
+    const abs = Math.abs(Math.round(yen / 10000));
+    if (abs >= 10000) return `${sign}${(abs / 10000).toFixed(1)}億`;
+    return `${sign}${abs.toLocaleString()}万`;
+  };
+
+  // ─────────────────────────
+  // ショートあり
+  // ─────────────────────────
+  if (sa) {
+    const yearsLeft = sa - curAge;
+    let score: number;
+    if (yearsLeft < 10) score = 15;
+    else if (yearsLeft < 25) score = 30;
+    else score = 45;
+
+    const headline = `${sa}歳で資金不足（あと${yearsLeft}年）`;
+    const body =
+      `【現状診断】\n現役期の収支・積立水準では、${sa}歳時点（残り${yearsLeft}年）で運用資産・現金がともに枯渇する見込みです。現状の年間収支は手取り${curIncome}万円・支出${curExp}万円で${monthlyDeficit > 0 ? `月${monthlyDeficit}万円の不足` : `黒字${-monthlyDeficit}万円/月`}、年間積立${annualSave}万円という構造になっています。生活防衛資金は約${livingDefenseMonths}ヶ月分です。\n\n` +
+      `【課題分析】\n資金ショートの根本原因は、(1) 老後の年金収入が現役期の生活水準をカバーしきれない、(2) 退職時${lastJobEndAge}歳から年金開始${penStartA}歳までのギャップ期間に取り崩しが集中、(3) インフレ進行で実質的な購買力が低下、の3点です。${koseiYears < 30 ? `特に厚生年金加入年数${koseiYears}年は短く、年金受給額が想定より低い可能性があります。` : ""}\n\n` +
+      `【具体的な改善策（${yearsLeft < 10 ? "即効性重視" : yearsLeft < 25 ? "中期構造改革" : "長期計画"}）】\n` +
+      `・固定費の削減: 住居費・通信費・保険料の見直しで月1〜3万円の捻出を目指しましょう。\n` +
+      `・積立の増額: NISA成長投資枠（年240万円）・つみたて投資枠（年120万円）・iDeCo（月2.3万円〜）の非課税枠を最大活用。月+2万円の積立で30年後に1,500〜2,000万円の差。\n` +
+      `・退職時期の延長: 65歳→68歳の3年延長で就労収入${plan.jobs.length > 0 ? Math.round(plan.jobs[0].inc * 3 / 10000) : 1500}万円相当の上乗せ＋年金繰下げで月額25.2%増。\n` +
+      `・年金繰下げ: 75歳まで繰下げ可。1ヶ月あたり0.7%増額（最大84%増）。\n` +
+      `・配偶者就労: 年103万円超のパート収入で世帯収入＋税優遇のバランス点。\n\n` +
+      `【次のステップ】\n「改善提案」タブで各施策の組み合わせ効果を試算できます。優先順位は「支出削減 → 積立強化 → 就労延長」が一般的に効果的です。FP個別相談で詳細プランの策定を推奨します。`;
+
+    return { score, level: "bad", headline, body };
   }
+
+  // ─────────────────────────
+  // 純資産マイナス（完走するがマイナス）
+  // ─────────────────────────
   if (nw < 0) {
     return {
-      headline: `${endAge}歳時点でマイナス`,
-      body: `老後に純資産がマイナスとなる見込みです。住宅ローンや不動産ローンの残債が老後の資産を圧迫している可能性があります。繰上返済の検討、不動産の見直し（売却・賃貸転換）、生活費水準の調整を含めた抜本的な家計設計の再構築をお勧めします。`,
-      alert: true,
+      score: 35,
+      level: "bad",
+      headline: `${endAge}歳時点で純資産マイナス（${fmtMan(nw)}）`,
+      body:
+        `【現状診断】\n${endAge}歳時点で資産より負債が${fmtMan(Math.abs(nw))}多い状態となる見込みです。住宅ローンや不動産ローンの残債が老後の資産を圧迫しています。\n\n` +
+        `【課題分析】\nローン残高が長期化し、低金利で借りた負債を相続・売却で清算する必要が生じる可能性があります。流動性資産（現金・投信）が不足しているため、不動産売却以外の選択肢が狭まります。\n\n` +
+        `【具体的な改善策】\n・繰上返済の優先度評価: 金利の高いローン（住宅ローン1%超、不動産2%超）から優先返済を検討。\n・不動産の見直し: 売却・賃貸転換・住み替え（ダウンサイズ）で含み益の現金化。\n・生活費水準の調整: 月-1万円の継続改善で30年で360万円＋運用益。\n・収入の補完: 副業・配偶者就労・退職金の早期受取りなど、キャッシュインフローの多角化。\n\n` +
+        `【次のステップ】\n抜本的な家計再構築が必要なため、FP個別相談で具体的なローン整理プランの策定をお勧めします。`,
     };
   }
+
+  // ─────────────────────────
+  // ${endAge}まで完走するが余裕わずか
+  // ─────────────────────────
   if (nw < 10_000_000) {
     return {
-      headline: `${endAge}歳まで完走（余裕わずか）`,
-      body: `計画上は${endAge}歳まで資産が続きますが、余裕は少なめです。想定外の支出（医療費・介護費・物価高騰）への備えとして、生活防衛資金の積み増しと支出管理の徹底をお勧めします。NISA・iDeCoの非課税枠を活用した追加積立で老後余裕度の改善を図りましょう。`,
-      alert: false,
+      score: 55,
+      level: "warn",
+      headline: `${endAge}歳まで完走するも余裕わずか（${fmtMan(nw)}）`,
+      body:
+        `【現状診断】\n${endAge}歳時点での純資産は${fmtMan(nw)}と、想定外の支出への耐性が限定的です。生活防衛資金は現在${livingDefenseMonths}ヶ月分（推奨は12〜24ヶ月）です。\n\n` +
+        `【課題分析】\n医療費（70歳以降の高額療養費は月8〜25万円自己負担）、介護費（在宅で月8〜10万円・施設で月13〜25万円が5〜10年）、物価上昇（年1〜2%継続で30年で35〜80%減価）など、想定外リスクへのバッファが薄い状態です。\n\n` +
+        `【具体的な改善策】\n・生活防衛資金の確保: 手取り年収の1〜2年分（${Math.round(curIncome)}〜${Math.round(curIncome * 2)}万円目安）を流動性高い形で確保。\n・NISA成長投資枠（年240万）の継続活用: 30年で元本7,200万円＋運用益で1億円超の積立も可能。\n・iDeCo の節税効果: 月2.3万円拠出で年間6.9万円の節税（所得税20%・住民税10%想定）。\n・医療保険の見直し: 高額療養費制度を踏まえ、過剰な保障を整理して可処分所得を確保。\n\n` +
+        `【次のステップ】\n月+1〜2万円の積立増で老後余裕度を大きく改善できます。「改善提案」タブで効果を試算してください。`,
     };
   }
+
+  // ─────────────────────────
+  // 概ね安定（1,000万〜5,000万）
+  // ─────────────────────────
   if (nw < 50_000_000) {
     return {
-      headline: `老後資金は概ね安定`,
-      body: `資金計画は概ね良好です。インフレや医療費増加のリスクに備え、資産の一部を株式・投信で分散運用し、実質的な購買力を維持することをご検討ください。長寿リスクを念頭に、65歳時点でも30〜40%程度の株式比率を維持することを推奨します。`,
-      alert: false,
+      score: 75,
+      level: "good",
+      headline: `老後資金は概ね安定（最終純資産 ${fmtMan(nw)}）`,
+      body:
+        `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産が見込まれ、想定通りに推移すれば安心して老後を過ごせる水準です。65歳時点の純資産は${fmtMan(result.rows.find((r) => r.age === 65)?.nw ?? 0)}で、年金開始時のスタート資金として十分です。\n\n` +
+        `【課題分析】\n基本設計に大きな問題はありません。今後の主要リスクは、(1) インフレ進行による実質購買力の低下、(2) 90歳超の長寿化による資産寿命、(3) 高齢期の医療・介護費の不確実性、の3点です。\n\n` +
+        `【具体的な推奨アクション】\n・分散運用の継続: 65歳時点でも株式・投信比率30〜40%を維持し、実質購買力を保つ。\n・取り崩し戦略: 60〜64歳はDC優先、65歳以降は公的年金＋他資産の組み合わせ（4%ルール参考）。\n・医療・介護の補完: 公的制度（高額療養費・介護保険）を踏まえ、不足分のみ民間保険で補完。\n・贈与の検討: 子・孫への暦年贈与（年110万円非課税）を早期から開始すれば、相続税課税対象を計画的に圧縮可能。\n\n` +
+        `【次のステップ】\n年1回の見直しで十分です。家族構成や税制改正に応じて運用配分・贈与戦略を微調整してください。`,
     };
   }
+
+  // ─────────────────────────
+  // 余裕ある（5,000万〜1億）
+  // ─────────────────────────
   if (nw < 100_000_000) {
     return {
-      headline: `余裕ある資産形成`,
-      body: `老後資金は十分に確保できる見通しです。今後は「守りから攻めへ」の移行を意識するタイミング。相続税対策（生前贈与・生命保険の死亡保険金非課税枠）、子・孫への教育資金一括贈与（1,500万円非課税）など、富裕層向けの最適化テーマを順次検討しましょう。`,
-      alert: false,
+      score: 85,
+      level: "good",
+      headline: `余裕ある資産形成（最終純資産 ${fmtMan(nw)}）`,
+      body:
+        `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれ、現役期の収支構造は健全です。想定外支出にも十分対応可能なバッファがあります。\n\n` +
+        `【課題分析】\n相続税の課税ライン（基礎控除3,000万円＋600万円×法定相続人数）に近づきつつあります。例えば配偶者＋子2人なら基礎控除は4,800万円。${nw > 48_000_000 ? "現状ですでに課税対象の可能性があり、" : ""}対策の検討時期に入っています。\n\n` +
+        `【具体的な推奨アクション】\n・暦年贈与の活用: 配偶者・子・孫への年110万円贈与を継続。例えば子2人に20年贈与で4,400万円の非課税移転。\n・教育資金一括贈与の特例: 子・孫への教育資金1,500万円が非課税（2026年3月末まで）。\n・生命保険の非課税枠: 死亡保険金は500万円×法定相続人数まで非課税。配偶者＋子2人なら1,500万円分。\n・iDeCo・NISAは継続: 退職所得控除（勤続年数×40〜70万円）と公的年金等控除を最大活用した受取設計を。\n\n` +
+        `【次のステップ】\n「守りから攻めへ」の移行タイミングです。FP・税理士と連携した相続シミュレーション（特に節税効果の試算）をお勧めします。`,
     };
   }
+
+  // ─────────────────────────
+  // 非常に良好（1〜3億）
+  // ─────────────────────────
+  if (nw < 300_000_000) {
+    return {
+      score: 92,
+      level: "good",
+      headline: `資産計画は非常に良好（最終純資産 ${fmtMan(nw)}）`,
+      body:
+        `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれます。一般家庭の上位5%以内に入る水準で、相続税の課税対象（10〜30%税率帯）となる規模です。\n\n` +
+        `【課題分析】\n無対策のままでは相続時に数千万円規模の納税が発生する可能性があります。法定相続人別の基礎控除を超える分が累進課税の対象になります（1億円超50%、2億円超55%）。\n\n` +
+        `【具体的な推奨アクション】\n・暦年贈与の最大活用: 年110万円×複数人×複数年で大規模な計画移転。例: 子2人＋孫4人に20年で6,600万円の非課税移転。\n・相続時精算課税制度: 60歳以上の親→18歳以上の子・孫に2,500万円まで贈与時非課税（相続時精算）。2024年から年110万の基礎控除追加。\n・教育資金一括贈与: 1,500万円非課税枠×子・孫の人数。\n・結婚・子育て資金贈与: 1,000万円非課税枠（2027年3月末まで）。\n・生命保険活用: 死亡保険金500万円×法定相続人数の非課税枠＋納税資金確保。\n・不動産活用: 評価額が時価より低い特性を活かして相続税評価額を圧縮（過度のタワマン節税は規制強化に注意）。\n\n` +
+        `【次のステップ】\nFP・税理士・弁護士チームによる包括的な相続戦略の構築が推奨されます。シミュレーションでの効果検証を年1回実施してください。`,
+    };
+  }
+
+  // ─────────────────────────
+  // 富裕層（3億超）
+  // ─────────────────────────
   return {
-    headline: `資産計画は非常に良好`,
-    body: `余裕のある資産計画です。相続税対策の本格的な検討時期です。配偶者・子への暦年贈与（年間110万円非課税）、教育資金一括贈与の特例（1,500万円非課税）、生命保険の死亡保険金非課税枠（500万円×法定相続人数）など、複数制度を組み合わせた戦略的な資産移転をFP・税理士と連携して計画しましょう。`,
-    alert: false,
+    score: 98,
+    level: "good",
+    headline: `富裕層レベルの資産計画（最終純資産 ${fmtMan(nw)}）`,
+    body:
+      `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれ、富裕層の上位1%水準です。相続税の最高税率55%（6億円超部分）の対象となり、無対策では資産の半分以上が納税により失われる可能性があります。\n\n` +
+      `【課題分析】\n単純な暦年贈与・生命保険活用では対応しきれない規模のため、法人活用・信託・国際分散などを組み合わせた高度な相続戦略が必要です。\n\n` +
+      `【具体的な推奨アクション】\n・資産管理会社（同族会社）の設立: 個人資産を法人化し、株式贈与で計画的に世代移転。事業承継税制（特例措置）も検討余地。\n・家族信託: 認知症リスク対応＋柔軟な資産承継設計。受託者を子に設定し、生前から資産管理を委譲。\n・不動産活用: 賃貸用不動産で評価減（路線価ベース＋小規模宅地等の特例で最大80%減）。\n・生命保険の高額活用: 終身保険で死亡保険金非課税枠＋納税資金確保。一時払終身は5,000万円〜数億円規模。\n・国際分散: 海外資産・海外法人による多角化（ただし租税条約・出国税・相続税の国際課税ルールに留意）。\n・社団・財団法人: 公益寄付による資産圧縮＋社会貢献。\n\n` +
+      `【次のステップ】\n専門家チーム（プライベートバンカー・税理士法人・弁護士・行政書士）による包括的な戦略構築が必須レベル。年1回以上の戦略レビューを推奨します。`,
   };
 }
 
@@ -71,7 +189,7 @@ export default function ResultPage() {
   const plan = usePlanStore((s) => s.plan);
   const result = useMemo(() => simulate(plan), [plan]);
 
-  const v = verdict(result.shortfallAge, result.finalNetWorth, plan.endAge, plan.curAge);
+  const v = buildVerdict(plan, result);
 
   // プロフィール
   const selfAge = ageOn(plan.selfBirth, undefined) ?? plan.curAge;
@@ -158,24 +276,82 @@ export default function ResultPage() {
 
       {/* 1. 診断結果 */}
       <ReportSection no="01" title="診断結果 ／ EXECUTIVE SUMMARY">
-        <div
-          className="rounded-2xl p-5"
-          style={{
-            background: v.alert ? "#fff0f0" : "#f0fff4",
-            border: `2.5px solid ${v.alert ? "#c8383a" : "#22863a"}`,
-          }}
-        >
-          <p
-            className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em]"
-            style={{ color: v.alert ? "#c8383a" : "#22863a" }}
-          >
-            診断結果
-          </p>
-          <p className="text-xl font-bold text-[#0a0a0a]">{v.headline}</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-[#0a0a0a]/70">
-            {v.body}
-          </p>
-        </div>
+        {(() => {
+          const colors =
+            v.level === "good"
+              ? { main: "#22863a", light: "#f0fff4", text: "#22863a" }
+              : v.level === "warn"
+                ? { main: "#d4a017", light: "#fff8e7", text: "#a07900" }
+                : { main: "#c8383a", light: "#fff0f0", text: "#c8383a" };
+          return (
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{
+                background: "#ffffff",
+                border: `2.5px solid ${colors.main}`,
+              }}
+            >
+              {/* スコア + 見出し */}
+              <div
+                className="flex items-center gap-4 px-5 py-4"
+                style={{ background: colors.light, borderBottom: `2px solid ${colors.main}` }}
+              >
+                <div className="flex shrink-0 flex-col items-center">
+                  <div
+                    className="flex items-center justify-center"
+                    style={{
+                      background: colors.main,
+                      borderRadius: "50%",
+                      width: 72,
+                      height: 72,
+                    }}
+                  >
+                    <span className="text-2xl font-bold text-white tabular-nums">
+                      {v.score}
+                    </span>
+                  </div>
+                  <span
+                    className="mt-1 text-[9px] font-bold uppercase tracking-[0.12em]"
+                    style={{ color: colors.text }}
+                  >
+                    /100点
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                    style={{ color: colors.text }}
+                  >
+                    診断スコア
+                  </p>
+                  <p className="mt-1 text-xl font-bold leading-tight text-[#0a0a0a]">
+                    {v.headline}
+                  </p>
+                  <p
+                    className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em]"
+                    style={{ color: colors.text }}
+                  >
+                    {v.level === "good"
+                      ? "GOOD ／ 良好"
+                      : v.level === "warn"
+                        ? "WARN ／ 要注意"
+                        : "ALERT ／ 要改善"}
+                  </p>
+                </div>
+              </div>
+
+              {/* FPコメント（4段構成） */}
+              <div className="px-5 py-4">
+                <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
+                  FP COMMENT ／ ファイナンシャルプランナーからの所見
+                </p>
+                <div className="whitespace-pre-line text-[12px] leading-[1.85] text-[#0a0a0a]/85" style={{ fontFeatureSettings: "'palt'" }}>
+                  {v.body}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </ReportSection>
 
       {/* 2. ご相談者プロフィール */}
