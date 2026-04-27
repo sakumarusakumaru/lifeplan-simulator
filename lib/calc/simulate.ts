@@ -264,7 +264,7 @@ export function simulate(input: PlanInput): SimulationSummary {
       let def = input.cashFloor - ass.c;
       const ord = resolveDrawOrder(input.drawOrder, input.drawCustomOrder, age);
       for (const t of ord) {
-        if (t === "dc" && age < 65) continue;
+        if (t === "dc" && age < 60) continue;
         if (def > 0 && ass[t] > 0) {
           const s = Math.min(def, ass[t]);
           ass[t] -= s;

@@ -135,21 +135,21 @@ export default function SuggestPage() {
     },
     {
       title: "取り崩し順序を「自動最適化」に変更",
-      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 自動最適化(65歳まで投信・株、65歳以降はDC含む)`,
+      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 自動最適化(〜59歳: 投信・株、60〜64歳: DC優先で年金繋ぎ、65歳〜: 投信・株を再優先)`,
       result: sc5,
       applicable: plan.drawOrder !== "auto-tiered",
       category: "drawdown",
     },
     {
       title: "取り崩し順序を「投信→株→金→DC」に変更",
-      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 流動性の高い投信から優先取崩。65歳でDC合流`,
+      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 流動性の高い投信から優先取崩。60歳でDC合流`,
       result: sc6,
       applicable: plan.drawOrder !== "fund-stock-crypto",
       category: "drawdown",
     },
     {
       title: "取り崩し順序を「株→投信→金→DC」に変更",
-      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 値動きの大きい個別株から優先取崩。65歳でDC合流`,
+      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 値動きの大きい個別株から優先取崩。60歳でDC合流`,
       result: sc7,
       applicable: plan.drawOrder !== "stock-fund-crypto",
       category: "drawdown",
@@ -337,7 +337,7 @@ export default function SuggestPage() {
         <ul className="flex flex-col gap-1 text-[10px] leading-relaxed text-[#0a0a0a]/75">
           <li>
             <span className="font-bold">自動最適化:</span>{" "}
-            一般的に最も合理的。65歳まで流動性の高い資産から取り崩し、DCは65歳以降に温存
+            年齢別に最適化。〜59歳は流動性の高い投信・株、60〜64歳は年金開始までの繋ぎとしてDCを優先取崩、65歳〜は公的年金と他資産を組み合わせて取崩
           </li>
           <li>
             <span className="font-bold">投信→株 優先:</span>{" "}
@@ -348,8 +348,8 @@ export default function SuggestPage() {
             個別株を先に売却。安定運用の投信を温存し、ボラを下げる戦略
           </li>
           <li>
-            <span className="font-bold">DC（確定拠出年金）:</span>{" "}
-            65歳まで取り崩し不可（税制優遇のため）。65歳以降は退職所得控除を活用すると有利
+            <span className="font-bold">DC（確定拠出年金 / iDeCo）:</span>{" "}
+            原則60歳から受給可。受給は60〜75歳の範囲で選択可能（一時金・年金・併用も選べる）。一時金受取時は退職所得控除、年金受取時は公的年金等控除を活用できる
           </li>
         </ul>
       </div>

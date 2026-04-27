@@ -17,7 +17,8 @@ export function resolveDrawOrder(
   age: number,
 ): DrawAsset[] {
   if (mode === "auto-tiered") {
-    if (age < 65) return ["f", "s", "k", "g"];
+    if (age < 60) return ["f", "s", "k", "g"];
+    if (age < 65) return ["dc", "s", "f", "k", "g"];
     return ["f", "s", "dc", "k", "g"];
   }
 
@@ -33,14 +34,18 @@ export function resolveDrawOrder(
     for (const x of DRAW_ASSETS) {
       if (!seen.has(x)) ord.push(x);
     }
-    if (age < 65) return ord.filter((x) => x !== "dc");
+    if (age < 60) return ord.filter((x) => x !== "dc");
     return ord;
   }
 
-  if (mode === "fund-stock-crypto") return age < 65 ? ["f", "s", "k", "g"] : ["f", "s", "dc", "k", "g"];
-  if (mode === "stock-fund-crypto") return age < 65 ? ["s", "f", "k", "g"] : ["s", "f", "dc", "k", "g"];
+  if (mode === "fund-stock-crypto") return age < 60 ? ["f", "s", "k", "g"] : ["f", "s", "dc", "k", "g"];
+  if (mode === "stock-fund-crypto") return age < 60 ? ["s", "f", "k", "g"] : ["s", "f", "dc", "k", "g"];
 
-  return age < 65 ? ["f", "s", "k", "g"] : ["f", "s", "dc", "k", "g"];
+  return age < 60
+    ? ["f", "s", "k", "g"]
+    : age < 65
+      ? ["dc", "s", "f", "k", "g"]
+      : ["f", "s", "dc", "k", "g"];
 }
 
 export function orderToText(ord: DrawAsset[]): string {

@@ -338,7 +338,7 @@ export default function ResultPage() {
             </li>
             <li>
               <span className="font-bold text-[#0a0a0a]">DC取り崩し:</span>{" "}
-              65歳までは取り崩し対象外。それ以降は他資産と並列で取り崩し可
+              60歳から受給可（原則それまでは取り崩し対象外）。60〜64歳は年金開始までの繋ぎとして優先取崩、65歳以降は公的年金と組み合わせて他資産と並列取崩
             </li>
             <li>
               <span className="font-bold text-[#0a0a0a]">想定外:</span>{" "}

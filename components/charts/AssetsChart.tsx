@@ -50,7 +50,7 @@ const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
   { key: "fund", label: "投信", desc: "NISA・特定口座の投資信託など" },
   { key: "stock", label: "株", desc: "個別株式・ETF" },
   { key: "gold", label: "金", desc: "金ETF・現物金・コモディティ" },
-  { key: "dc", label: "DC", desc: "確定拠出年金・iDeCo（65歳まで取崩不可）" },
+  { key: "dc", label: "DC", desc: "確定拠出年金・iDeCo（60歳から受給可、原則として60歳まで取崩不可）" },
 ];
 
 export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {

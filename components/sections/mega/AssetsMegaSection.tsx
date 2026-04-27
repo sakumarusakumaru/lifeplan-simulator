@@ -144,7 +144,7 @@ export function AssetsMegaSection() {
             setSaveEnd={(v) => setField("saveDcEndAge", v)}
           />
           <div className="mt-2 text-[11px] font-medium text-[#0a0a0a]/55">
-            ※ 65歳までは取り崩しの対象外
+            ※ 60歳までは取り崩しの対象外（受給開始は60〜75歳の範囲で選択可、60歳まで非課税で運用継続）
           </div>
         </CollapsibleSubGroup>
 
