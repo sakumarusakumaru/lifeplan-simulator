@@ -87,7 +87,7 @@ export default function ResultPage() {
 
   // 現状サマリー（curAge時点の年次データ）
   const cur = result.rows[0];
-  const totalAssetsNow =
+  const financialAssets =
     plan.cashBal +
     plan.fundBal +
     plan.stockBal +
@@ -99,6 +99,8 @@ export default function ResultPage() {
     (acc, ln) => acc + ln.monthlyPay * ln.remainMonths,
     0,
   );
+  // 不動産（簿価）はローン残高と同額として計上：金融資産＋不動産簿価＝資産合計
+  const totalAssetsNow = financialAssets + realEstateBal;
   const totalLiabilitiesNow =
     (plan.useHomeLoan ? plan.hlBal : 0) + realEstateBal + otherLoanBal;
   const netWorthNow = totalAssetsNow - totalLiabilitiesNow;
@@ -453,8 +455,31 @@ function BalanceSheetVis({
 }) {
   const totalAssets = assets.reduce((a, b) => a + b.value, 0);
   const totalLiabilities = liabilities.reduce((a, b) => a + b.value, 0);
-  const max = Math.max(totalAssets, totalLiabilities, 1);
   const isAlert = netWorth < 0;
+
+  // FP式バランスシート（T勘定）：資産 = 負債 + 純資産 で両側の高さが等しい
+  // - 純資産プラス: 右側に負債＋純資産（緑）を積む → 両側とも totalAssets と等しい
+  // - 純資産マイナス: 左側（資産）に純資産マイナス（赤）を積む → 両側とも totalLiabilities と等しい
+  const totalHeight = Math.max(totalAssets, totalLiabilities, 1);
+  const BAR_HEIGHT = 280; // px
+
+  // 各セグメントの高さ計算
+  const assetSegments = assets
+    .filter((a) => a.value > 0)
+    .map((a) => ({
+      ...a,
+      heightPx: (a.value / totalHeight) * BAR_HEIGHT,
+    }));
+
+  const liabilitySegments = liabilities
+    .filter((l) => l.value > 0)
+    .map((l) => ({
+      ...l,
+      heightPx: (l.value / totalHeight) * BAR_HEIGHT,
+    }));
+
+  // 純資産の高さ（プラス/マイナス両対応）
+  const nwHeightPx = (Math.abs(netWorth) / totalHeight) * BAR_HEIGHT;
 
   return (
     <div
@@ -465,154 +490,180 @@ function BalanceSheetVis({
         BALANCE SHEET ／ 資産・負債バランス
       </p>
 
-      {/* 資産バー */}
-      <BSBar
-        title="資産 ASSETS"
-        titleColor="#22863a"
-        items={assets}
-        total={totalAssets}
-        max={max}
-      />
+      {/* T勘定型バランスシート */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* 左: 資産 */}
+        <div>
+          <div
+            className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1"
+            style={{ borderColor: "#22863a" }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
+              {isAlert ? "資産 + 純資産マイナス" : "資産 ASSETS"}
+            </span>
+            <span className="text-sm font-bold tabular-nums text-[#22863a]">
+              {fmtMan(isAlert ? totalAssets + Math.abs(netWorth) : totalAssets)}
+            </span>
+          </div>
 
-      {/* 負債バー */}
-      <div className="mt-4">
-        <BSBar
-          title="負債 LIABILITIES"
-          titleColor="#c8383a"
-          items={liabilities}
-          total={totalLiabilities}
-          max={max}
-        />
+          <BSColumn
+            segments={assetSegments}
+            extraSegment={
+              isAlert
+                ? {
+                    label: "純資産マイナス",
+                    value: Math.abs(netWorth),
+                    color: "#c8383a",
+                    heightPx: nwHeightPx,
+                    striped: true,
+                  }
+                : null
+            }
+            heightPx={BAR_HEIGHT}
+            align="left"
+          />
+        </div>
+
+        {/* 右: 負債 + 純資産 */}
+        <div>
+          <div
+            className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1"
+            style={{ borderColor: "#c8383a" }}
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
+              {isAlert ? "負債" : "負債 + 純資産"}
+            </span>
+            <span className="text-sm font-bold tabular-nums text-[#c8383a]">
+              {fmtMan(isAlert ? totalLiabilities : totalLiabilities + Math.max(0, netWorth))}
+            </span>
+          </div>
+
+          <BSColumn
+            segments={liabilitySegments}
+            extraSegment={
+              !isAlert && netWorth > 0
+                ? {
+                    label: "純資産（NET）",
+                    value: netWorth,
+                    color: "#22863a",
+                    heightPx: nwHeightPx,
+                    striped: false,
+                  }
+                : null
+            }
+            heightPx={BAR_HEIGHT}
+            align="right"
+          />
+        </div>
       </div>
 
-      {/* 純資産 */}
+      {/* 純資産サマリー */}
       <div
-        className="mt-5 rounded-lg px-4 py-3"
+        className="mt-4 flex items-center justify-between rounded-lg px-4 py-2.5"
         style={{
           background: isAlert ? "#fff0f0" : "#f0fff4",
-          border: `2.5px solid ${isAlert ? "#c8383a" : "#22863a"}`,
+          border: `2px solid ${isAlert ? "#c8383a" : "#22863a"}`,
         }}
       >
-        <div className="flex items-baseline justify-between">
-          <div>
-            <p
-              className="text-[9px] font-bold uppercase tracking-[0.18em]"
-              style={{ color: isAlert ? "#c8383a" : "#22863a" }}
-            >
-              純資産（NET WORTH）
-            </p>
-            <p className="mt-0.5 text-[10px] text-[#0a0a0a]/60">
-              資産合計 − 負債合計
-            </p>
-          </div>
-          <p
-            className="text-2xl font-bold tabular-nums"
+        <div>
+          <span
+            className="text-[9px] font-bold uppercase tracking-[0.18em]"
             style={{ color: isAlert ? "#c8383a" : "#22863a" }}
           >
-            {fmtMan(netWorth)}
-          </p>
+            純資産（NET WORTH）
+          </span>
+          <span className="ml-2 text-[10px] text-[#0a0a0a]/60">
+            資産 {fmtMan(totalAssets)} − 負債 {fmtMan(totalLiabilities)}
+          </span>
         </div>
-        {/* 視覚的な比較バー */}
-        {totalAssets + totalLiabilities > 0 && (
-          <div
-            className="mt-3 flex h-2 overflow-hidden rounded"
-            style={{ background: "#e5e7eb" }}
-          >
-            <div
-              style={{
-                width: `${(totalAssets / (totalAssets + totalLiabilities)) * 100}%`,
-                background: "#22863a",
-              }}
-              title={`資産 ${fmtMan(totalAssets)}`}
-            />
-            <div
-              style={{
-                width: `${(totalLiabilities / (totalAssets + totalLiabilities)) * 100}%`,
-                background: "#c8383a",
-              }}
-              title={`負債 ${fmtMan(totalLiabilities)}`}
-            />
-          </div>
-        )}
+        <span
+          className="text-xl font-bold tabular-nums"
+          style={{ color: isAlert ? "#c8383a" : "#22863a" }}
+        >
+          {fmtMan(netWorth)}
+        </span>
       </div>
     </div>
   );
 }
 
-function BSBar({
-  title,
-  titleColor,
-  items,
-  total,
-  max,
+interface BSSegment extends BSItem {
+  heightPx: number;
+  striped?: boolean;
+}
+
+function BSColumn({
+  segments,
+  extraSegment,
+  heightPx,
+  align,
 }: {
-  title: string;
-  titleColor: string;
-  items: BSItem[];
-  total: number;
-  max: number;
+  segments: BSSegment[];
+  extraSegment: BSSegment | null;
+  heightPx: number;
+  align: "left" | "right";
 }) {
-  const widthPct = max > 0 ? (total / max) * 100 : 0;
+  const allSegments: BSSegment[] = extraSegment
+    ? [...segments, extraSegment]
+    : segments;
 
   return (
-    <div>
-      <div className="mb-1.5 flex items-baseline justify-between">
-        <span
-          className="text-[10px] font-bold uppercase tracking-[0.18em]"
-          style={{ color: titleColor }}
-        >
-          {title}
-        </span>
-        <span
-          className="text-base font-bold tabular-nums"
-          style={{ color: titleColor }}
-        >
-          {fmtMan(total)}
-        </span>
+    <div className="flex gap-2">
+      {/* バー本体（縦積み） */}
+      <div
+        className="flex flex-col-reverse overflow-hidden"
+        style={{
+          width: 56,
+          height: heightPx,
+          border: "1.5px solid #0a0a0a30",
+          borderRadius: 4,
+        }}
+      >
+        {allSegments.map((s) => (
+          <div
+            key={s.label}
+            className="flex items-center justify-center"
+            style={{
+              height: s.heightPx,
+              minHeight: 2,
+              background: s.color,
+              borderTop: s !== allSegments[0] ? "1px solid #ffffff60" : "none",
+              backgroundImage: s.striped
+                ? "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.25) 4px, rgba(255,255,255,0.25) 8px)"
+                : "none",
+            }}
+            title={`${s.label}: ${fmtMan(s.value)}`}
+          />
+        ))}
       </div>
 
-      {/* スタックバー */}
-      {items.length > 0 ? (
-        <div
-          className="flex h-7 overflow-hidden rounded"
-          style={{
-            width: `${widthPct}%`,
-            minWidth: "2px",
-            border: "1.5px solid #0a0a0a30",
-          }}
-        >
-          {items.map((it) => (
-            <div
-              key={it.label}
-              style={{
-                width: `${(it.value / total) * 100}%`,
-                background: it.color,
-                borderRight: "1px solid #ffffff60",
-              }}
-              title={`${it.label}: ${fmtMan(it.value)}`}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="h-7 rounded border-2 border-dashed border-[#0a0a0a20]" />
-      )}
-
-      {/* 凡例 */}
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        {items.map((it) => (
-          <span
-            key={it.label}
-            className="inline-flex items-center gap-1 text-[10px] tabular-nums"
+      {/* 凡例（縦並び） */}
+      <ul className={`flex-1 flex flex-col-reverse ${align === "right" ? "items-start" : "items-start"} text-[10px]`}>
+        {allSegments.map((s) => (
+          <li
+            key={s.label}
+            className="flex items-center gap-1.5 py-0.5"
+            style={{ minHeight: Math.max(s.heightPx, 18) }}
           >
             <span
               className="inline-block h-2.5 w-2.5 shrink-0"
-              style={{ background: it.color, border: "1px solid #0a0a0a30" }}
+              style={{
+                background: s.color,
+                border: "1px solid #0a0a0a30",
+                backgroundImage: s.striped
+                  ? "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,0.4) 2px, rgba(255,255,255,0.4) 4px)"
+                  : "none",
+              }}
             />
-            <span className="text-[#0a0a0a]/70">{it.label}</span>
-            <span className="font-bold text-[#0a0a0a]">{fmtMan(it.value)}</span>
-          </span>
+            <div className="min-w-0">
+              <p className="leading-tight text-[#0a0a0a]/70">{s.label}</p>
+              <p className="font-bold tabular-nums leading-tight text-[#0a0a0a]">
+                {fmtMan(s.value)}
+              </p>
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

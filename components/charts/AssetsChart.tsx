@@ -40,6 +40,7 @@ const FILLS = {
   cash: "#64748b",
   fund: "#94a3b8",
   stock: "#b8c6d4",
+  crypto: "#a78bfa",
   gold: "#c9aa7c",
   dc: "#dde6ef",
   nw: "#c8383a",
@@ -49,6 +50,7 @@ const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
   { key: "cash", label: "現金", desc: "預貯金など即現金化できる資産" },
   { key: "fund", label: "投信", desc: "NISA・特定口座の投資信託など" },
   { key: "stock", label: "株", desc: "個別株式・ETF" },
+  { key: "crypto", label: "仮想通貨", desc: "ビットコイン・イーサリアム等のクリプト資産" },
   { key: "gold", label: "金", desc: "金ETF・現物金・コモディティ" },
   { key: "dc", label: "DC", desc: "確定拠出年金・iDeCo（60歳から受給可、原則として60歳まで取崩不可）" },
 ];
@@ -59,6 +61,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
     現金: Math.round(r.ass.c),
     投信: Math.round(r.ass.f),
     株: Math.round(r.ass.s),
+    仮想通貨: Math.round(r.ass.k || 0),
     金: Math.round(r.ass.g || 0),
     DC: Math.round(r.ass.dc),
     純資産: Math.round(r.nw),
@@ -103,7 +106,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
             <Tooltip
               content={({ payload, label }) => {
                 if (!payload?.length) return null;
-                const ORDER = ["現金", "投信", "株", "金", "DC", "純資産"];
+                const ORDER = ["現金", "投信", "株", "仮想通貨", "金", "DC", "純資産"];
                 const sorted = ORDER.map((k) =>
                   payload.find((p) => p.dataKey === k),
                 ).filter(Boolean) as typeof payload;
@@ -185,11 +188,12 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                 <span style={{ color: "#0a0a0a" }}>{value}</span>
               )}
             />
-            <Area type="linear" dataKey="DC"   stackId="bb" stroke={FILLS.dc}    strokeWidth={0.5} fill={FILLS.dc}    fillOpacity={1} />
-            <Area type="linear" dataKey="金"   stackId="bb" stroke={FILLS.gold}  strokeWidth={0.5} fill={FILLS.gold}  fillOpacity={1} />
-            <Area type="linear" dataKey="株"   stackId="bb" stroke={FILLS.stock} strokeWidth={0.5} fill={FILLS.stock} fillOpacity={1} />
-            <Area type="linear" dataKey="投信" stackId="bb" stroke={FILLS.fund}  strokeWidth={0.5} fill={FILLS.fund}  fillOpacity={1} />
-            <Area type="linear" dataKey="現金" stackId="bb" stroke={FILLS.cash}  strokeWidth={0.5} fill={FILLS.cash}  fillOpacity={1} />
+            <Area type="linear" dataKey="DC"     stackId="bb" stroke={FILLS.dc}     strokeWidth={0.5} fill={FILLS.dc}     fillOpacity={1} />
+            <Area type="linear" dataKey="金"     stackId="bb" stroke={FILLS.gold}   strokeWidth={0.5} fill={FILLS.gold}   fillOpacity={1} />
+            <Area type="linear" dataKey="仮想通貨" stackId="bb" stroke={FILLS.crypto} strokeWidth={0.5} fill={FILLS.crypto} fillOpacity={1} />
+            <Area type="linear" dataKey="株"     stackId="bb" stroke={FILLS.stock}  strokeWidth={0.5} fill={FILLS.stock}  fillOpacity={1} />
+            <Area type="linear" dataKey="投信"   stackId="bb" stroke={FILLS.fund}   strokeWidth={0.5} fill={FILLS.fund}   fillOpacity={1} />
+            <Area type="linear" dataKey="現金"   stackId="bb" stroke={FILLS.cash}   strokeWidth={0.5} fill={FILLS.cash}   fillOpacity={1} />
             <Line
               type="linear"
               dataKey="純資産"

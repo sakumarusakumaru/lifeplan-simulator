@@ -134,53 +134,74 @@ export function HealthHeader({
 
   return (
     <div
-      className="rounded-xl"
+      className="overflow-hidden rounded-xl"
       style={{ background: "#ffffff", border: "2.5px solid #0a0a0a" }}
     >
-      {/* 上段: スコア + 診断見出し */}
-      <div
-        className="flex items-center gap-3 rounded-t-[10px] px-4 py-3"
-        style={{ background: c.light, borderBottom: `2px solid ${c.main}` }}
-      >
-        <div className="flex shrink-0 flex-col items-center">
-          <div
-            className="flex items-center justify-center"
-            style={{
-              background: c.main,
-              borderRadius: "50%",
-              width: 52,
-              height: 52,
-            }}
-          >
-            <span className="text-base font-bold text-white tabular-nums">
-              {health.score}
+      {/* 上段: 左右2カラム */}
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        {/* 左上: 診断スコア */}
+        <div
+          className="flex items-center gap-3 px-4 py-3 sm:border-r"
+          style={{
+            background: c.light,
+            borderColor: `${c.main}30`,
+            borderRight: undefined,
+            borderBottom: `2px solid ${c.main}`,
+          }}
+        >
+          <div className="flex shrink-0 flex-col items-center">
+            <div
+              className="flex items-center justify-center"
+              style={{
+                background: c.main,
+                borderRadius: "50%",
+                width: 56,
+                height: 56,
+              }}
+            >
+              <span className="text-lg font-bold text-white tabular-nums">
+                {health.score}
+              </span>
+            </div>
+            <span
+              className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.12em]"
+              style={{ color: c.text }}
+            >
+              /100
             </span>
           </div>
-          <span
-            className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.12em]"
-            style={{ color: c.text }}
-          >
-            /100
-          </span>
+          <div className="min-w-0 flex-1">
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.18em]"
+              style={{ color: c.text }}
+            >
+              診断スコア
+            </p>
+            <p className="mt-0.5 text-sm font-bold leading-tight text-[#0a0a0a]">
+              {health.headline}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p
-            className="text-[9px] font-bold uppercase tracking-[0.18em]"
-            style={{ color: c.text }}
-          >
-            診断スコア
-          </p>
-          <p className="mt-0.5 text-sm font-bold leading-tight text-[#0a0a0a]">
-            {health.headline}
-          </p>
-        </div>
-      </div>
 
-      {/* 中段: 主要KPI 横一列 */}
-      <div className="px-4 py-3">
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="min-w-0">
+        {/* 右上: 主要指標 KEY INDICATORS */}
+        <div
+          className="flex flex-col gap-2 px-4 py-3"
+          style={{ borderBottom: "1.5px solid #0a0a0a18" }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
+              主要指標 ／ KEY INDICATORS
+            </span>
+            <span
+              aria-hidden
+              className="inline-block h-px flex-1"
+              style={{ background: "#0a0a0a18" }}
+            />
+          </div>
+
+          {/* 最終純資産 + sparkline (最も大きく) */}
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
               <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
                 最終純資産（{plan.endAge}歳）
               </p>
@@ -194,33 +215,36 @@ export function HealthHeader({
             <Sparkline
               values={nwSeries}
               positive={result.finalNetWorth >= 0}
-              width={70}
-              height={28}
+              width={90}
+              height={32}
             />
           </div>
-          <Divider />
-          <KpiInline
-            label="ショート"
-            value={shortfallText}
-            status={result.shortfallAge ? "alert" : "ok"}
-          />
-          <KpiInline
-            label={`退職時(${lastJobEndAge}歳)`}
-            value={nwAtRetire !== null ? fmt(nwAtRetire) : "—"}
-            status={nwAtRetire !== null && nwAtRetire < 0 ? "alert" : "neutral"}
-          />
-          <KpiInline
-            label="65歳純資産"
-            value={nwAt65 !== null ? fmt(nwAt65) : "—"}
-            status={nwAt65 !== null && nwAt65 < 0 ? "alert" : "neutral"}
-          />
+
+          {/* 3 KPI 小 */}
+          <div className="grid grid-cols-3 gap-x-2 gap-y-1">
+            <KpiInline
+              label="ショート"
+              value={shortfallText}
+              status={result.shortfallAge ? "alert" : "ok"}
+            />
+            <KpiInline
+              label={`退職時(${lastJobEndAge}歳)`}
+              value={nwAtRetire !== null ? fmt(nwAtRetire) : "—"}
+              status={nwAtRetire !== null && nwAtRetire < 0 ? "alert" : "neutral"}
+            />
+            <KpiInline
+              label="65歳純資産"
+              value={nwAt65 !== null ? fmt(nwAt65) : "—"}
+              status={nwAt65 !== null && nwAt65 < 0 ? "alert" : "neutral"}
+            />
+          </div>
         </div>
       </div>
 
       {/* 下段: FP INSIGHT 1行 */}
       <div
-        className="flex items-center gap-2 rounded-b-[10px] px-4 py-2.5"
-        style={{ background: c.light, borderTop: `1.5px solid ${c.main}40` }}
+        className="flex items-center gap-2 px-4 py-2.5"
+        style={{ background: c.light }}
       >
         <span
           className="shrink-0 text-[9px] font-bold uppercase tracking-[0.18em]"
@@ -236,20 +260,10 @@ export function HealthHeader({
   );
 }
 
-function Divider() {
-  return (
-    <span
-      aria-hidden
-      className="hidden h-7 w-px shrink-0 sm:inline-block"
-      style={{ background: "#0a0a0a18" }}
-    />
-  );
-}
-
 function Sparkline({
   values,
-  width = 70,
-  height = 28,
+  width = 90,
+  height = 32,
   positive = true,
 }: {
   values: number[];
@@ -344,12 +358,12 @@ function KpiInline({
         >
           {icon}
         </span>
-        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
+        <span className="truncate text-[8px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/55">
           {label}
         </span>
       </div>
       <span
-        className="text-sm font-bold tabular-nums leading-tight"
+        className="text-xs font-bold tabular-nums leading-tight"
         style={{ color: valueColor }}
       >
         {value}
