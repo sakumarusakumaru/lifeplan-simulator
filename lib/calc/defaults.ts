@@ -86,7 +86,7 @@ export const DEFAULT_PLAN: PlanInput = {
   lifeEvents: [],
   kids: [],
   res: [
-    { name: "物件1", rent: 80000, cost: 150000, bal: 15_000_000, rate: 2.0, term: 20, start: 35 },
+    { name: "物件1", rent: 80000, cost: 150000, propTax: 100000, bal: 15_000_000, rate: 2.0, term: 20, start: 35 },
   ],
   ins: [],
 };

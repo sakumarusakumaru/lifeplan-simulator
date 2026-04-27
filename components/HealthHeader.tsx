@@ -115,19 +115,21 @@ const ALERT_COLORS: Record<AlertLevel, { main: string; light: string; text: stri
 export function HealthHeader({
   result,
   plan,
-  taxModeDetailed,
 }: {
   result: SimulationSummary;
   plan: PlanInput;
-  taxModeDetailed: boolean;
 }) {
   const health = computeHealth(result, plan);
   const c = ALERT_COLORS[health.alert];
   const nwSeries = result.rows.map((r) => r.nw);
 
-  const totalCare = result.rows.reduce((a, r) => a + r.care, 0);
-  const totalInherit = result.rows.reduce((a, r) => a + r.inherit, 0);
-  const totalSocialIns = result.rows.reduce((a, r) => a + r.socialIns, 0);
+  const lastJobEndAge =
+    plan.jobs.length > 0
+      ? Math.max(...plan.jobs.map((j) => j.end))
+      : plan.penStartA;
+  const retireRow = result.rows.find((r) => r.age === lastJobEndAge);
+  const nwAtRetire = retireRow ? retireRow.nw : null;
+  const nwAt65 = result.rows.find((r) => r.age === 65)?.nw ?? null;
   const shortfallText = result.shortfallAge ? `${result.shortfallAge}歳` : "なし";
 
   return (
@@ -203,19 +205,14 @@ export function HealthHeader({
             status={result.shortfallAge ? "alert" : "ok"}
           />
           <KpiInline
-            label="生涯介護"
-            value={totalCare > 0 ? fmt(totalCare) : "0万"}
-            status={totalCare > 0 ? "warn" : "neutral"}
+            label={`退職時(${lastJobEndAge}歳)`}
+            value={nwAtRetire !== null ? fmt(nwAtRetire) : "—"}
+            status={nwAtRetire !== null && nwAtRetire < 0 ? "alert" : "neutral"}
           />
           <KpiInline
-            label="生涯相続"
-            value={totalInherit > 0 ? fmt(totalInherit) : "0万"}
-            status={totalInherit > 0 ? "ok" : "neutral"}
-          />
-          <KpiInline
-            label="生涯社保"
-            value={taxModeDetailed ? fmt(totalSocialIns) : "—"}
-            status="neutral"
+            label="65歳純資産"
+            value={nwAt65 !== null ? fmt(nwAt65) : "—"}
+            status={nwAt65 !== null && nwAt65 < 0 ? "alert" : "neutral"}
           />
         </div>
       </div>

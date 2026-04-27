@@ -134,22 +134,22 @@ export default function SuggestPage() {
       category: "spending",
     },
     {
-      title: "取り崩し順序を「自動最適化」に変更",
-      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 自動最適化(〜59歳: 投信・株、60〜64歳: DC優先で年金繋ぎ、65歳〜: 投信・株を再優先)`,
+      title: "取り崩し順序を「自動最適化（年齢別）」に変更",
+      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 〜59歳: 投信→株→仮想通貨→金、60〜64歳: DC→株→投信→仮想通貨→金、65歳〜: 投信→株→DC→仮想通貨→金`,
       result: sc5,
       applicable: plan.drawOrder !== "auto-tiered",
       category: "drawdown",
     },
     {
-      title: "取り崩し順序を「投信→株→金→DC」に変更",
-      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 流動性の高い投信から優先取崩。60歳でDC合流`,
+      title: "取り崩し順序を「投信→株→DC→仮想通貨→金」に変更",
+      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 流動性の高い投信から優先取崩。仮想通貨・金は最後まで温存`,
       result: sc6,
       applicable: plan.drawOrder !== "fund-stock-crypto",
       category: "drawdown",
     },
     {
-      title: "取り崩し順序を「株→投信→金→DC」に変更",
-      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 値動きの大きい個別株から優先取崩。60歳でDC合流`,
+      title: "取り崩し順序を「株→投信→DC→仮想通貨→金」に変更",
+      detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 値動きの大きい個別株から優先取崩。仮想通貨・金は最後まで温存`,
       result: sc7,
       applicable: plan.drawOrder !== "stock-fund-crypto",
       category: "drawdown",
@@ -337,15 +337,15 @@ export default function SuggestPage() {
         <ul className="flex flex-col gap-1 text-[10px] leading-relaxed text-[#0a0a0a]/75">
           <li>
             <span className="font-bold">自動最適化:</span>{" "}
-            年齢別に最適化。〜59歳は流動性の高い投信・株、60〜64歳は年金開始までの繋ぎとしてDCを優先取崩、65歳〜は公的年金と他資産を組み合わせて取崩
+            年齢別に最適化。〜59歳は投信・株を優先（DC不可）、60〜64歳は年金開始までの繋ぎとしてDC優先、65歳〜は公的年金と組み合わせて取崩。仮想通貨・金は変動大のため最後まで温存
           </li>
           <li>
             <span className="font-bold">投信→株 優先:</span>{" "}
-            投信を先に取り崩し。値動きの大きい個別株を後ろに残してリスクを取る戦略
+            投信を先に取り崩し。次に個別株、60歳以降はDCも取崩。仮想通貨・金は最後まで温存（リスク資産として残す戦略）
           </li>
           <li>
             <span className="font-bold">株→投信 優先:</span>{" "}
-            個別株を先に売却。安定運用の投信を温存し、ボラを下げる戦略
+            個別株を先に売却。安定運用の投信を温存し、ボラを下げる戦略。仮想通貨・金は最後まで温存
           </li>
           <li>
             <span className="font-bold">DC（確定拠出年金 / iDeCo）:</span>{" "}

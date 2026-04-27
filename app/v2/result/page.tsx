@@ -214,66 +214,35 @@ export default function ResultPage() {
           />
         </div>
 
-        <div
-          className="mt-3 rounded-xl p-4"
-          style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
-        >
-          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/60">
-            BALANCE SHEET ／ 資産・負債バランス
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="mb-1.5 text-[10px] font-bold text-[#22863a]">
-                資産（ASSETS）
-              </p>
-              <BSRow label="現金・預金" value={plan.cashBal} />
-              <BSRow label="投信" value={plan.fundBal} />
-              <BSRow label="株" value={plan.stockBal} />
-              <BSRow label="DC" value={plan.dcBal} />
-              <BSRow label="金・コモディティ" value={plan.goldBal} />
-              <BSRow label="仮想通貨" value={plan.cryptoBal} />
-              <BSRow label="不動産（簿価）" value={realEstateBal} />
-              <div
-                className="mt-2 flex items-baseline justify-between border-t-2 border-[#0a0a0a] pt-2"
-              >
-                <span className="text-[11px] font-bold text-[#0a0a0a]">合計</span>
-                <span className="text-sm font-bold tabular-nums text-[#22863a]">
-                  {fmtMan(totalAssetsNow + realEstateBal)}
-                </span>
-              </div>
-            </div>
-            <div>
-              <p className="mb-1.5 text-[10px] font-bold text-[#c8383a]">
-                負債（LIABILITIES）
-              </p>
-              <BSRow
-                label="住宅ローン残高"
-                value={plan.useHomeLoan ? plan.hlBal : 0}
-              />
-              <BSRow label="不動産ローン残高" value={realEstateBal} />
-              <BSRow label="その他ローン残高" value={otherLoanBal} />
-              <div
-                className="mt-2 flex items-baseline justify-between border-t-2 border-[#0a0a0a] pt-2"
-              >
-                <span className="text-[11px] font-bold text-[#0a0a0a]">合計</span>
-                <span className="text-sm font-bold tabular-nums text-[#c8383a]">
-                  {fmtMan(totalLiabilitiesNow)}
-                </span>
-              </div>
-              <div className="mt-3 flex items-baseline justify-between rounded-lg bg-[#0a0a0a] px-3 py-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/60">
-                  純資産（NET）
-                </span>
-                <span
-                  className="text-base font-bold tabular-nums"
-                  style={{ color: netWorthNow < 0 ? "#f87171" : "#86efac" }}
-                >
-                  {fmtMan(netWorthNow)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <BalanceSheetVis
+          assets={[
+            { label: "現金・預金", value: plan.cashBal, color: "#64748b" },
+            { label: "投信", value: plan.fundBal, color: "#94a3b8" },
+            { label: "株", value: plan.stockBal, color: "#b8c6d4" },
+            { label: "金・コモディティ", value: plan.goldBal, color: "#c9aa7c" },
+            { label: "DC", value: plan.dcBal, color: "#dde6ef" },
+            { label: "仮想通貨", value: plan.cryptoBal, color: "#a78bfa" },
+            { label: "不動産（簿価）", value: realEstateBal, color: "#8b6f4e" },
+          ].filter((a) => a.value > 0)}
+          liabilities={[
+            {
+              label: "住宅ローン残高",
+              value: plan.useHomeLoan ? plan.hlBal : 0,
+              color: "#c8383a",
+            },
+            {
+              label: "不動産ローン残高",
+              value: realEstateBal,
+              color: "#e88a8c",
+            },
+            {
+              label: "その他ローン残高",
+              value: otherLoanBal,
+              color: "#d4a017",
+            },
+          ].filter((l) => l.value > 0)}
+          netWorth={netWorthNow}
+        />
       </ReportSection>
 
       {/* 4. 主要指標 */}
@@ -467,14 +436,183 @@ function SummaryCard({
   );
 }
 
-function BSRow({ label, value }: { label: string; value: number }) {
-  if (value === 0) return null;
+interface BSItem {
+  label: string;
+  value: number;
+  color: string;
+}
+
+function BalanceSheetVis({
+  assets,
+  liabilities,
+  netWorth,
+}: {
+  assets: BSItem[];
+  liabilities: BSItem[];
+  netWorth: number;
+}) {
+  const totalAssets = assets.reduce((a, b) => a + b.value, 0);
+  const totalLiabilities = liabilities.reduce((a, b) => a + b.value, 0);
+  const max = Math.max(totalAssets, totalLiabilities, 1);
+  const isAlert = netWorth < 0;
+
   return (
-    <div className="flex items-baseline justify-between py-0.5">
-      <span className="text-[10px] text-[#0a0a0a]/65">{label}</span>
-      <span className="text-[11px] font-bold tabular-nums text-[#0a0a0a]">
-        {fmtMan(value)}
-      </span>
+    <div
+      className="mt-3 rounded-xl p-4"
+      style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
+    >
+      <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/60">
+        BALANCE SHEET ／ 資産・負債バランス
+      </p>
+
+      {/* 資産バー */}
+      <BSBar
+        title="資産 ASSETS"
+        titleColor="#22863a"
+        items={assets}
+        total={totalAssets}
+        max={max}
+      />
+
+      {/* 負債バー */}
+      <div className="mt-4">
+        <BSBar
+          title="負債 LIABILITIES"
+          titleColor="#c8383a"
+          items={liabilities}
+          total={totalLiabilities}
+          max={max}
+        />
+      </div>
+
+      {/* 純資産 */}
+      <div
+        className="mt-5 rounded-lg px-4 py-3"
+        style={{
+          background: isAlert ? "#fff0f0" : "#f0fff4",
+          border: `2.5px solid ${isAlert ? "#c8383a" : "#22863a"}`,
+        }}
+      >
+        <div className="flex items-baseline justify-between">
+          <div>
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.18em]"
+              style={{ color: isAlert ? "#c8383a" : "#22863a" }}
+            >
+              純資産（NET WORTH）
+            </p>
+            <p className="mt-0.5 text-[10px] text-[#0a0a0a]/60">
+              資産合計 − 負債合計
+            </p>
+          </div>
+          <p
+            className="text-2xl font-bold tabular-nums"
+            style={{ color: isAlert ? "#c8383a" : "#22863a" }}
+          >
+            {fmtMan(netWorth)}
+          </p>
+        </div>
+        {/* 視覚的な比較バー */}
+        {totalAssets + totalLiabilities > 0 && (
+          <div
+            className="mt-3 flex h-2 overflow-hidden rounded"
+            style={{ background: "#e5e7eb" }}
+          >
+            <div
+              style={{
+                width: `${(totalAssets / (totalAssets + totalLiabilities)) * 100}%`,
+                background: "#22863a",
+              }}
+              title={`資産 ${fmtMan(totalAssets)}`}
+            />
+            <div
+              style={{
+                width: `${(totalLiabilities / (totalAssets + totalLiabilities)) * 100}%`,
+                background: "#c8383a",
+              }}
+              title={`負債 ${fmtMan(totalLiabilities)}`}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BSBar({
+  title,
+  titleColor,
+  items,
+  total,
+  max,
+}: {
+  title: string;
+  titleColor: string;
+  items: BSItem[];
+  total: number;
+  max: number;
+}) {
+  const widthPct = max > 0 ? (total / max) * 100 : 0;
+
+  return (
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <span
+          className="text-[10px] font-bold uppercase tracking-[0.18em]"
+          style={{ color: titleColor }}
+        >
+          {title}
+        </span>
+        <span
+          className="text-base font-bold tabular-nums"
+          style={{ color: titleColor }}
+        >
+          {fmtMan(total)}
+        </span>
+      </div>
+
+      {/* スタックバー */}
+      {items.length > 0 ? (
+        <div
+          className="flex h-7 overflow-hidden rounded"
+          style={{
+            width: `${widthPct}%`,
+            minWidth: "2px",
+            border: "1.5px solid #0a0a0a30",
+          }}
+        >
+          {items.map((it) => (
+            <div
+              key={it.label}
+              style={{
+                width: `${(it.value / total) * 100}%`,
+                background: it.color,
+                borderRight: "1px solid #ffffff60",
+              }}
+              title={`${it.label}: ${fmtMan(it.value)}`}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="h-7 rounded border-2 border-dashed border-[#0a0a0a20]" />
+      )}
+
+      {/* 凡例 */}
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+        {items.map((it) => (
+          <span
+            key={it.label}
+            className="inline-flex items-center gap-1 text-[10px] tabular-nums"
+          >
+            <span
+              className="inline-block h-2.5 w-2.5 shrink-0"
+              style={{ background: it.color, border: "1px solid #0a0a0a30" }}
+            />
+            <span className="text-[#0a0a0a]/70">{it.label}</span>
+            <span className="font-bold text-[#0a0a0a]">{fmtMan(it.value)}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

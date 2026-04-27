@@ -21,6 +21,7 @@ const NEW_RE = (): RealEstate => ({
   name: "新しい物件",
   rent: 0,
   cost: 0,
+  propTax: 0,
   bal: 0,
   rate: 1.0,
   term: 20,
@@ -193,37 +194,40 @@ export function AssetsMegaSection() {
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <NumberField
-                      label="家賃(月)"
+                      label="家賃収入(月)"
                       value={r.rent}
                       onChange={(v) => updateRe(i, { rent: v })}
                       unit="円"
+                      hint="物件全体の月額家賃"
                     />
                     <NumberField
-                      label="経費(年)"
+                      label="管理費＋修繕積立費(年)"
                       value={r.cost}
                       onChange={(v) => updateRe(i, { cost: v })}
                       unit="円"
+                      hint="区分マンション等の管理組合費"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
+                    <NumberField
+                      label="固定資産税(年)"
+                      value={r.propTax ?? 0}
+                      onChange={(v) => updateRe(i, { propTax: v })}
+                      unit="円"
+                      hint="土地＋家屋の年間固定資産税・都市計画税"
+                    />
                     <NumberField
                       label="ローン残高"
                       value={r.bal}
                       onChange={(v) => updateRe(i, { bal: v })}
                       unit="円"
                     />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     <PercentField
                       label="金利"
                       value={r.rate}
                       onChange={(v) => updateRe(i, { rate: v })}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <NumberField
-                      label="開始年齢"
-                      value={typeof r.start === "number" ? r.start : Number(r.start) || 0}
-                      onChange={(v) => updateRe(i, { start: v })}
-                      unit="歳"
                     />
                     <NumberField
                       label="ローン期間"
@@ -232,6 +236,13 @@ export function AssetsMegaSection() {
                       unit="年"
                     />
                   </div>
+                  <NumberField
+                    label="開始年齢"
+                    value={typeof r.start === "number" ? r.start : Number(r.start) || 0}
+                    onChange={(v) => updateRe(i, { start: v })}
+                    unit="歳"
+                    hint="本人がこの物件の運用を開始する年齢"
+                  />
                 </div>
               </ListItemCard>
             ))}

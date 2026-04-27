@@ -160,6 +160,7 @@ export function simulate(input: PlanInput): SimulationSummary {
     for (const r of rSims) {
       const rent = r.rent * 12 * infl;
       const cost = r.cost * infl;
+      const propTax = (r.propTax || 0) * infl;
       const rStartA = yearToStartAge(r.start, input);
       let intr = 0;
       let pay = 0;
@@ -170,13 +171,13 @@ export function simulate(input: PlanInput): SimulationSummary {
         pay = p;
         r.bal = Math.max(0, r.bal - (p - intr));
       }
-      const profit = Math.max(0, rent - cost - intr);
+      const profit = Math.max(0, rent - cost - propTax - intr);
       const taxR = profit * (input.taxRate / 100);
       reRentTot += rent;
-      reCostTot += cost;
+      reCostTot += cost + propTax;
       rePayTot += pay;
       reTaxTot += taxR;
-      const flow = rent - cost - pay - taxR;
+      const flow = rent - cost - propTax - pay - taxR;
       reInc += flow;
       reD.push({ bal: r.bal, flow, rent });
     }

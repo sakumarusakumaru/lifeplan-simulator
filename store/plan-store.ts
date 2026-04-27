@@ -36,6 +36,7 @@ export const usePlanStore = create<PlanStore>()(
         const persistedPlan = (persisted?.plan ?? {}) as Partial<PlanInput> & {
           kids?: Array<{ s?: Record<string, unknown>; opt?: Record<string, unknown> } & Record<string, unknown>>;
           jobs?: Array<Record<string, unknown>>;
+          res?: Array<Record<string, unknown>>;
         };
 
         // Kid フィールドの自動マイグレーション
@@ -59,6 +60,13 @@ export const usePlanStore = create<PlanStore>()(
           return obj;
         });
 
+        // RealEstate フィールドの自動マイグレーション (propTax追加)
+        const migratedRes = (persistedPlan.res ?? DEFAULT_PLAN.res).map((r) => {
+          const obj = { ...r } as Record<string, unknown>;
+          if (obj.propTax === undefined) obj.propTax = 0;
+          return obj;
+        });
+
         return {
           ...currentState,
           plan: {
@@ -67,6 +75,7 @@ export const usePlanStore = create<PlanStore>()(
             ...persistedPlan,
             kids: migratedKids,
             jobs: migratedJobs,
+            res: migratedRes,
             selfPension: {
               ...DEFAULT_PLAN.selfPension,
               ...(persistedPlan.selfPension ?? {}),

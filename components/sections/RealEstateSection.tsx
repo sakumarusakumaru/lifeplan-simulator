@@ -12,6 +12,7 @@ const NEW_RE = (): RealEstate => ({
   name: "新しい物件",
   rent: 0,
   cost: 0,
+  propTax: 0,
   bal: 0,
   rate: 1.0,
   term: 20,

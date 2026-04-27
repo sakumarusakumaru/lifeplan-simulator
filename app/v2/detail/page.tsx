@@ -36,11 +36,7 @@ export default function DetailPage() {
           </div>
 
           <aside className="flex flex-col gap-4 sm:sticky sm:top-[64px] sm:max-h-[calc(100vh-72px)] sm:self-start sm:overflow-y-auto sm:pr-1">
-            <HealthHeader
-              result={result}
-              plan={plan}
-              taxModeDetailed={plan.taxMode === "detailed"}
-            />
+            <HealthHeader result={result} plan={plan} />
             <ResultsPanel />
           </aside>
         </div>

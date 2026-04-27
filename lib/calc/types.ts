@@ -46,11 +46,12 @@ export interface SideJob {
 
 export interface RealEstate {
   name: string;
-  rent: number;
-  cost: number;
-  bal: number;
-  rate: number;
-  term: number;
+  rent: number;       // 月額家賃収入（円・物件全体）
+  cost: number;       // 年間管理費＋修繕積立費（円）
+  propTax: number;    // 年間固定資産税（円）
+  bal: number;        // ローン残高（円）
+  rate: number;       // 金利（%）
+  term: number;       // ローン期間（年）
   start: number | string;
 }
 
