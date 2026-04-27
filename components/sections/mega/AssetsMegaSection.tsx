@@ -382,58 +382,6 @@ export function AssetsMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
-        {plan.drawOrder === "custom" ? (
-          <CollapsibleSubGroup title="取り崩し順序（カスタム）">
-            <div className="flex flex-col gap-2">
-              {plan.drawCustomOrder.map((code, i) => (
-                <div
-                  key={code}
-                  className="flex items-center gap-3 px-4 py-2"
-                  style={{
-                    background: "#ffffff",
-                    border: "2.5px solid #0a0a0a",
-                    borderRadius: 12,
-                  }}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="flex-1 text-sm font-bold text-[#0a0a0a]">
-                    {DRAW_LABEL[code]}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => moveCustom(i, -1)}
-                    disabled={i === 0}
-                    className="px-3 py-1 text-xs font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#0a0a0a]"
-                    style={{
-                      border: "2.5px solid #0a0a0a",
-                      borderRadius: 12,
-                      background: "#f0f0ee",
-                      color: "#0a0a0a",
-                    }}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveCustom(i, 1)}
-                    disabled={i === plan.drawCustomOrder.length - 1}
-                    className="px-3 py-1 text-xs font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#0a0a0a]"
-                    style={{
-                      border: "2.5px solid #0a0a0a",
-                      borderRadius: 12,
-                      background: "#f0f0ee",
-                      color: "#0a0a0a",
-                    }}
-                  >
-                    ↓
-                  </button>
-                </div>
-              ))}
-            </div>
-          </CollapsibleSubGroup>
-        ) : null}
       </div>
     </Section>
   );

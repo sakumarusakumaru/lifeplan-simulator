@@ -10,7 +10,7 @@ import { SelectField } from "@/components/inputs/SelectField";
 import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
 import { Section } from "@/components/Section";
 import { ageOn } from "@/lib/calc/age";
-import type { DrawOrderMode } from "@/lib/calc/types";
+import type { DrawAsset, DrawOrderMode } from "@/lib/calc/types";
 import { calcDetailedTaxV2 } from "@/lib/calc/tax";
 import { usePlanStore } from "@/store/plan-store";
 
@@ -31,6 +31,14 @@ const DRAW_ORDER_OPTIONS: { value: DrawOrderMode; label: string }[] = [
   { value: "stock-fund-crypto", label: "株→投信→仮想通貨" },
   { value: "custom", label: "カスタム順序" },
 ];
+
+const DRAW_LABEL: Record<DrawAsset, string> = {
+  f: "投信",
+  s: "株",
+  k: "仮想通貨",
+  g: "金・コモディティ",
+  dc: "確定拠出年金",
+};
 
 function AgeDisplay({ birth }: { birth: string }) {
   const age = ageOn(birth, undefined);
@@ -179,6 +187,73 @@ export function SettingsMegaSection() {
               onChange={(v) => setField("drawOrder", v)}
               options={DRAW_ORDER_OPTIONS}
             />
+            {plan.drawOrder === "custom" ? (
+              <div
+                className="flex flex-col gap-1.5 rounded-lg p-2"
+                style={{ background: "#f0f0ee", border: "1.5px solid #0a0a0a30" }}
+              >
+                <p className="px-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
+                  カスタム順序（上から先に取り崩し）
+                </p>
+                {plan.drawCustomOrder.map((code, i) => {
+                  const move = (dir: -1 | 1) => {
+                    const order = [...plan.drawCustomOrder];
+                    const j = i + dir;
+                    if (j < 0 || j >= order.length) return;
+                    [order[i], order[j]] = [order[j], order[i]];
+                    setField("drawCustomOrder", order);
+                  };
+                  return (
+                    <div
+                      key={code}
+                      className="flex items-center gap-2 px-2.5 py-1.5"
+                      style={{
+                        background: "#ffffff",
+                        border: "2px solid #0a0a0a",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#66666a]">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="flex-1 text-xs font-bold text-[#0a0a0a]">
+                        {DRAW_LABEL[code]}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => move(-1)}
+                        disabled={i === 0}
+                        className="px-2 py-0.5 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#0a0a0a]"
+                        style={{
+                          border: "2px solid #0a0a0a",
+                          borderRadius: 6,
+                          background: "#f0f0ee",
+                          color: "#0a0a0a",
+                        }}
+                        aria-label="上へ"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => move(1)}
+                        disabled={i === plan.drawCustomOrder.length - 1}
+                        className="px-2 py-0.5 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#0a0a0a]"
+                        style={{
+                          border: "2px solid #0a0a0a",
+                          borderRadius: 6,
+                          background: "#f0f0ee",
+                          color: "#0a0a0a",
+                        }}
+                        aria-label="下へ"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
             <CheckboxField
               label="現金不足時に借金を許容（資産売却しない）"
               value={plan.allowNegCash}

@@ -20,7 +20,7 @@ export const DEFAULT_PLAN: PlanInput = {
   cashFloor: 2_000_000,
   allowNegCash: false,
   drawOrder: "auto-tiered",
-  drawCustomOrder: ["f", "s", "dc", "k"],
+  drawCustomOrder: ["f", "s", "dc", "k", "g"],
 
   jukuM: { pre: 15000, e13: 35000, e46: 50000, jh: 70000, hs: 80000, ronin: 120000 },
 
@@ -82,6 +82,14 @@ export const DEFAULT_PLAN: PlanInput = {
   hlRate: 0.7,
   hlTerm: 30,
   hlStart: 35,
+
+  homeOwned: true,
+  homePropType: "house",
+  homeStructure: "wood",
+  homeBuiltYear: new Date().getFullYear() - 5,
+  homePurchasePrice: 0,
+  homeLandRatio: 50,
+  homeCurrentValueOverride: 0,
 
   lifeEvents: [],
   kids: [],

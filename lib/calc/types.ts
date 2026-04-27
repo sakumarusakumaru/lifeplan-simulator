@@ -201,6 +201,15 @@ export interface PlanInput {
   hlTerm: number;
   hlStart: number;
 
+  // 持ち家（自宅）の評価額算定用 - BSの資産側に計上
+  homeOwned: boolean;             // 持ち家かどうか
+  homePropType: RealEstateType;
+  homeStructure: BuildingStructure;
+  homeBuiltYear: number;
+  homePurchasePrice: number;
+  homeLandRatio: number;          // 0-100 (戸建てのみ意味あり)
+  homeCurrentValueOverride: number; // 0なら自動計算
+
   kids: Kid[];
   res: RealEstate[];
   ins: Insurance[];

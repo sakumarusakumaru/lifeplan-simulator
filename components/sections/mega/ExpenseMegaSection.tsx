@@ -12,7 +12,9 @@ import { AddButton, ListItemCard } from "@/components/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
 import { Section } from "@/components/Section";
 import { kidAge, kidOffset } from "@/lib/calc/age";
+import { computeRealEstateValue } from "@/lib/calc/finance";
 import type {
+  BuildingStructure,
   CareEvent,
   InheritanceEvent,
   Insurance,
@@ -22,8 +24,29 @@ import type {
   Kid,
   LifeExpenseEvent,
   OtherLoan,
+  RealEstateType,
   SchoolType,
 } from "@/lib/calc/types";
+
+const HOME_PROP_TYPE_OPTIONS: { value: RealEstateType; label: string }[] = [
+  { value: "house", label: "戸建て" },
+  { value: "mansion", label: "マンション（区分所有）" },
+  { value: "land", label: "土地のみ" },
+];
+
+const HOME_STRUCTURE_OPTIONS: { value: BuildingStructure; label: string }[] = [
+  { value: "wood", label: "木造（耐用22年）" },
+  { value: "lightSteel", label: "軽量鉄骨（27年）" },
+  { value: "heavySteel", label: "重量鉄骨（34年）" },
+  { value: "rc", label: "RC造（47年）" },
+  { value: "src", label: "SRC造（47年）" },
+];
+
+const fmtMan = (yen: number) => {
+  const sign = yen < 0 ? "-" : "";
+  const abs = Math.abs(Math.round(yen / 10000));
+  return `${sign}${abs.toLocaleString()}万円`;
+};
 import { usePlanStore } from "@/store/plan-store";
 
 const SCHOOL_OPTIONS: { value: SchoolType; label: string }[] = [
@@ -299,6 +322,126 @@ export function ExpenseMegaSection() {
                 unit="円"
               />
             </div>
+            <CheckboxField
+              label="持ち家（自宅を所有している）"
+              value={plan.homeOwned ?? plan.useHomeLoan}
+              onChange={(v) => setField("homeOwned", v)}
+            />
+            {plan.homeOwned && (
+              <div
+                className="flex flex-col gap-2 rounded-lg p-3"
+                style={{ background: "#f0f7ff", border: "1.5px solid #3b82f640" }}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/65">
+                  自宅の評価額（BSの資産側に計上）
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <SelectField
+                    label="物件種別"
+                    value={plan.homePropType ?? "house"}
+                    onChange={(v) => setField("homePropType", v)}
+                    options={HOME_PROP_TYPE_OPTIONS}
+                  />
+                  {(plan.homePropType ?? "house") === "house" ? (
+                    <SelectField
+                      label="建物構造"
+                      value={plan.homeStructure ?? "wood"}
+                      onChange={(v) => setField("homeStructure", v)}
+                      options={HOME_STRUCTURE_OPTIONS}
+                    />
+                  ) : (
+                    <div />
+                  )}
+                </div>
+                {(plan.homePropType ?? "house") !== "land" ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField
+                      label="築年（西暦）"
+                      value={plan.homeBuiltYear ?? new Date().getFullYear()}
+                      onChange={(v) => setField("homeBuiltYear", v)}
+                      unit="年"
+                      hint={`築${Math.max(0, new Date().getFullYear() - (plan.homeBuiltYear ?? new Date().getFullYear()))}年`}
+                    />
+                    <NumberField
+                      label="購入価格"
+                      value={plan.homePurchasePrice ?? 0}
+                      onChange={(v) => setField("homePurchasePrice", v)}
+                      unit="円"
+                      hint="諸費用込みの取得時総額"
+                    />
+                  </div>
+                ) : (
+                  <NumberField
+                    label="購入価格"
+                    value={plan.homePurchasePrice ?? 0}
+                    onChange={(v) => setField("homePurchasePrice", v)}
+                    unit="円"
+                  />
+                )}
+                {(plan.homePropType ?? "house") === "house" && (
+                  <NumberField
+                    label="土地価格比率"
+                    value={plan.homeLandRatio ?? 50}
+                    onChange={(v) => setField("homeLandRatio", v)}
+                    unit="%"
+                    hint="購入価格のうち土地が占める割合"
+                  />
+                )}
+                {(() => {
+                  const currentYear = new Date().getFullYear();
+                  const estimatedHomeValue = computeRealEstateValue(
+                    {
+                      name: "自宅",
+                      rent: 0,
+                      cost: 0,
+                      propTax: 0,
+                      bal: 0,
+                      rate: 0,
+                      term: 0,
+                      start: 0,
+                      propType: plan.homePropType ?? "house",
+                      structure: plan.homeStructure ?? "wood",
+                      builtYear: plan.homeBuiltYear ?? currentYear,
+                      purchasePrice: plan.homePurchasePrice ?? 0,
+                      landRatio: plan.homeLandRatio ?? 50,
+                      currentValueOverride: plan.homeCurrentValueOverride ?? 0,
+                    },
+                    currentYear,
+                  );
+                  const useOverride = (plan.homeCurrentValueOverride ?? 0) > 0;
+                  return (
+                    <div
+                      className="rounded-lg p-2"
+                      style={{
+                        background: useOverride ? "#fff8e7" : "#f0fff4",
+                        border: `1.5px solid ${useOverride ? "#d4a017" : "#22863a"}40`,
+                      }}
+                    >
+                      <div className="mb-1.5 flex items-baseline justify-between">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                          style={{ color: useOverride ? "#a07900" : "#22863a" }}
+                        >
+                          {useOverride ? "現在評価額（手動指定）" : "推定現在評価額"}
+                        </span>
+                        <span
+                          className="text-sm font-bold tabular-nums"
+                          style={{ color: useOverride ? "#a07900" : "#22863a" }}
+                        >
+                          {fmtMan(estimatedHomeValue)}
+                        </span>
+                      </div>
+                      <NumberField
+                        label="現在評価額（手動上書き・空欄=自動）"
+                        value={plan.homeCurrentValueOverride ?? 0}
+                        onChange={(v) => setField("homeCurrentValueOverride", v)}
+                        unit="円"
+                      />
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             <CheckboxField
               label="住宅ローンあり"
               value={plan.useHomeLoan}

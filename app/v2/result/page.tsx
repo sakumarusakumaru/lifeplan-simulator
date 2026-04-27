@@ -100,12 +100,37 @@ export default function ResultPage() {
     const yr = new Date().getFullYear();
     return plan.res.reduce((acc, r) => acc + computeRealEstateValue(r, yr), 0);
   }, [plan.res]);
+
+  // 持ち家（自宅）の評価額
+  const homeValue = useMemo(() => {
+    if (!plan.homeOwned) return 0;
+    const yr = new Date().getFullYear();
+    return computeRealEstateValue(
+      {
+        name: "自宅",
+        rent: 0,
+        cost: 0,
+        propTax: 0,
+        bal: 0,
+        rate: 0,
+        term: 0,
+        start: 0,
+        propType: plan.homePropType ?? "house",
+        structure: plan.homeStructure ?? "wood",
+        builtYear: plan.homeBuiltYear ?? yr,
+        purchasePrice: plan.homePurchasePrice ?? 0,
+        landRatio: plan.homeLandRatio ?? 50,
+        currentValueOverride: plan.homeCurrentValueOverride ?? 0,
+      },
+      yr,
+    );
+  }, [plan]);
   const otherLoanBal = plan.otherLoans.reduce(
     (acc, ln) => acc + ln.monthlyPay * ln.remainMonths,
     0,
   );
   // 不動産（簿価）= 物件種別と築年数から推定した現在評価額（手動上書き優先）
-  const totalAssetsNow = financialAssets + realEstateValue;
+  const totalAssetsNow = financialAssets + realEstateValue + homeValue;
   const totalLiabilitiesNow =
     (plan.useHomeLoan ? plan.hlBal : 0) + realEstateLoan + otherLoanBal;
   const netWorthNow = totalAssetsNow - totalLiabilitiesNow;
@@ -230,14 +255,15 @@ export default function ResultPage() {
               { label: "仮想通貨", value: plan.cryptoBal, color: "#a78bfa", category: "current" },
               { label: "金・コモディティ", value: plan.goldBal, color: "#c9aa7c", category: "current" },
               { label: "DC", value: plan.dcBal, color: "#dde6ef", category: "fixed" },
-              { label: "不動産（評価額）", value: realEstateValue, color: "#8b6f4e", category: "fixed" },
+              { label: "自宅（評価額）", value: homeValue, color: "#a05f3a", category: "fixed" },
+              { label: "不動産投資（評価額）", value: realEstateValue, color: "#8b6f4e", category: "fixed" },
             ] as const
           ).filter((a) => a.value > 0)}
           liabilities={(
             [
               { label: "その他ローン残高", value: otherLoanBal, color: "#d4a017", category: "current" },
               { label: "住宅ローン残高", value: plan.useHomeLoan ? plan.hlBal : 0, color: "#c8383a", category: "fixed" },
-              { label: "不動産ローン残高", value: realEstateLoan, color: "#e88a8c", category: "fixed" },
+              { label: "不動産投資ローン残高", value: realEstateLoan, color: "#e88a8c", category: "fixed" },
             ] as const
           ).filter((l) => l.value > 0)}
           netWorth={netWorthNow}

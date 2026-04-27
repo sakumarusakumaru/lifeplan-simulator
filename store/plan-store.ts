@@ -60,6 +60,16 @@ export const usePlanStore = create<PlanStore>()(
           return obj;
         });
 
+        // drawCustomOrder の自動マイグレーション: 不足している資産を末尾に追加
+        const ALL_DRAW_ASSETS: ("f" | "s" | "k" | "dc" | "g")[] = ["f", "s", "k", "dc", "g"];
+        const persistedOrder = persistedPlan.drawCustomOrder;
+        const migratedDrawOrder = persistedOrder
+          ? [
+              ...persistedOrder.filter((a) => ALL_DRAW_ASSETS.includes(a as typeof ALL_DRAW_ASSETS[number])),
+              ...ALL_DRAW_ASSETS.filter((a) => !persistedOrder.includes(a)),
+            ]
+          : DEFAULT_PLAN.drawCustomOrder;
+
         // RealEstate フィールドの自動マイグレーション (propTax + 評価額算定用フィールド追加)
         const currentYear = new Date().getFullYear();
         const migratedRes = (persistedPlan.res ?? DEFAULT_PLAN.res).map((r) => {
@@ -74,6 +84,19 @@ export const usePlanStore = create<PlanStore>()(
           return obj;
         });
 
+        // 持ち家（自宅）フィールドのマイグレーション
+        const planWithHome = persistedPlan as typeof persistedPlan & Record<string, unknown>;
+        if (planWithHome.homeOwned === undefined) {
+          // 旧データ: useHomeLoan が true なら持ち家とみなす
+          planWithHome.homeOwned = Boolean(planWithHome.useHomeLoan);
+        }
+        if (planWithHome.homePropType === undefined) planWithHome.homePropType = "house";
+        if (planWithHome.homeStructure === undefined) planWithHome.homeStructure = "wood";
+        if (planWithHome.homeBuiltYear === undefined) planWithHome.homeBuiltYear = currentYear - 5;
+        if (planWithHome.homePurchasePrice === undefined) planWithHome.homePurchasePrice = 0;
+        if (planWithHome.homeLandRatio === undefined) planWithHome.homeLandRatio = 50;
+        if (planWithHome.homeCurrentValueOverride === undefined) planWithHome.homeCurrentValueOverride = 0;
+
         return {
           ...currentState,
           plan: {
@@ -83,6 +106,7 @@ export const usePlanStore = create<PlanStore>()(
             kids: migratedKids,
             jobs: migratedJobs,
             res: migratedRes,
+            drawCustomOrder: migratedDrawOrder,
             selfPension: {
               ...DEFAULT_PLAN.selfPension,
               ...(persistedPlan.selfPension ?? {}),
