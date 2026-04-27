@@ -611,18 +611,35 @@ function BSColumnGrouped({
   hovered: string | null;
   setHovered: (s: string | null) => void;
 }) {
-  // 縦積み用に flat 化（最初のグループの最初がバーの最下部、グループ境目に太線を入れる）
-  const flatSegments: { segment: BSSegment; isGroupTop: boolean; groupLabel: string }[] = [];
-  groups.forEach((g) => {
-    g.segments.forEach((s, i) => {
-      flatSegments.push({ segment: s, isGroupTop: i === 0, groupLabel: g.label });
+  // バーと凡例で同じ視覚順序になるように、上→下のソース配列を構築
+  // 視覚順序（上→下）:
+  //   1. extraSegment (純資産マイナス・純資産NET など)
+  //   2. グループを逆順に展開（固定資産が上、流動資産が下）
+  //   3. 各グループ内も逆順（流動性が高いものをより下に）
+  type Item = {
+    segment: BSSegment;
+    groupLabel: string | null;
+    isGroupHead: boolean; // グループ境界（このアイテムの直前に区切り線を入れる）
+  };
+  const ordered: Item[] = [];
+  if (extraSegment) {
+    ordered.push({ segment: extraSegment, groupLabel: null, isGroupHead: false });
+  }
+  [...groups].reverse().forEach((g) => {
+    const reversed = [...g.segments].reverse();
+    reversed.forEach((s, i) => {
+      ordered.push({
+        segment: s,
+        groupLabel: g.label,
+        isGroupHead: i === 0,
+      });
     });
   });
 
-  // バー（flat-segments を下から上へ表示、extraSegment はその上）
+  // バー（上→下 順に縦積み、デフォルト flex-col）
   const Bar = (
     <div
-      className="flex flex-col-reverse overflow-hidden"
+      className="flex flex-col overflow-hidden"
       style={{
         width: BS_BAR_WIDTH,
         height: heightPx,
@@ -631,79 +648,60 @@ function BSColumnGrouped({
         flexShrink: 0,
       }}
     >
-      {extraSegment && (
-        <div
-          onMouseEnter={() => setHovered(extraSegment.label)}
-          onMouseLeave={() => setHovered(null)}
-          className="cursor-pointer transition-all"
-          style={{
-            height: extraSegment.heightPx,
-            minHeight: 2,
-            background: extraSegment.color,
-            borderTop: flatSegments.length > 0 ? "2px dashed #ffffff80" : "none",
-            backgroundImage: extraSegment.striped
-              ? "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.25) 4px, rgba(255,255,255,0.25) 8px)"
-              : "none",
-            filter: hovered === extraSegment.label ? "brightness(1.15)" : "none",
-          }}
-          title={`${extraSegment.label}: ${fmtMan(extraSegment.value)}`}
-        />
-      )}
-      {[...flatSegments].reverse().map((s, idx, arr) => (
-        <div
-          key={s.segment.label}
-          onMouseEnter={() => setHovered(s.segment.label)}
-          onMouseLeave={() => setHovered(null)}
-          className="cursor-pointer transition-all"
-          style={{
-            height: s.segment.heightPx,
-            minHeight: 2,
-            background: s.segment.color,
-            borderTop:
-              idx === 0
-                ? "none"
-                : arr[idx - 1].isGroupTop
-                  ? "2px solid #0a0a0a"
-                  : "1px solid #ffffff60",
-            filter: hovered === s.segment.label ? "brightness(1.15)" : "none",
-          }}
-          title={`[${s.groupLabel}] ${s.segment.label}: ${fmtMan(s.segment.value)}`}
-        />
-      ))}
+      {ordered.map((item, idx) => {
+        const isExtra = item.groupLabel === null;
+        const borderTop =
+          idx === 0
+            ? "none"
+            : isExtra
+              ? "2px dashed #ffffff80"
+              : item.isGroupHead
+                ? "2px solid #0a0a0a"
+                : "1px solid #ffffff60";
+        return (
+          <div
+            key={item.segment.label}
+            onMouseEnter={() => setHovered(item.segment.label)}
+            onMouseLeave={() => setHovered(null)}
+            className="cursor-pointer transition-all"
+            style={{
+              height: item.segment.heightPx,
+              minHeight: 2,
+              background: item.segment.color,
+              borderTop,
+              backgroundImage: item.segment.striped
+                ? "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.25) 4px, rgba(255,255,255,0.25) 8px)"
+                : "none",
+              filter: hovered === item.segment.label ? "brightness(1.15)" : "none",
+            }}
+            title={
+              isExtra
+                ? `${item.segment.label}: ${fmtMan(item.segment.value)}`
+                : `[${item.groupLabel}] ${item.segment.label}: ${fmtMan(item.segment.value)}`
+            }
+          />
+        );
+      })}
     </div>
   );
 
-  // 凡例（バーと同じ視覚的順序: 下から上）
+  // 凡例（バーと同じ上→下 順）
   const Legend = (
     <ul
-      className={`flex flex-1 flex-col-reverse text-[10px] ${
+      className={`flex flex-1 flex-col text-[10px] ${
         barSide === "right" ? "items-end text-right" : "items-start text-left"
       }`}
     >
-      {extraSegment && (
+      {ordered.map((item) => (
         <BSLegendItem
-          segment={extraSegment}
-          groupLabel={null}
-          showGroup={false}
+          key={item.segment.label}
+          segment={item.segment}
+          groupLabel={item.groupLabel}
+          showGroup={item.isGroupHead}
           barSide={barSide}
           hovered={hovered}
           setHovered={setHovered}
         />
-      )}
-      {groups.map((g) => (
-        <li key={g.label} className="flex flex-col-reverse w-full">
-          {g.segments.map((s, i) => (
-            <BSLegendItem
-              key={s.label}
-              segment={s}
-              groupLabel={g.label}
-              showGroup={i === 0}
-              barSide={barSide}
-              hovered={hovered}
-              setHovered={setHovered}
-            />
-          ))}
-        </li>
       ))}
     </ul>
   );
