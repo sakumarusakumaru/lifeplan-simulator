@@ -20,8 +20,8 @@ const NEW_KID = (): Kid => ({
   name: "新しい子",
   birth: "",
   offset: 0,
-  s: { k: "pub", e: "pub", j: "pub", h: "pub", u: "pub" },
-  opt: { ronin: false, grad: false, dormU: false, dormG: false, send: 0 },
+  s: { k: "pub", e: "pub", j: "pub", h: "pub", u: "pub", g: "none" },
+  opt: { ronin: false, dorm: false, grad: false, dormU: false, dormG: false, send: 0 },
 });
 
 export function EducationSection() {
@@ -103,9 +103,9 @@ export function EducationSection() {
                     </div>
                     <div className="grid grid-cols-1 gap-2 grid-cols-1">
                       <CheckboxField label="浪人" value={k.opt.ronin} onChange={(v) => updateOpt(i, "ronin", v)} />
-                      <CheckboxField label="大学院" value={k.opt.grad} onChange={(v) => updateOpt(i, "grad", v)} />
-                      <CheckboxField label="下宿(大)" value={k.opt.dormU} onChange={(v) => updateOpt(i, "dormU", v)} />
-                      <CheckboxField label="下宿(院)" value={k.opt.dormG} onChange={(v) => updateOpt(i, "dormG", v)} />
+                      <CheckboxField label="大学院" value={k.opt.grad ?? false} onChange={(v) => updateOpt(i, "grad", v)} />
+                      <CheckboxField label="下宿(大)" value={k.opt.dormU ?? false} onChange={(v) => updateOpt(i, "dormU", v)} />
+                      <CheckboxField label="下宿(院)" value={k.opt.dormG ?? false} onChange={(v) => updateOpt(i, "dormG", v)} />
                     </div>
                   </div>
                 </ListItemCard>

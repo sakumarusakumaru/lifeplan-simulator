@@ -12,6 +12,7 @@ const NEW_JOB = (): Job => ({
   start: 30,
   end: 60,
   inc: 0,
+  raise: 0,
   sev: 0,
   sevAge: 60,
 });

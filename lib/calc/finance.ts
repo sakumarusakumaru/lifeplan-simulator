@@ -22,11 +22,11 @@ export function calcInsuranceY(
 }
 
 export const EDU: Record<"k" | "e" | "j" | "h" | "u" | "g" | "r", Record<SchoolType, number>> = {
-  k: { pub: 20, pri: 50 },
-  e: { pub: 30, pri: 100 },
-  j: { pub: 40, pri: 120 },
-  h: { pub: 40, pri: 100 },
-  u: { pub: 120, pri: 180 },
-  g: { pub: 120, pri: 180 },
-  r: { pub: 100, pri: 100 },
+  k: { pub: 20, pri: 50, none: 0 },
+  e: { pub: 30, pri: 100, none: 0 },
+  j: { pub: 40, pri: 120, none: 0 },
+  h: { pub: 40, pri: 100, none: 0 },
+  u: { pub: 120, pri: 180, none: 0 },
+  g: { pub: 120, pri: 180, none: 0 },
+  r: { pub: 100, pri: 100, none: 0 },
 };

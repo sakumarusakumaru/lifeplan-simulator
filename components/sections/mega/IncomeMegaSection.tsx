@@ -3,6 +3,7 @@
 import { CheckboxField } from "@/components/inputs/CheckboxField";
 import { NumberField } from "@/components/inputs/NumberField";
 import { SelectField } from "@/components/inputs/SelectField";
+import { SliderField } from "@/components/inputs/SliderField";
 import { TextField } from "@/components/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
@@ -38,6 +39,7 @@ const NEW_JOB = (): Job => ({
   start: 30,
   end: 60,
   inc: 0,
+  raise: 2.0,
   sev: 0,
   sevAge: 60,
 });
@@ -230,14 +232,30 @@ export function IncomeMegaSection() {
               >
                 <div className="grid grid-cols-1 gap-2">
                   <TextField label="名称" value={j.name} onChange={(v) => updateJob(i, { name: v })} />
-                  <NumberField label="年収" value={j.inc} onChange={(v) => updateJob(i, { inc: v })} unit="円" />
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
-                    <NumberField label="開始年齢" value={j.start} onChange={(v) => updateJob(i, { start: v })} unit="歳" />
-                    <NumberField label="終了年齢" value={j.end} onChange={(v) => updateJob(i, { end: v })} unit="歳" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField
+                      label="年収（額面）"
+                      value={j.inc}
+                      onChange={(v) => updateJob(i, { inc: v })}
+                      unit="円"
+                    />
+                    <SliderField
+                      label="昇給率（年・複利）"
+                      value={j.raise ?? 0}
+                      onChange={(v) => updateJob(i, { raise: v })}
+                      min={0}
+                      max={10}
+                      step={0.1}
+                      hint="年収が毎年この率で上がると仮定"
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField label="入社" value={j.start} onChange={(v) => updateJob(i, { start: v })} unit="歳" />
+                    <NumberField label="退職" value={j.end} onChange={(v) => updateJob(i, { end: v })} unit="歳" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     <NumberField label="退職金" value={j.sev} onChange={(v) => updateJob(i, { sev: v })} unit="円" />
-                    <NumberField label="退職金 受取年齢" value={j.sevAge} onChange={(v) => updateJob(i, { sevAge: v })} unit="歳" />
+                    <NumberField label="退職金 受取" value={j.sevAge} onChange={(v) => updateJob(i, { sevAge: v })} unit="歳" />
                   </div>
                 </div>
               </ListItemCard>

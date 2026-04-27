@@ -48,7 +48,7 @@ export const DEFAULT_PLAN: PlanInput = {
   saveDcEndAge: 60,
 
   jobs: [
-    { name: "現職", start: 30, end: 60, inc: 6_000_000, sev: 10_000_000, sevAge: 60 },
+    { name: "現職", start: 30, end: 60, inc: 6_000_000, raise: 2.0, sev: 10_000_000, sevAge: 60 },
   ],
   sideJobs: [{ name: "副業", start: 35, end: 50, inc: 500_000 }],
   penStartA: 65,

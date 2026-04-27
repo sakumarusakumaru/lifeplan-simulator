@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { CheckboxField } from "@/components/inputs/CheckboxField";
 import { DateField } from "@/components/inputs/DateField";
 import { NumberField } from "@/components/inputs/NumberField";
@@ -16,6 +18,7 @@ import type {
   Insurance,
   InsuranceType,
   Insured,
+  JukuMonthly,
   Kid,
   LifeExpenseEvent,
   OtherLoan,
@@ -23,10 +26,58 @@ import type {
 } from "@/lib/calc/types";
 import { usePlanStore } from "@/store/plan-store";
 
-const SCHOOL_OPTIONS = [
-  { value: "pub" as SchoolType, label: "公立" },
-  { value: "pri" as SchoolType, label: "私立" },
-] as const;
+const SCHOOL_OPTIONS: { value: SchoolType; label: string }[] = [
+  { value: "pub", label: "公立" },
+  { value: "pri", label: "私立" },
+];
+
+const UNIV_OPTIONS: { value: SchoolType; label: string }[] = [
+  { value: "pub", label: "国公立" },
+  { value: "pri", label: "私立" },
+  { value: "none", label: "進学しない" },
+];
+
+interface JukuPreset {
+  key: string;
+  label: string;
+  desc: string;
+  values: JukuMonthly;
+}
+
+// 出典: 文部科学省 学校外活動費 / Benesse教育研究所 / 大手塾相場
+// 月額(円)・幼児〜浪人。家庭の教育投資レベル別の典型値
+const JUKU_PRESETS: JukuPreset[] = [
+  {
+    key: "none",
+    label: "通塾なし",
+    desc: "通信教育・公文等もなし",
+    values: { pre: 0, e13: 0, e46: 0, jh: 0, hs: 0, ronin: 0 },
+  },
+  {
+    key: "modest",
+    label: "控えめ層",
+    desc: "公文・通信教育中心",
+    values: { pre: 0, e13: 3_000, e46: 8_000, jh: 15_000, hs: 20_000, ronin: 50_000 },
+  },
+  {
+    key: "average",
+    label: "全国平均層",
+    desc: "受験対策や習い事を含む全国平均",
+    values: { pre: 2_000, e13: 8_000, e46: 20_000, jh: 25_000, hs: 30_000, ronin: 80_000 },
+  },
+  {
+    key: "keen",
+    label: "教育熱心層",
+    desc: "中受・大受対策を本格化",
+    values: { pre: 8_000, e13: 20_000, e46: 50_000, jh: 40_000, hs: 50_000, ronin: 100_000 },
+  },
+  {
+    key: "tokyo",
+    label: "東京熱心層",
+    desc: "有名塾フル活用（鉄緑会・SAPIX等）",
+    values: { pre: 15_000, e13: 35_000, e46: 80_000, jh: 60_000, hs: 80_000, ronin: 150_000 },
+  },
+];
 
 const TYPE_OPTIONS: { value: InsuranceType; label: string }[] = [
   { value: "生命（死亡・収入保障）", label: "生命（死亡・収入保障）" },
@@ -52,8 +103,8 @@ const NEW_KID = (): Kid => ({
   name: "新しい子",
   birth: "",
   offset: 0,
-  s: { k: "pub", e: "pub", j: "pub", h: "pub", u: "pub" },
-  opt: { ronin: false, grad: false, dormU: false, dormG: false, send: 0 },
+  s: { k: "pub", e: "pub", j: "pub", h: "pub", u: "pub", g: "none" },
+  opt: { ronin: false, dorm: false, send: 50_000 },
 });
 
 const NEW_LOAN = (): OtherLoan => ({
@@ -84,6 +135,7 @@ const NEW_CARE = (): CareEvent => ({
 export function ExpenseMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
+  const [showLivingGuide, setShowLivingGuide] = useState(false);
 
   const updateLoan = (i: number, patch: Partial<OtherLoan>) =>
     setField("otherLoans", plan.otherLoans.map((ln, idx) => (idx === i ? { ...ln, ...patch } : ln)));
@@ -155,43 +207,67 @@ export function ExpenseMegaSection() {
     >
       <div className="flex flex-col gap-2">
         <CollapsibleSubGroup title="基本生活費">
-          <div
-            className="rounded-lg p-3"
-            style={{ background: "#fff8e7", border: "1.5px solid #d4a017" }}
+          <button
+            type="button"
+            onClick={() => setShowLivingGuide(!showLivingGuide)}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[#fff8e7]"
+            style={{ border: "1.5px solid #d4a017", background: showLivingGuide ? "#fff8e7" : "#fffdf6" }}
           >
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#a07900]">
-              ⚠ 重複入力を防ぐため、ここに含めるもの／含めないものを確認
-            </p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <div>
-                <p className="mb-1 text-[10px] font-bold text-[#22863a]">✓ 含める</p>
-                <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
-                  <li>・食費・外食</li>
-                  <li>・水道光熱費</li>
-                  <li>・通信費（スマホ・ネット）</li>
-                  <li>・日用品・被服費</li>
-                  <li>・交通費・ガソリン代</li>
-                  <li>・娯楽・サブスク・交際費</li>
-                  <li>・医療費（保険適用範囲）</li>
-                </ul>
+            <span
+              className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[11px] font-bold text-white"
+              style={{ background: "#d4a017", borderRadius: "50%" }}
+            >
+              !
+            </span>
+            <span className="flex-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#a07900]">
+              ここに含めるもの／含めないものを確認
+            </span>
+            <span
+              className="text-[10px] font-bold text-[#a07900] transition-transform"
+              style={{ display: "inline-block", transform: showLivingGuide ? "rotate(180deg)" : "none" }}
+            >
+              ▾
+            </span>
+          </button>
+          {showLivingGuide && (
+            <div
+              className="rounded-lg p-3"
+              style={{ background: "#fff8e7", border: "1.5px solid #d4a017" }}
+            >
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#a07900]">
+                ⚠ 重複入力を防ぐため、ここに含めるもの／含めないものを確認
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div>
+                  <p className="mb-1 text-[10px] font-bold text-[#22863a]">✓ 含める</p>
+                  <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
+                    <li>・食費・外食</li>
+                    <li>・水道光熱費</li>
+                    <li>・通信費（スマホ・ネット）</li>
+                    <li>・日用品・被服費</li>
+                    <li>・交通費・ガソリン代</li>
+                    <li>・娯楽・サブスク・交際費</li>
+                    <li>・医療費（保険適用範囲）</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] font-bold text-[#c8383a]">✗ 含めない（別項目で入力）</p>
+                  <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
+                    <li>・家賃・住宅ローン → 住居</li>
+                    <li>・保険料 → 保険</li>
+                    <li>・教育費・塾代 → 教育費</li>
+                    <li>・投信/株/NISA積立 → 資産・運用</li>
+                    <li>・介護費用 → 介護費用</li>
+                    <li>・ライフイベント → ライフイベント</li>
+                    <li>・自動車/奨学金返済 → その他ローン</li>
+                  </ul>
+                </div>
               </div>
-              <div>
-                <p className="mb-1 text-[10px] font-bold text-[#c8383a]">✗ 含めない（別項目で入力）</p>
-                <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
-                  <li>・家賃・住宅ローン → 住居</li>
-                  <li>・保険料 → 保険</li>
-                  <li>・教育費・塾代 → 教育費</li>
-                  <li>・投信/株/NISA積立 → 資産・運用</li>
-                  <li>・介護費用 → 介護費用</li>
-                  <li>・ライフイベント → ライフイベント</li>
-                  <li>・自動車/奨学金返済 → その他ローン</li>
-                </ul>
-              </div>
+              <p className="mt-2 text-[10px] leading-relaxed text-[#0a0a0a]/55">
+                参考: 単身 12〜18万 / 夫婦 22〜30万 / 子あり世帯 28〜40万（家賃・教育費除く・月額）
+              </p>
             </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-[#0a0a0a]/55">
-              参考: 単身 12〜18万 / 夫婦 22〜30万 / 子あり世帯 28〜40万（家賃・教育費除く・月額）
-            </p>
-          </div>
+          )}
           <div className="grid grid-cols-1 gap-2">
             <NumberField
               label="基本支出(月)"
@@ -303,9 +379,39 @@ export function ExpenseMegaSection() {
           <div className="flex flex-col gap-4">
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-                — 塾の月額
+                — 塾の月額（モデルケースから選んで自動入力）
               </div>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="mb-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                {JUKU_PRESETS.map((p) => {
+                  const matches =
+                    plan.jukuM.pre === p.values.pre &&
+                    plan.jukuM.e13 === p.values.e13 &&
+                    plan.jukuM.e46 === p.values.e46 &&
+                    plan.jukuM.jh === p.values.jh &&
+                    plan.jukuM.hs === p.values.hs &&
+                    plan.jukuM.ronin === p.values.ronin;
+                  return (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => setField("jukuM", p.values)}
+                      className="flex flex-col gap-0.5 px-3 py-2 text-left transition-colors"
+                      style={{
+                        border: matches ? "2.5px solid #c8383a" : "2px solid #0a0a0a25",
+                        background: matches ? "#fff0f0" : "#ffffff",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <span className="text-[11px] font-bold text-[#0a0a0a]">{p.label}</span>
+                      <span className="text-[9px] leading-tight text-[#0a0a0a]/55">{p.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mb-2 text-[9px] leading-relaxed text-[#0a0a0a]/50">
+                ※ プリセット選択後、各段階の数値を個別に編集できます。出典: 文部科学省 学校外活動費 / Benesse教育研究所 / 大手塾相場
+              </p>
+              <div className="grid grid-cols-2 gap-2">
                 <NumberField
                   label="幼児(3-5)"
                   value={plan.jukuM.pre}
@@ -363,59 +469,61 @@ export function ExpenseMegaSection() {
                           value={k.name}
                           onChange={(v) => updateKid(i, { name: v })}
                         />
-                        <DateField
-                          label="生年月日"
-                          value={k.birth}
-                          onChange={(v) => updateKid(i, { birth: v })}
-                        />
-                        <NumberField
-                          label="現在年齢"
-                          value={ca ?? 0}
-                          onChange={() => {}}
-                          unit="歳"
-                          hint="生年月日から自動"
-                        />
-                        <NumberField
-                          label="仕送り(月)"
-                          value={k.opt.send}
-                          onChange={(v) => updateOpt(i, "send", v)}
-                          unit="円"
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <DateField
+                            label="生年月日"
+                            value={k.birth}
+                            onChange={(v) => updateKid(i, { birth: v })}
+                          />
+                          <NumberField
+                            label="現在年齢"
+                            value={ca ?? 0}
+                            onChange={() => {}}
+                            unit="歳"
+                            hint="生年月日から自動"
+                          />
+                        </div>
                       </div>
                       <div className="mt-4">
                         <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-                          — 進学プラン
+                          — 進学プラン（公立 / 私立 / 進学しない）
                         </div>
-                        <div className="grid grid-cols-1 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <SelectField
-                            label="幼"
+                            label="幼稚園"
                             value={k.s.k}
                             onChange={(v) => updateStage(i, "k", v)}
                             options={SCHOOL_OPTIONS}
                           />
                           <SelectField
-                            label="小"
+                            label="小学校"
                             value={k.s.e}
                             onChange={(v) => updateStage(i, "e", v)}
                             options={SCHOOL_OPTIONS}
                           />
                           <SelectField
-                            label="中"
+                            label="中学"
                             value={k.s.j}
                             onChange={(v) => updateStage(i, "j", v)}
                             options={SCHOOL_OPTIONS}
                           />
                           <SelectField
-                            label="高"
+                            label="高校"
                             value={k.s.h}
                             onChange={(v) => updateStage(i, "h", v)}
                             options={SCHOOL_OPTIONS}
                           />
                           <SelectField
-                            label="大"
+                            label="大学"
                             value={k.s.u}
                             onChange={(v) => updateStage(i, "u", v)}
-                            options={SCHOOL_OPTIONS}
+                            options={UNIV_OPTIONS}
+                          />
+                          <SelectField
+                            label="大学院"
+                            value={k.s.g ?? "none"}
+                            onChange={(v) => updateStage(i, "g", v)}
+                            options={UNIV_OPTIONS}
                           />
                         </div>
                       </div>
@@ -423,27 +531,33 @@ export function ExpenseMegaSection() {
                         <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
                           — オプション
                         </div>
-                        <div className="grid grid-cols-1 gap-2">
+                        <div className="flex flex-col gap-2">
                           <CheckboxField
-                            label="浪人"
+                            label="浪人を経て1年遅れで進学"
                             value={k.opt.ronin}
                             onChange={(v) => updateOpt(i, "ronin", v)}
                           />
                           <CheckboxField
-                            label="大学院"
-                            value={k.opt.grad}
-                            onChange={(v) => updateOpt(i, "grad", v)}
+                            label="下宿（大学・大学院期間中）"
+                            value={k.opt.dorm ?? false}
+                            onChange={(v) => updateOpt(i, "dorm", v)}
                           />
-                          <CheckboxField
-                            label="下宿(大)"
-                            value={k.opt.dormU}
-                            onChange={(v) => updateOpt(i, "dormU", v)}
-                          />
-                          <CheckboxField
-                            label="下宿(院)"
-                            value={k.opt.dormG}
-                            onChange={(v) => updateOpt(i, "dormG", v)}
-                          />
+                          {k.opt.dorm ? (
+                            <div
+                              className="rounded-lg p-3"
+                              style={{ background: "#f0f7ff", border: "1.5px solid #3b82f640" }}
+                            >
+                              <p className="mb-2 text-[10px] leading-relaxed text-[#0a0a0a]/65">
+                                💡 下宿先への月々の仕送り（家賃・食費補助等）。下宿期間中のみ計算に反映されます。参考: 月5〜10万円が一般的
+                              </p>
+                              <NumberField
+                                label="仕送り(月)"
+                                value={k.opt.send}
+                                onChange={(v) => updateOpt(i, "send", v)}
+                                unit="円"
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </ListItemCard>

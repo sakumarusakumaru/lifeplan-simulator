@@ -37,8 +37,15 @@ export function quickToPlan(q: QuickInput): PlanInput {
     name: `子${i + 1}`,
     birth: `${baseYear - kidAge}-07-01`,
     offset: q.curAge - kidAge,
-    s: { k: "pub" as const, e: "pub" as const, j: "pub" as const, h: "pub" as const, u: "pub" as const },
-    opt: { ronin: false, grad: false, dormU: false, dormG: false, send: 100000 },
+    s: {
+      k: "pub" as const,
+      e: "pub" as const,
+      j: "pub" as const,
+      h: "pub" as const,
+      u: "pub" as const,
+      g: "none" as const,
+    },
+    opt: { ronin: false, dorm: false, send: 100000 },
   }));
 
   // living cost: average of current and retirement target
@@ -101,6 +108,7 @@ export function quickToPlan(q: QuickInput): PlanInput {
       start: q.curAge,
       end: q.workEndAge,
       inc: selfGrossY,
+      raise: 2.0,
       sev: sevAmt,
       sevAge: q.workEndAge,
     }],

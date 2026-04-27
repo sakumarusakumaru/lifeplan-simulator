@@ -1,4 +1,4 @@
-export type SchoolType = "pub" | "pri";
+export type SchoolType = "pub" | "pri" | "none";
 
 export interface KidStages {
   k: SchoolType;
@@ -6,14 +6,17 @@ export interface KidStages {
   j: SchoolType;
   h: SchoolType;
   u: SchoolType;
+  g: SchoolType;
 }
 
 export interface KidOptions {
   ronin: boolean;
-  grad: boolean;
-  dormU: boolean;
-  dormG: boolean;
+  dorm: boolean;
   send: number;
+  // 旧フィールド（自動マイグレーション用に残置）
+  grad?: boolean;
+  dormU?: boolean;
+  dormG?: boolean;
 }
 
 export interface Kid {
@@ -29,6 +32,7 @@ export interface Job {
   start: number;
   end: number;
   inc: number;
+  raise: number;       // 昇給率(%/年・複利)
   sev: number;
   sevAge: number;
 }

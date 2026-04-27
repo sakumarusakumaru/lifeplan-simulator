@@ -10,6 +10,7 @@ import type {
   PlanInput,
   RealEstate,
   RealEstateRowDetail,
+  SchoolType,
   SimulationSummary,
   YearlyResult,
 } from "./types";
@@ -53,7 +54,11 @@ export function simulate(input: PlanInput): SimulationSummary {
 
     let job = 0;
     for (const j of input.jobs) {
-      if (age >= j.start && age < j.end) job += j.inc;
+      if (age >= j.start && age < j.end) {
+        const yearsWorked = age - j.start;
+        const raisePct = (j.raise || 0) / 100;
+        job += j.inc * Math.pow(1 + raisePct, yearsWorked);
+      }
       if (age === j.sevAge) job += j.sev;
     }
     let side = 0;
@@ -201,14 +206,18 @@ export function simulate(input: PlanInput): SimulationSummary {
         jukuMan = (input.jukuM.hs * 12) / 10000;
       } else {
         const uS = k.opt.ronin ? 19 : 18;
+        // 旧フィールド互換: dorm が未設定の場合は旧 dormU/dormG を参照
+        const isDorm = k.opt.dorm ?? (k.opt.dormU || k.opt.dormG) ?? false;
+        // 旧フィールド互換: s.g が未設定の場合は旧 grad を参照
+        const gradStage: SchoolType = k.s.g ?? (k.opt.grad ? "pub" : "none");
         if (k.opt.ronin && ca === 18) {
           jukuMan = (input.jukuM.ronin * 12) / 10000;
-        } else if (ca >= uS && ca < uS + 4) {
+        } else if (ca >= uS && ca < uS + 4 && k.s.u !== "none") {
           tuitionMan = EDU.u[k.s.u];
-          if (k.opt.dormU) tuitionMan += (k.opt.send * 12) / 10000;
-        } else if (k.opt.grad && ca >= uS + 4 && ca < uS + 6) {
-          tuitionMan = EDU.g.pub;
-          if (k.opt.dormG) tuitionMan += (k.opt.send * 12) / 10000;
+          if (isDorm) tuitionMan += (k.opt.send * 12) / 10000;
+        } else if (gradStage !== "none" && ca >= uS + 4 && ca < uS + 6) {
+          tuitionMan = EDU.g[gradStage];
+          if (isDorm) tuitionMan += (k.opt.send * 12) / 10000;
         }
       }
 
