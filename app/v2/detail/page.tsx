@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { HealthHeader } from "@/components/HealthHeader";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import { AssetsMegaSection } from "@/components/sections/mega/AssetsMegaSection";
 import { ExpenseMegaSection } from "@/components/sections/mega/ExpenseMegaSection";
@@ -9,13 +10,6 @@ import { IncomeMegaSection } from "@/components/sections/mega/IncomeMegaSection"
 import { SettingsMegaSection } from "@/components/sections/mega/SettingsMegaSection";
 import { simulate } from "@/lib/calc/simulate";
 import { usePlanStore } from "@/store/plan-store";
-
-const fmt = (yen: number) => {
-  const sign = yen < 0 ? "-" : "";
-  const abs = Math.abs(Math.round(yen / 10000));
-  if (abs >= 10000) return `${sign}${(abs / 10000).toFixed(1)}億`;
-  return `${sign}${abs.toLocaleString()}万`;
-};
 
 export default function DetailPage() {
   const hydrated = usePlanStore((s) => s.hydrated);
@@ -30,34 +24,28 @@ export default function DetailPage() {
     );
   }
 
-  const totalCare = result.rows.reduce((a, r) => a + r.care, 0);
-  const totalInherit = result.rows.reduce((a, r) => a + r.inherit, 0);
-  const totalSocialIns = result.rows.reduce((a, r) => a + r.socialIns, 0);
-
   return (
-    <main className="px-4 py-6 pb-24 sm:px-8">
-      <div className="mx-auto max-w-7xl">
-        {/* Header strip */}
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
-              VER 2 / DETAIL INPUT
-            </p>
-            <h1 className="mt-1 text-lg font-bold text-[#0a0a0a]">FP相談級 詳細入力</h1>
-            <p className="mt-1 text-xs text-[#0a0a0a]/55">
-              収入・資産・支出の全項目 + 累進税計算・相続・介護費用を統合。すべての変更がリアルタイムで反映されます。
-            </p>
-          </div>
-          <KpiStrip
-            nw={fmt(result.finalNetWorth)}
-            shortfall={result.shortfallAge ? `${result.shortfallAge}歳` : "なし"}
-            care={fmt(totalCare)}
-            inherit={fmt(totalInherit)}
-            socialIns={plan.taxMode === "detailed" ? fmt(totalSocialIns) : "—"}
-            alert={!!result.shortfallAge || result.finalNetWorth < 0}
-          />
-        </div>
+    <main className="pb-24">
+      {/* Hero - scrolls away */}
+      <div className="mx-auto max-w-7xl px-4 pb-3 pt-6 sm:px-8">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
+          VER 2 / DETAIL INPUT
+        </p>
+        <h1 className="mt-1 text-lg font-bold text-[#0a0a0a]">FP相談級 詳細入力</h1>
+        <p className="mt-1 text-xs text-[#0a0a0a]/55">
+          収入・資産・支出の全項目 + 累進税計算・相続・介護費用を統合。すべての変更がリアルタイムで反映されます。
+        </p>
+      </div>
 
+      {/* Sticky health header (compacts on scroll) */}
+      <HealthHeader
+        result={result}
+        plan={plan}
+        taxModeDetailed={plan.taxMode === "detailed"}
+      />
+
+      {/* Main content */}
+      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-8">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
           <div className="flex flex-col gap-2">
             <SettingsMegaSection />
@@ -66,51 +54,11 @@ export default function DetailPage() {
             <ExpenseMegaSection />
           </div>
 
-          <aside className="sm:sticky sm:top-[56px] sm:max-h-[calc(100vh-56px)] sm:self-start sm:overflow-y-auto sm:pr-1">
+          <aside className="sm:sticky sm:top-[112px] sm:max-h-[calc(100vh-112px)] sm:self-start sm:overflow-y-auto sm:pr-1">
             <ResultsPanel />
           </aside>
         </div>
       </div>
     </main>
-  );
-}
-
-function KpiStrip({
-  nw,
-  shortfall,
-  care,
-  inherit,
-  socialIns,
-  alert,
-}: {
-  nw: string;
-  shortfall: string;
-  care: string;
-  inherit: string;
-  socialIns: string;
-  alert: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[10px]">
-      <KpiInline label="最終純資産" value={nw} alert={alert} />
-      <KpiInline label="資金ショート" value={shortfall} alert={shortfall !== "なし"} />
-      <KpiInline label="生涯介護" value={care} />
-      <KpiInline label="生涯相続" value={inherit} />
-      <KpiInline label="生涯社保" value={socialIns} />
-    </div>
-  );
-}
-
-function KpiInline({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/50">{label}</span>
-      <span
-        className="text-sm font-bold tabular-nums"
-        style={{ color: alert ? "#c8383a" : "#0a0a0a" }}
-      >
-        {value}
-      </span>
-    </div>
   );
 }
