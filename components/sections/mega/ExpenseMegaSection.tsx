@@ -155,6 +155,43 @@ export function ExpenseMegaSection() {
     >
       <div className="flex flex-col gap-2">
         <CollapsibleSubGroup title="基本生活費">
+          <div
+            className="rounded-lg p-3"
+            style={{ background: "#fff8e7", border: "1.5px solid #d4a017" }}
+          >
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#a07900]">
+              ⚠ 重複入力を防ぐため、ここに含めるもの／含めないものを確認
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div>
+                <p className="mb-1 text-[10px] font-bold text-[#22863a]">✓ 含める</p>
+                <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
+                  <li>・食費・外食</li>
+                  <li>・水道光熱費</li>
+                  <li>・通信費（スマホ・ネット）</li>
+                  <li>・日用品・被服費</li>
+                  <li>・交通費・ガソリン代</li>
+                  <li>・娯楽・サブスク・交際費</li>
+                  <li>・医療費（保険適用範囲）</li>
+                </ul>
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-bold text-[#c8383a]">✗ 含めない（別項目で入力）</p>
+                <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
+                  <li>・家賃・住宅ローン → 住居</li>
+                  <li>・保険料 → 保険</li>
+                  <li>・教育費・塾代 → 教育費</li>
+                  <li>・投信/株/NISA積立 → 資産・運用</li>
+                  <li>・介護費用 → 介護費用</li>
+                  <li>・ライフイベント → ライフイベント</li>
+                  <li>・自動車/奨学金返済 → その他ローン</li>
+                </ul>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] leading-relaxed text-[#0a0a0a]/55">
+              参考: 単身 12〜18万 / 夫婦 22〜30万 / 子あり世帯 28〜40万（家賃・教育費除く・月額）
+            </p>
+          </div>
           <div className="grid grid-cols-1 gap-2">
             <NumberField
               label="基本支出(月)"
@@ -167,6 +204,7 @@ export function ExpenseMegaSection() {
               value={plan.specialY}
               onChange={(v) => setField("specialY", v)}
               unit="円"
+              hint="年に数回発生する出費（旅行・家電買替・冠婚葬祭・ふるさと納税等）。住居・保険・教育費とは別。"
             />
           </div>
         </CollapsibleSubGroup>
