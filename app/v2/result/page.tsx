@@ -22,38 +22,46 @@ const fmtMan = (yen: number) => {
   return `${sign}${abs.toLocaleString()}万円`;
 };
 
-function verdict(shortfallAge: number | null, nw: number, endAge: number) {
+function verdict(shortfallAge: number | null, nw: number, endAge: number, curAge: number) {
   if (shortfallAge) {
+    const yearsLeft = shortfallAge - curAge;
     return {
       headline: `${shortfallAge}歳で資金不足`,
-      body: `このままでは${shortfallAge}歳時点で資産が底をつく見込みです。生活費の見直し・収入増・運用改善など早めの対策が必要です。`,
+      body: `あと${yearsLeft}年で資産が枯渇する見込みです。固定費の見直しによる支出削減、副業・配偶者就労による収入多角化、NISA・iDeCo等の非課税枠を活用した積立投資の強化、退職時期の延長による就労期間の確保を組み合わせることで改善可能です。具体的な改善効果は「改善提案」タブで複数シナリオ別に試算できます。`,
       alert: true,
     };
   }
   if (nw < 0) {
     return {
       headline: `${endAge}歳時点でマイナス`,
-      body: `老後に資産がマイナスとなる見込みです。支出の削減と積立の強化が急務です。`,
+      body: `老後に純資産がマイナスとなる見込みです。住宅ローンや不動産ローンの残債が老後の資産を圧迫している可能性があります。繰上返済の検討、不動産の見直し（売却・賃貸転換）、生活費水準の調整を含めた抜本的な家計設計の再構築をお勧めします。`,
       alert: true,
     };
   }
   if (nw < 10_000_000) {
     return {
       headline: `${endAge}歳まで完走（余裕わずか）`,
-      body: `計画上は${endAge}歳まで資産が続きますが、余裕は少なめです。想定外の支出への備えを厚くしましょう。`,
+      body: `計画上は${endAge}歳まで資産が続きますが、余裕は少なめです。想定外の支出（医療費・介護費・物価高騰）への備えとして、生活防衛資金の積み増しと支出管理の徹底をお勧めします。NISA・iDeCoの非課税枠を活用した追加積立で老後余裕度の改善を図りましょう。`,
       alert: false,
     };
   }
   if (nw < 50_000_000) {
     return {
       headline: `老後資金は概ね安定`,
-      body: `資金計画は概ね良好です。インフレ・医療費リスクに備え、引き続き分散運用を続けましょう。`,
+      body: `資金計画は概ね良好です。インフレや医療費増加のリスクに備え、資産の一部を株式・投信で分散運用し、実質的な購買力を維持することをご検討ください。長寿リスクを念頭に、65歳時点でも30〜40%程度の株式比率を維持することを推奨します。`,
+      alert: false,
+    };
+  }
+  if (nw < 100_000_000) {
+    return {
+      headline: `余裕ある資産形成`,
+      body: `老後資金は十分に確保できる見通しです。今後は「守りから攻めへ」の移行を意識するタイミング。相続税対策（生前贈与・生命保険の死亡保険金非課税枠）、子・孫への教育資金一括贈与（1,500万円非課税）など、富裕層向けの最適化テーマを順次検討しましょう。`,
       alert: false,
     };
   }
   return {
     headline: `資産計画は非常に良好`,
-    body: `余裕のある資産計画です。相続・贈与対策や資産の最適化を検討するタイミングです。`,
+    body: `余裕のある資産計画です。相続税対策の本格的な検討時期です。配偶者・子への暦年贈与（年間110万円非課税）、教育資金一括贈与の特例（1,500万円非課税）、生命保険の死亡保険金非課税枠（500万円×法定相続人数）など、複数制度を組み合わせた戦略的な資産移転をFP・税理士と連携して計画しましょう。`,
     alert: false,
   };
 }
@@ -62,7 +70,7 @@ export default function ResultPage() {
   const plan = usePlanStore((s) => s.plan);
   const result = useMemo(() => simulate(plan), [plan]);
 
-  const v = verdict(result.shortfallAge, result.finalNetWorth, plan.endAge);
+  const v = verdict(result.shortfallAge, result.finalNetWorth, plan.endAge, plan.curAge);
 
   // プロフィール
   const selfAge = ageOn(plan.selfBirth, undefined) ?? plan.curAge;

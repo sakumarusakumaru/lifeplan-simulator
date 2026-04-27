@@ -2,8 +2,8 @@
 
 import { CheckboxField } from "@/components/inputs/CheckboxField";
 import { NumberField } from "@/components/inputs/NumberField";
+import { PercentField } from "@/components/inputs/PercentField";
 import { SelectField } from "@/components/inputs/SelectField";
-import { SliderField } from "@/components/inputs/SliderField";
 import { TextField } from "@/components/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/CollapsibleSubGroup";
@@ -239,12 +239,12 @@ export function IncomeMegaSection() {
                       onChange={(v) => updateJob(i, { inc: v })}
                       unit="円"
                     />
-                    <SliderField
+                    <PercentField
                       label="昇給率（年・複利）"
                       value={j.raise ?? 0}
                       onChange={(v) => updateJob(i, { raise: v })}
                       min={0}
-                      max={10}
+                      max={20}
                       step={0.1}
                       hint="年収が毎年この率で上がると仮定"
                     />
