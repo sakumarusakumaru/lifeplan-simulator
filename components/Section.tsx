@@ -38,9 +38,9 @@ export function Section({
     <section
       id={id}
       style={{
-        background: "#f0f0ee",
-        border: "2.5px solid #0a0a0a",
-        borderRadius: 12,
+        background: stickyEnabled ? "transparent" : "#f0f0ee",
+        border: stickyEnabled ? "none" : "2.5px solid #0a0a0a",
+        borderRadius: stickyEnabled ? 0 : 12,
         scrollMarginTop: 24,
       }}
     >
@@ -55,9 +55,14 @@ export function Section({
                 top: topPx,
                 zIndex: 5,
                 background: "#f0f0ee",
-                borderTopLeftRadius: 10,
-                borderTopRightRadius: 10,
-                boxShadow: open ? "0 2px 0 0 #0a0a0a" : "none",
+                borderTop: "2.5px solid #0a0a0a",
+                borderLeft: "2.5px solid #0a0a0a",
+                borderRight: "2.5px solid #0a0a0a",
+                borderBottom: "2.5px solid #0a0a0a",
+                borderTopLeftRadius: 12,
+                borderTopRightRadius: 12,
+                borderBottomLeftRadius: open ? 0 : 12,
+                borderBottomRightRadius: open ? 0 : 12,
               }
             : undefined
         }
@@ -98,7 +103,18 @@ export function Section({
       {open ? (
         <div
           className="px-4 pb-4"
-          style={{ borderTop: "2.5px solid #0a0a0a" }}
+          style={
+            stickyEnabled
+              ? {
+                  background: "#f0f0ee",
+                  borderLeft: "2.5px solid #0a0a0a",
+                  borderRight: "2.5px solid #0a0a0a",
+                  borderBottom: "2.5px solid #0a0a0a",
+                  borderBottomLeftRadius: 12,
+                  borderBottomRightRadius: 12,
+                }
+              : { borderTop: "2.5px solid #0a0a0a" }
+          }
         >
           <div className="pt-4">{children}</div>
         </div>

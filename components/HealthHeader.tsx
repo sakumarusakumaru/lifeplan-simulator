@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 import type { PlanInput, SimulationSummary } from "@/lib/calc/types";
 
 type AlertLevel = "good" | "warn" | "bad";
@@ -119,6 +121,8 @@ export function HealthHeader({
   result: SimulationSummary;
   plan: PlanInput;
 }) {
+  const pathname = usePathname();
+  const isV3 = pathname?.startsWith("/v3") ?? false;
   const health = computeHealth(result, plan);
   const c = ALERT_COLORS[health.alert];
   const nwSeries = result.rows.map((r) => r.nw);
@@ -135,7 +139,10 @@ export function HealthHeader({
   return (
     <div
       className="overflow-hidden rounded-xl"
-      style={{ background: "#ffffff", border: "2.5px solid #0a0a0a" }}
+      style={{
+        background: "#ffffff",
+        border: isV3 ? "1.5px solid #0a0a0a25" : "2.5px solid #0a0a0a",
+      }}
     >
       {/* 上段: 左右2カラム */}
       <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">

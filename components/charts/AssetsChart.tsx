@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   Area,
   CartesianGrid,
@@ -56,6 +57,8 @@ const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
 ];
 
 export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
+  const pathname = usePathname();
+  const isV3 = pathname?.startsWith("/v3") ?? false;
   const data = rows.map((r) => ({
     age: r.age,
     現金: Math.round(r.ass.c),
@@ -72,7 +75,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
       className="p-5"
       style={{
         background: "#f0f0ee",
-        border: "2.5px solid #0a0a0a",
+        border: isV3 ? "1.5px solid #0a0a0a25" : "2.5px solid #0a0a0a",
         borderRadius: 12,
       }}
     >
