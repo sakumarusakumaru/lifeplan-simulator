@@ -106,13 +106,6 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <Link
-            href="/v2/detail"
-            className="text-[10px] font-bold tracking-[0.1em] text-[#0a0a0a]/55 transition-colors hover:text-[#0a0a0a]"
-            title="v2 安定版に戻る"
-          >
-            ← v2
-          </Link>
           <span
             className="inline-flex items-center text-[10px] font-bold uppercase tracking-[0.1em] text-white"
             style={{

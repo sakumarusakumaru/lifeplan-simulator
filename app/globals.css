@@ -39,3 +39,27 @@ body {
 button {
   font-family: inherit;
 }
+
+/* PDF出力用：印刷時はナビ・フッター・操作系UIを隠してA4に収める */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+  }
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  section {
+    page-break-inside: avoid;
+  }
+}

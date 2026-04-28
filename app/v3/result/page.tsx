@@ -259,6 +259,23 @@ export default function ResultPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
+      {/* PDF出力ボタン（印刷時は非表示） */}
+      <div className="no-print mb-4 flex justify-end">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="px-4 py-2 text-xs font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+          style={{
+            background: "#ffffff",
+            color: "#0a0a0a",
+            border: "2.5px solid #0a0a0a",
+            borderRadius: 10,
+          }}
+        >
+          PDFでダウンロード ／ PRINT
+        </button>
+      </div>
+
       {/* レポートヘッダー */}
       <div className="mb-6 flex items-end justify-between border-b-2 border-[#0a0a0a] pb-3">
         <div>
@@ -527,7 +544,7 @@ export default function ResultPage() {
       </ReportSection>
 
       {/* Actions */}
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <div className="no-print mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
           href="/v3/suggest"
           className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
