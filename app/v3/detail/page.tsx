@@ -30,20 +30,7 @@ export default function DetailPage() {
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
           <StickyHeaderContext.Provider value={{ enabled: true, topPx: 44 }}>
-            <div className="flex flex-col gap-0">
-              {/* sticky scrim: ナビバー下端（y=0〜44px）をコンテンツが透けないよう蓋をする */}
-              <div
-                aria-hidden
-                style={{
-                  position: "sticky",
-                  top: 0,
-                  height: 44,
-                  background: "#f0f0ee",
-                  marginBottom: -44,
-                  zIndex: 4,
-                  pointerEvents: "none",
-                }}
-              />
+            <div className="flex flex-col gap-2">
               <SettingsMegaSection />
               <IncomeMegaSection />
               <AssetsMegaSection />
