@@ -45,10 +45,11 @@ const FILLS = {
 };
 
 // ホバー時のハイライト色（少し濃く・鮮やか）
+// 収入はスレート系、支出はニュートラルグレー系で色相を分離 → ホバー時に取り違えない
 const FILLS_HOVER = {
-  income: "#0f172a",
-  expense: "#475569",
-  invest: "#3b82f6",
+  income: "#0f172a", // slate-900
+  expense: "#525252", // neutral-600（slate系の収入と色相を変える）
+  invest: "#3b82f6", // blue-500
   cf: "#c8383a",
 };
 
@@ -225,6 +226,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                 );
               }}
               cursor={{ fill: "rgba(10,10,10,0.05)" }}
+              offset={28}
+              wrapperStyle={{ pointerEvents: "none" }}
             />
 
             {KEYS.map((key) => (

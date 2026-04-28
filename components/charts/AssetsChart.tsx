@@ -233,6 +233,8 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                 );
               }}
               cursor={{ stroke: "#0a0a0a", strokeWidth: 1, strokeDasharray: "2 2" }}
+              offset={28}
+              wrapperStyle={{ pointerEvents: "none" }}
             />
 
             <Area

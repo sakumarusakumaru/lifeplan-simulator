@@ -665,29 +665,80 @@ function BalanceSheetVis({
   const totalAssets = assets.reduce((a, b) => a + b.value, 0);
   const totalLiabilities = liabilities.reduce((a, b) => a + b.value, 0);
   const isAlert = netWorth < 0;
-  const totalHeight = Math.max(totalAssets, totalLiabilities, 1);
 
   const [hovered, setHovered] = useState<string | null>(null);
 
-  const buildSegments = (items: BSItem[]): BSSegment[] =>
-    items
-      .filter((it) => it.value > 0)
-      .map((it) => ({
-        ...it,
-        heightPx: Math.max(
-          (it.value / totalHeight) * BS_BAR_HEIGHT,
-          BS_MIN_SEG_HEIGHT,
-        ),
-      }));
+  // 各側のextra（純資産マイナス or 純資産NET）
+  const assetsExtraDef: BSItem | null = isAlert
+    ? { label: "純資産マイナス", value: Math.abs(netWorth), color: "#c8383a", category: "current" }
+    : null;
+  const liabilitiesExtraDef: BSItem | null = !isAlert && netWorth > 0
+    ? { label: "純資産（NET）", value: netWorth, color: "#22863a", category: "current" }
+    : null;
 
-  const currentA = buildSegments(assets.filter((a) => a.category === "current"));
-  const fixedA = buildSegments(assets.filter((a) => a.category === "fixed"));
-  const currentL = buildSegments(liabilities.filter((l) => l.category === "current"));
-  const fixedL = buildSegments(liabilities.filter((l) => l.category === "fixed"));
-  const nwHeightPx = Math.max(
-    (Math.abs(netWorth) / totalHeight) * BS_BAR_HEIGHT,
-    BS_MIN_SEG_HEIGHT,
-  );
+  // 1側全体（通常項目+extra）を一括レイアウト：
+  //  (1) 比例配分で各セグメント高さを初期化
+  //  (2) 最小高さ(22px)未満の項目を底上げし、不足分を大きい項目から比例で減算
+  //  (3) 合計を BS_BAR_HEIGHT に厳密に固定 → 資産側と負債側の天地が一致する
+  // 会計恒等式 (資産 = 負債 + 純資産) により、両側の合計値は等しい。
+  // よって各側を独立に target=BS_BAR_HEIGHT で正規化すれば天地が必ず揃う。
+  type LaidSeg = BSSegment & { _isExtra: boolean };
+  const layoutSide = (
+    items: BSItem[],
+    extra: BSItem | null,
+    extraStriped: boolean,
+  ): LaidSeg[] => {
+    const filtered = items.filter((it) => it.value > 0);
+    const all: { item: BSItem; isExtra: boolean; striped: boolean }[] = filtered.map(
+      (it) => ({ item: it, isExtra: false, striped: false }),
+    );
+    if (extra) all.push({ item: extra, isExtra: true, striped: extraStriped });
+
+    const totalVal = all.reduce((a, x) => a + x.item.value, 0);
+    if (totalVal === 0) return [];
+
+    // 初期：比例配分
+    const segs: LaidSeg[] = all.map(({ item, isExtra, striped }) => ({
+      ...item,
+      heightPx: (item.value / totalVal) * BS_BAR_HEIGHT,
+      striped,
+      _isExtra: isExtra,
+    }));
+
+    // 再分配：小さい項目を最小値に底上げし、余りを大きい項目から減算
+    const small = segs.filter((s) => s.heightPx < BS_MIN_SEG_HEIGHT);
+    if (small.length === 0) return segs;
+
+    const large = segs.filter((s) => s.heightPx >= BS_MIN_SEG_HEIGHT);
+    const minBudget = small.length * BS_MIN_SEG_HEIGHT;
+    const remaining = BS_BAR_HEIGHT - minBudget;
+
+    if (remaining <= 0 || large.length === 0) {
+      // フォールバック：項目が多すぎて再分配不可 → 均等配分
+      const eq = BS_BAR_HEIGHT / segs.length;
+      return segs.map((s) => ({ ...s, heightPx: eq }));
+    }
+
+    const largeSum = large.reduce((a, s) => a + s.heightPx, 0);
+    const scale = remaining / largeSum;
+
+    return segs.map((s) =>
+      s.heightPx < BS_MIN_SEG_HEIGHT
+        ? { ...s, heightPx: BS_MIN_SEG_HEIGHT }
+        : { ...s, heightPx: s.heightPx * scale },
+    );
+  };
+
+  const assetSegs = layoutSide(assets, assetsExtraDef, true);
+  const liabilitySegs = layoutSide(liabilities, liabilitiesExtraDef, false);
+
+  const currentA = assetSegs.filter((s) => !s._isExtra && s.category === "current");
+  const fixedA = assetSegs.filter((s) => !s._isExtra && s.category === "fixed");
+  const aExtraSeg = assetSegs.find((s) => s._isExtra) ?? null;
+
+  const currentL = liabilitySegs.filter((s) => !s._isExtra && s.category === "current");
+  const fixedL = liabilitySegs.filter((s) => !s._isExtra && s.category === "fixed");
+  const lExtraSeg = liabilitySegs.find((s) => s._isExtra) ?? null;
 
   return (
     <div
@@ -718,18 +769,7 @@ function BalanceSheetVis({
               { label: "流動資産", segments: currentA },
               { label: "固定資産", segments: fixedA },
             ]}
-            extraSegment={
-              isAlert
-                ? {
-                    label: "純資産マイナス",
-                    value: Math.abs(netWorth),
-                    color: "#c8383a",
-                    heightPx: nwHeightPx,
-                    striped: true,
-                    category: "current",
-                  }
-                : null
-            }
+            extraSegment={aExtraSeg}
             hovered={hovered}
             setHovered={setHovered}
           />
@@ -754,18 +794,7 @@ function BalanceSheetVis({
               { label: "流動負債", segments: currentL },
               { label: "固定負債", segments: fixedL },
             ]}
-            extraSegment={
-              !isAlert && netWorth > 0
-                ? {
-                    label: "純資産（NET）",
-                    value: netWorth,
-                    color: "#22863a",
-                    heightPx: nwHeightPx,
-                    striped: false,
-                    category: "current",
-                  }
-                : null
-            }
+            extraSegment={lExtraSeg}
             hovered={hovered}
             setHovered={setHovered}
           />
