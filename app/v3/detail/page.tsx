@@ -26,7 +26,7 @@ export default function DetailPage() {
   }
 
   return (
-    <main className="px-4 py-6 pb-24 sm:px-8">
+    <main className="px-4 py-6 pb-6 sm:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
           <StickyHeaderContext.Provider value={{ enabled: true, topPx: 44 }}>
