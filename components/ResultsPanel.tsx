@@ -36,7 +36,7 @@ export function ResultsPanel() {
       <div
         style={{
           background: "#f0f0ee",
-          border: isV3 ? "1.5px solid #0a0a0a25" : "2.5px solid #0a0a0a",
+          border: isV3 ? "none" : "2.5px solid #0a0a0a",
           borderRadius: 12,
         }}
       >

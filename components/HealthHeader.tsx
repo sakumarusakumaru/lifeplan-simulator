@@ -141,7 +141,7 @@ export function HealthHeader({
       className="overflow-hidden rounded-xl"
       style={{
         background: "#ffffff",
-        border: isV3 ? "1.5px solid #0a0a0a25" : "2.5px solid #0a0a0a",
+        border: isV3 ? "none" : "2.5px solid #0a0a0a",
       }}
     >
       {/* 上段: 左右2カラム */}
@@ -153,7 +153,7 @@ export function HealthHeader({
             background: c.light,
             borderColor: `${c.main}30`,
             borderRight: undefined,
-            borderBottom: isV3 ? `1px solid ${c.main}30` : `2px solid ${c.main}`,
+            borderBottom: isV3 ? "none" : `2px solid ${c.main}`,
           }}
         >
           <div className="flex shrink-0 flex-col items-center">
@@ -193,7 +193,7 @@ export function HealthHeader({
         {/* 右上: 主要指標 KEY INDICATORS */}
         <div
           className="flex flex-col gap-2 px-4 py-3"
-          style={{ borderBottom: "1.5px solid #0a0a0a18" }}
+          style={{ borderBottom: isV3 ? "none" : "1.5px solid #0a0a0a18" }}
         >
           <div className="flex items-center gap-2">
             <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
