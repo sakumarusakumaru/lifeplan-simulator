@@ -61,7 +61,7 @@ export function Section({
             ? {
                 position: "sticky",
                 top: topPx,
-                zIndex: 5,
+                zIndex: 10,
                 background: "#f0f0ee",
                 borderTop: "2.5px solid #0a0a0a",
                 borderLeft: "2.5px solid #0a0a0a",
