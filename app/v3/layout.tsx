@@ -21,6 +21,8 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
 
   const onDetail = pathname?.startsWith("/v3/detail") ?? false;
   const onResult = pathname?.startsWith("/v3/result") ?? false;
+  const onSuggest = pathname?.startsWith("/v3/suggest") ?? false;
+  const showPdf = onDetail || onResult || onSuggest;
 
   const plan = usePlanStore((s) => s.plan);
   const patch = usePlanStore((s) => s.patch);
@@ -81,7 +83,7 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
           href="/"
           className="shrink-0 text-sm font-bold uppercase tracking-[0.18em] text-[#0a0a0a] transition-colors hover:text-[#c8383a]"
         >
-          LIFEPLAN
+          LIFE PLAN SIMULATOR v3
         </Link>
 
         <span className="text-[#0a0a0a]/30">|</span>
@@ -195,7 +197,7 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
               />
             </>
           )}
-          {onResult && (
+          {showPdf && (
             <button
               type="button"
               onClick={() => window.print()}
