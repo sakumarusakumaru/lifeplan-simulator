@@ -17,7 +17,7 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen" style={{ background: "#f0f0ee" }}>
       <header
         className="sticky top-0 z-50 flex items-center gap-3 px-4 py-2.5 sm:px-8"
-        style={{ background: "#f0f0ee", borderBottom: "2.5px solid #0a0a0a" }}
+        style={{ background: "#f0f0ee" }}
       >
         <Link
           href="/"
