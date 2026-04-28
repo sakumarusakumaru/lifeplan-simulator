@@ -153,7 +153,7 @@ export function HealthHeader({
             background: c.light,
             borderColor: `${c.main}30`,
             borderRight: undefined,
-            borderBottom: `2px solid ${c.main}`,
+            borderBottom: isV3 ? `1px solid ${c.main}30` : `2px solid ${c.main}`,
           }}
         >
           <div className="flex shrink-0 flex-col items-center">

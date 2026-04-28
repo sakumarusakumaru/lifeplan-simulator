@@ -37,12 +37,20 @@ export function Section({
   return (
     <section
       id={id}
-      style={{
-        background: stickyEnabled ? "transparent" : "#f0f0ee",
-        border: stickyEnabled ? "none" : "2.5px solid #0a0a0a",
-        borderRadius: stickyEnabled ? 0 : 12,
-        scrollMarginTop: 24,
-      }}
+      // sticky 有効時は display:contents でセクション要素自体をボックスツリーから外し、
+      // 内部の button と content を flex 親の直接の子として扱う。これにより
+      // 全セクションのボタンが同じスクロールコンテナ内で sticky し、
+      // 後続のボタンが前のボタンを覆う「列頭スティッキー」パターンが成立する。
+      style={
+        stickyEnabled
+          ? { display: "contents" }
+          : {
+              background: "#f0f0ee",
+              border: "2.5px solid #0a0a0a",
+              borderRadius: 12,
+              scrollMarginTop: 24,
+            }
+      }
     >
       <button
         type="button"
@@ -63,6 +71,8 @@ export function Section({
                 borderTopRightRadius: 12,
                 borderBottomLeftRadius: open ? 0 : 12,
                 borderBottomRightRadius: open ? 0 : 12,
+                marginBottom: open ? 0 : 8,
+                scrollMarginTop: 24,
               }
             : undefined
         }
@@ -112,6 +122,7 @@ export function Section({
                   borderBottom: "2.5px solid #0a0a0a",
                   borderBottomLeftRadius: 12,
                   borderBottomRightRadius: 12,
+                  marginBottom: 8,
                 }
               : { borderTop: "2.5px solid #0a0a0a" }
           }

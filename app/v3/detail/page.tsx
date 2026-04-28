@@ -30,7 +30,7 @@ export default function DetailPage() {
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
           <StickyHeaderContext.Provider value={{ enabled: true, topPx: 56 }}>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-0">
               <SettingsMegaSection />
               <IncomeMegaSection />
               <AssetsMegaSection />

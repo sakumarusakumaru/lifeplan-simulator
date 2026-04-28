@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { AssetsChart } from "@/components/charts/AssetsChart";
@@ -19,6 +20,8 @@ const yenToOkuMan = (yen: number): string => {
 };
 
 export function ResultsPanel() {
+  const pathname = usePathname();
+  const isV3 = pathname?.startsWith("/v3") ?? false;
   const plan = usePlanStore((s) => s.plan);
   const result = useMemo(() => simulate(plan), [plan]);
   const [showTable, setShowTable] = useState(false);
@@ -33,7 +36,7 @@ export function ResultsPanel() {
       <div
         style={{
           background: "#f0f0ee",
-          border: "2.5px solid #0a0a0a",
+          border: isV3 ? "1.5px solid #0a0a0a25" : "2.5px solid #0a0a0a",
           borderRadius: 12,
         }}
       >
