@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   Bar,
   CartesianGrid,
@@ -35,16 +36,34 @@ const axisFmt = (yen: number): string => {
   return String(Math.round(yen));
 };
 
+// 通常色
 const FILLS = {
-  income: "#334155",   // ダークスレート — 収入（上方向）
-  expense: "#9ca3af",  // ミディアムグレー — 支出（下方向）
-  invest: "#93c5fd",   // ライトブルー — 投資積立（下方向、支出と明確に区別）
-  cf: "#c8383a",       // レッド — 収支ライン
+  income: "#334155",
+  expense: "#9ca3af",
+  invest: "#93c5fd",
+  cf: "#c8383a",
+};
+
+// ホバー時のハイライト色（少し濃く・鮮やか）
+const FILLS_HOVER = {
+  income: "#0f172a",
+  expense: "#475569",
+  invest: "#3b82f6",
+  cf: "#c8383a",
+};
+
+const KEYS: ("収入" | "支出" | "投資積立")[] = ["収入", "支出", "投資積立"];
+const KEY_TO_FILL: Record<string, "income" | "expense" | "invest"> = {
+  収入: "income",
+  支出: "expense",
+  投資積立: "invest",
 };
 
 export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   const pathname = usePathname();
   const isV3 = pathname?.startsWith("/v3") ?? false;
+
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
   const data = rows.map((r) => ({
     age: r.age,
@@ -53,6 +72,11 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
     投資積立: -Math.round(r.inv),
     収支: Math.round(r.cf),
   }));
+
+  const getFill = (key: "収入" | "支出" | "投資積立"): string => {
+    const k = KEY_TO_FILL[key];
+    return hoveredKey === key ? FILLS_HOVER[k] : FILLS[k];
+  };
 
   return (
     <div
@@ -74,7 +98,11 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
 
       <div className="h-[260px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 4 }}>
+          <ComposedChart
+            data={data}
+            stackOffset="sign"
+            margin={{ top: 10, right: 10, left: 0, bottom: 4 }}
+          >
             <CartesianGrid stroke="rgba(10,10,10,0.08)" strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="age"
@@ -90,7 +118,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               width={48}
             />
 
-            {/* 0円ライン（収入ゾーンと支出ゾーンの境界） */}
+            {/* 0円ライン */}
             <ReferenceLine y={0} stroke="#0a0a0a" strokeWidth={2} />
 
             <Tooltip
@@ -110,7 +138,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                       border: "2.5px solid #0a0a0a",
                       borderRadius: 12,
                       padding: "14px 18px",
-                      minWidth: 230,
+                      minWidth: 240,
                     }}
                   >
                     <p style={{ color: "#0a0a0a", fontWeight: 800, margin: "0 0 12px", fontSize: 17 }}>
@@ -123,6 +151,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                       const isCF = key === "収支";
                       const isIncome = key === "収入";
                       const sign = isCF ? (val >= 0 ? "+" : "−") : isIncome ? "+" : "−";
+                      const isHovered = hoveredKey === key;
                       const valueColor = isCF
                         ? cf < 0
                           ? "#c8383a"
@@ -131,7 +160,15 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                       return (
                         <div
                           key={key}
-                          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginBottom: 7,
+                            transform: isHovered ? "scale(1.08)" : "scale(1)",
+                            transformOrigin: "left center",
+                            transition: "transform 0.12s",
+                          }}
                         >
                           <span
                             style={{
@@ -146,10 +183,25 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                               borderRadius: isCF ? 2 : 0,
                             }}
                           />
-                          <span style={{ color: "#0a0a0a", flex: 1, fontSize: 13, fontWeight: 700 }}>
+                          <span
+                            style={{
+                              color: "#0a0a0a",
+                              flex: 1,
+                              fontSize: isHovered ? 15 : 13,
+                              fontWeight: isHovered ? 800 : 700,
+                              transition: "all 0.12s",
+                            }}
+                          >
                             {entry.name}
                           </span>
-                          <span style={{ color: valueColor, fontWeight: 800, fontSize: 16 }}>
+                          <span
+                            style={{
+                              color: valueColor,
+                              fontWeight: 800,
+                              fontSize: isHovered ? 18 : 16,
+                              transition: "all 0.12s",
+                            }}
+                          >
                             {sign}{fmtAbs(absVal)}
                           </span>
                         </div>
@@ -175,14 +227,23 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               cursor={{ fill: "rgba(10,10,10,0.05)" }}
             />
 
-            <Bar dataKey="収入" stackId="bb-cf" fill={FILLS.income} stroke="none" />
-            <Bar dataKey="支出" stackId="bb-cf" fill={FILLS.expense} stroke="none" />
-            <Bar dataKey="投資積立" stackId="bb-cf" fill={FILLS.invest} stroke="none" />
+            {KEYS.map((key) => (
+              <Bar
+                key={key}
+                dataKey={key}
+                stackId="bb-cf"
+                fill={getFill(key)}
+                stroke="none"
+                onMouseEnter={() => setHoveredKey(key)}
+                onMouseLeave={() => setHoveredKey(null)}
+              />
+            ))}
+
             <Line
               type="linear"
               dataKey="収支"
               stroke={FILLS.cf}
-              strokeWidth={2.5}
+              strokeWidth={hoveredKey === "収支" ? 3.5 : 2.5}
               dot={false}
               activeDot={{ r: 5, stroke: "#0a0a0a", strokeWidth: 2 }}
             />
@@ -283,7 +344,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
             </div>
           </div>
           <p className="mt-2 text-[9px] text-[#0a0a0a]/45">
-            ※ 職歴が未入力の場合、収入ゾーンは表示されません（基本設定で設定してください）
+            ※ 棒の上にマウスをかざすと、その項目が拡大表示されます。
           </p>
         </div>
 

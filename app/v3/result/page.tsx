@@ -651,6 +651,7 @@ interface BSSegment extends BSItem {
 
 const BS_BAR_HEIGHT = 280;
 const BS_BAR_WIDTH = 112;
+const BS_MIN_SEG_HEIGHT = 22; // 凡例側の最小高と揃えるためのバー側最小セグメント高
 
 function BalanceSheetVis({
   assets,
@@ -673,14 +674,20 @@ function BalanceSheetVis({
       .filter((it) => it.value > 0)
       .map((it) => ({
         ...it,
-        heightPx: (it.value / totalHeight) * BS_BAR_HEIGHT,
+        heightPx: Math.max(
+          (it.value / totalHeight) * BS_BAR_HEIGHT,
+          BS_MIN_SEG_HEIGHT,
+        ),
       }));
 
   const currentA = buildSegments(assets.filter((a) => a.category === "current"));
   const fixedA = buildSegments(assets.filter((a) => a.category === "fixed"));
   const currentL = buildSegments(liabilities.filter((l) => l.category === "current"));
   const fixedL = buildSegments(liabilities.filter((l) => l.category === "fixed"));
-  const nwHeightPx = (Math.abs(netWorth) / totalHeight) * BS_BAR_HEIGHT;
+  const nwHeightPx = Math.max(
+    (Math.abs(netWorth) / totalHeight) * BS_BAR_HEIGHT,
+    BS_MIN_SEG_HEIGHT,
+  );
 
   return (
     <div
@@ -723,7 +730,6 @@ function BalanceSheetVis({
                   }
                 : null
             }
-            heightPx={BS_BAR_HEIGHT}
             hovered={hovered}
             setHovered={setHovered}
           />
@@ -760,7 +766,6 @@ function BalanceSheetVis({
                   }
                 : null
             }
-            heightPx={BS_BAR_HEIGHT}
             hovered={hovered}
             setHovered={setHovered}
           />
@@ -802,14 +807,12 @@ function BSColumnGrouped({
   barSide,
   groups,
   extraSegment,
-  heightPx,
   hovered,
   setHovered,
 }: {
   barSide: "left" | "right";
   groups: { label: string; segments: BSSegment[] }[];
   extraSegment: BSSegment | null;
-  heightPx: number;
   hovered: string | null;
   setHovered: (s: string | null) => void;
 }) {
@@ -838,13 +841,13 @@ function BSColumnGrouped({
     });
   });
 
-  // バー（上→下 順に縦積み、デフォルト flex-col）
+  // バー（上→下 順に縦積み）。高さは固定せず、各セグメントの実高さの合計で自動的に伸びる。
+  // これにより凡例（同じ高さ規則）との行頭・行末がピクセル単位で揃う。
   const Bar = (
     <div
       className="flex flex-col overflow-hidden"
       style={{
         width: BS_BAR_WIDTH,
-        height: heightPx,
         border: "1.5px solid #0a0a0a30",
         borderRadius: 4,
         flexShrink: 0,
@@ -852,14 +855,13 @@ function BSColumnGrouped({
     >
       {ordered.map((item, idx) => {
         const isExtra = item.groupLabel === null;
+        // セグメント間は薄い白線で区切るのみ。流動/固定の境界は凡例の[群ラベル]で示す。
         const borderTop =
           idx === 0
             ? "none"
             : isExtra
               ? "2px dashed #ffffff80"
-              : item.isGroupHead
-                ? "2px solid #0a0a0a"
-                : "1px solid #ffffff60";
+              : "1px solid #ffffff60";
         return (
           <div
             key={item.segment.label}
@@ -868,7 +870,6 @@ function BSColumnGrouped({
             className="cursor-pointer transition-all"
             style={{
               height: item.segment.heightPx,
-              minHeight: 2,
               background: item.segment.color,
               borderTop,
               backgroundImage: item.segment.striped
@@ -958,11 +959,11 @@ function BSLegendItem({
     <li
       onMouseEnter={() => setHovered(segment.label)}
       onMouseLeave={() => setHovered(null)}
-      className={`flex items-center gap-1.5 py-0.5 cursor-pointer transition-all ${
+      className={`flex items-center gap-1.5 cursor-pointer transition-all ${
         barSide === "right" ? "flex-row-reverse" : ""
       }`}
       style={{
-        minHeight: Math.max(segment.heightPx, 22),
+        height: segment.heightPx,
       }}
     >
       {swatch}

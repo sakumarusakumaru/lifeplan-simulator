@@ -1,11 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   Area,
   CartesianGrid,
   ComposedChart,
-  Legend,
   Line,
   ReferenceLine,
   ResponsiveContainer,
@@ -47,6 +47,16 @@ const FILLS = {
   nw: "#c8383a",
 };
 
+const FILLS_HOVER = {
+  cash: "#334155",
+  fund: "#64748b",
+  stock: "#7d92a8",
+  crypto: "#7c3aed",
+  gold: "#a47f4d",
+  dc: "#a8b8c8",
+  nw: "#c8383a",
+};
+
 const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
   { key: "cash", label: "現金", desc: "預貯金など即現金化できる資産" },
   { key: "fund", label: "投信", desc: "NISA・特定口座の投資信託など" },
@@ -56,9 +66,21 @@ const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
   { key: "dc", label: "DC", desc: "確定拠出年金・iDeCo（60歳から受給可、原則として60歳まで取崩不可）" },
 ];
 
+const KEY_TO_FILL: Record<string, keyof typeof FILLS> = {
+  現金: "cash",
+  投信: "fund",
+  株: "stock",
+  仮想通貨: "crypto",
+  金: "gold",
+  DC: "dc",
+};
+
 export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
   const pathname = usePathname();
   const isV3 = pathname?.startsWith("/v3") ?? false;
+
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
   const data = rows.map((r) => ({
     age: r.age,
     現金: Math.round(r.ass.c),
@@ -69,6 +91,12 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
     DC: Math.round(r.ass.dc),
     純資産: Math.round(r.nw),
   }));
+
+  const getFill = (label: string): string => {
+    const k = KEY_TO_FILL[label];
+    if (!k) return "#000";
+    return hoveredKey === label ? FILLS_HOVER[k] : FILLS[k];
+  };
 
   return (
     <div
@@ -121,53 +149,80 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                       background: "#ffffff",
                       border: "2.5px solid #0a0a0a",
                       borderRadius: 12,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      padding: "10px 14px",
-                      minWidth: 200,
+                      padding: "14px 18px",
+                      minWidth: 230,
                     }}
                   >
-                    <p style={{ color: "#0a0a0a", fontWeight: 700, margin: "0 0 6px", fontSize: 13 }}>
-                      {label}歳 時点
+                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: "0 0 12px", fontSize: 17 }}>
+                      {label}歳
                     </p>
-                    {sorted.map((entry) => (
-                      <div
-                        key={entry.dataKey as string}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          margin: "3px 0",
-                        }}
-                      >
-                        <span
+                    {sorted.map((entry) => {
+                      const key = entry.dataKey as string;
+                      const isNW = key === "純資産";
+                      const isHovered = hoveredKey === key;
+                      const valueColor = isNW
+                        ? Number(entry.value) < 0
+                          ? "#c8383a"
+                          : "#22863a"
+                        : "#0a0a0a";
+                      return (
+                        <div
+                          key={key}
                           style={{
-                            display: "inline-block",
-                            width: 10,
-                            height: 10,
-                            background: entry.color as string,
-                            border: entry.dataKey === "純資産" ? "none" : "1px solid #0a0a0a30",
-                          }}
-                        />
-                        <span style={{ color: "#0a0a0a", flex: 1 }}>{entry.name}</span>
-                        <span
-                          style={{
-                            color: entry.dataKey === "純資産" ? "#c8383a" : "#0a0a0a",
-                            fontWeight: 800,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginBottom: 6,
+                            transform: isHovered ? "scale(1.08)" : "scale(1)",
+                            transformOrigin: "left center",
+                            transition: "transform 0.12s",
                           }}
                         >
-                          {yenToOkuMan(Number(entry.value) || 0)}
-                        </span>
-                      </div>
-                    ))}
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: 13,
+                              height: 13,
+                              flexShrink: 0,
+                              background: isNW ? "transparent" : (entry.color as string),
+                              border: isNW
+                                ? `3px solid ${FILLS.nw}`
+                                : "1px solid #0a0a0a20",
+                              borderRadius: isNW ? 2 : 0,
+                            }}
+                          />
+                          <span
+                            style={{
+                              color: "#0a0a0a",
+                              flex: 1,
+                              fontSize: isHovered ? 15 : 13,
+                              fontWeight: isHovered ? 800 : 700,
+                              transition: "all 0.12s",
+                            }}
+                          >
+                            {entry.name}
+                          </span>
+                          <span
+                            style={{
+                              color: valueColor,
+                              fontWeight: 800,
+                              fontSize: isHovered ? 18 : 16,
+                              transition: "all 0.12s",
+                            }}
+                          >
+                            {yenToOkuMan(Number(entry.value) || 0)}
+                          </span>
+                        </div>
+                      );
+                    })}
                     <p
                       style={{
-                        marginTop: 6,
-                        paddingTop: 6,
-                        borderTop: "1px dashed #0a0a0a30",
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: nw < 0 ? "#c8383a" : "#0a0a0a",
+                        marginTop: 8,
+                        paddingTop: 8,
+                        borderTop: "1.5px dashed #0a0a0a20",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: nw < 0 ? "#c8383a" : "#22863a",
                       }}
                     >
                       {nw < 0
@@ -179,32 +234,82 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
               }}
               cursor={{ stroke: "#0a0a0a", strokeWidth: 1, strokeDasharray: "2 2" }}
             />
-            <Legend
-              wrapperStyle={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-              }}
-              iconType="square"
-              formatter={(value) => (
-                <span style={{ color: "#0a0a0a" }}>{value}</span>
-              )}
+
+            <Area
+              type="linear"
+              dataKey="DC"
+              stackId="bb"
+              stroke={getFill("DC")}
+              strokeWidth={0.5}
+              fill={getFill("DC")}
+              fillOpacity={1}
+              onMouseEnter={() => setHoveredKey("DC")}
+              onMouseLeave={() => setHoveredKey(null)}
             />
-            <Area type="linear" dataKey="DC"     stackId="bb" stroke={FILLS.dc}     strokeWidth={0.5} fill={FILLS.dc}     fillOpacity={1} />
-            <Area type="linear" dataKey="金"     stackId="bb" stroke={FILLS.gold}   strokeWidth={0.5} fill={FILLS.gold}   fillOpacity={1} />
-            <Area type="linear" dataKey="仮想通貨" stackId="bb" stroke={FILLS.crypto} strokeWidth={0.5} fill={FILLS.crypto} fillOpacity={1} />
-            <Area type="linear" dataKey="株"     stackId="bb" stroke={FILLS.stock}  strokeWidth={0.5} fill={FILLS.stock}  fillOpacity={1} />
-            <Area type="linear" dataKey="投信"   stackId="bb" stroke={FILLS.fund}   strokeWidth={0.5} fill={FILLS.fund}   fillOpacity={1} />
-            <Area type="linear" dataKey="現金"   stackId="bb" stroke={FILLS.cash}   strokeWidth={0.5} fill={FILLS.cash}   fillOpacity={1} />
+            <Area
+              type="linear"
+              dataKey="金"
+              stackId="bb"
+              stroke={getFill("金")}
+              strokeWidth={0.5}
+              fill={getFill("金")}
+              fillOpacity={1}
+              onMouseEnter={() => setHoveredKey("金")}
+              onMouseLeave={() => setHoveredKey(null)}
+            />
+            <Area
+              type="linear"
+              dataKey="仮想通貨"
+              stackId="bb"
+              stroke={getFill("仮想通貨")}
+              strokeWidth={0.5}
+              fill={getFill("仮想通貨")}
+              fillOpacity={1}
+              onMouseEnter={() => setHoveredKey("仮想通貨")}
+              onMouseLeave={() => setHoveredKey(null)}
+            />
+            <Area
+              type="linear"
+              dataKey="株"
+              stackId="bb"
+              stroke={getFill("株")}
+              strokeWidth={0.5}
+              fill={getFill("株")}
+              fillOpacity={1}
+              onMouseEnter={() => setHoveredKey("株")}
+              onMouseLeave={() => setHoveredKey(null)}
+            />
+            <Area
+              type="linear"
+              dataKey="投信"
+              stackId="bb"
+              stroke={getFill("投信")}
+              strokeWidth={0.5}
+              fill={getFill("投信")}
+              fillOpacity={1}
+              onMouseEnter={() => setHoveredKey("投信")}
+              onMouseLeave={() => setHoveredKey(null)}
+            />
+            <Area
+              type="linear"
+              dataKey="現金"
+              stackId="bb"
+              stroke={getFill("現金")}
+              strokeWidth={0.5}
+              fill={getFill("現金")}
+              fillOpacity={1}
+              onMouseEnter={() => setHoveredKey("現金")}
+              onMouseLeave={() => setHoveredKey(null)}
+            />
             <Line
               type="linear"
               dataKey="純資産"
               stroke={FILLS.nw}
-              strokeWidth={3}
+              strokeWidth={hoveredKey === "純資産" ? 4 : 3}
               dot={false}
               activeDot={{ r: 5, stroke: "#0a0a0a", strokeWidth: 2.5, fill: FILLS.nw }}
             />
+
             {lifeEvents.map((ev, idx) => (
               <ReferenceLine
                 key={`${ev.age}-${ev.label}`}
@@ -267,7 +372,22 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
         <p className="mb-1.5 text-[10px] font-bold text-[#0a0a0a]">■ 積み上げ面 ＝ その年の資産内訳</p>
         <ul className="mb-3 flex flex-col gap-1 pl-1">
           {ITEMS.map((it) => (
-            <li key={it.key} className="flex items-start gap-2 text-[10px] leading-relaxed">
+            <li
+              key={it.key}
+              onMouseEnter={() => {
+                const labelMap: Record<string, string> = {
+                  cash: "現金",
+                  fund: "投信",
+                  stock: "株",
+                  crypto: "仮想通貨",
+                  gold: "金",
+                  dc: "DC",
+                };
+                setHoveredKey(labelMap[it.key] ?? null);
+              }}
+              onMouseLeave={() => setHoveredKey(null)}
+              className="flex cursor-pointer items-start gap-2 text-[10px] leading-relaxed"
+            >
               <span
                 className="mt-0.5 inline-block h-3 w-3 shrink-0"
                 style={{ background: FILLS[it.key], border: "1px solid #0a0a0a40" }}
@@ -287,7 +407,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
             style={{ background: FILLS.nw }}
           />
           全資産から住宅ローン・その他ローン・不動産ローンの負債を差し引いた金額。
-          マイナス = 負債超過の状態。マウスオーバーで詳細表示。
+          マイナス = 負債超過の状態。マウスオーバーで該当項目が拡大表示されます。
         </p>
       </div>
     </div>
