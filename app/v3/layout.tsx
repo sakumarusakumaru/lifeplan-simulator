@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef } from "react";
 
 import { ConsentDialog } from "@/components/ConsentDialog";
 import { Footer } from "@/components/Footer";
+import type { PlanInput } from "@/lib/calc/types";
+import { usePlanStore } from "@/store/plan-store";
 
 const TABS = [
   { href: "/v3/detail", label: "詳細入力" },
@@ -15,6 +18,58 @@ const TABS = [
 export default function V2Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const activeIdx = TABS.findIndex((t) => pathname.startsWith(t.href));
+
+  const onDetail = pathname?.startsWith("/v3/detail") ?? false;
+  const onResult = pathname?.startsWith("/v3/result") ?? false;
+
+  const plan = usePlanStore((s) => s.plan);
+  const patch = usePlanStore((s) => s.patch);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 入力データをJSONでDL（detailタブ用）
+  const exportPlan = () => {
+    const json = JSON.stringify(plan, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const ts = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `lifeplan_${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const importPlan = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (typeof data !== "object" || data === null) {
+          throw new Error("JSONの形式が不正です");
+        }
+        if (!("curAge" in data) || !("endAge" in data)) {
+          throw new Error("ライフプランデータではありません");
+        }
+        patch(data as Partial<PlanInput>);
+        alert("データを読み込みました");
+      } catch (err) {
+        alert(
+          "読み込みに失敗しました：" +
+            (err instanceof Error ? err.message : "不明"),
+        );
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const headerBtnStyle = {
+    background: "#ffffff",
+    color: "#0a0a0a",
+    border: "2px solid #0a0a0a",
+    borderRadius: 8,
+  };
 
   return (
     <div className="min-h-screen" style={{ background: "#f0f0ee" }}>
@@ -105,19 +160,52 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <span
-            className="inline-flex items-center text-[10px] font-bold uppercase tracking-[0.1em] text-white"
-            style={{
-              height: 20,
-              padding: "0 8px",
-              background: "#c8383a",
-              border: "2px solid #0a0a0a",
-              borderRadius: 8,
-            }}
-          >
-            VER 3
-          </span>
+        {/* ページ別アクション（VER 3 バッジは廃止） */}
+        <div className="no-print ml-auto flex shrink-0 items-center gap-1.5">
+          {onDetail && (
+            <>
+              <button
+                type="button"
+                onClick={exportPlan}
+                className="px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+                style={headerBtnStyle}
+                title="現在の入力データをJSONとしてダウンロード"
+              >
+                ↓ JSONでDL
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+                style={headerBtnStyle}
+                title="保存したJSONを読み込んで反映"
+              >
+                ↑ JSONを読み込み
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) importPlan(f);
+                  e.target.value = "";
+                }}
+              />
+            </>
+          )}
+          {onResult && (
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+              style={headerBtnStyle}
+              title="ブラウザの印刷からPDFとして保存"
+            >
+              ↓ PDFでDL
+            </button>
+          )}
         </div>
       </header>
 
