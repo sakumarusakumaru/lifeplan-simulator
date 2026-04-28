@@ -31,7 +31,7 @@ function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
         score: 15,
         alert: "bad",
         headline: `${sa}歳で資金ショート（極めて深刻）`,
-        shortInsight: "資金ショート対策が急務。固定費見直し・収入多角化を即時着手。",
+        shortInsight: "資金ショートが見込まれる状況。固定費見直し・収入多角化が論点となります。",
       };
     }
     if (yearsLeft < 25) {
@@ -39,14 +39,14 @@ function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
         score: 30,
         alert: "bad",
         headline: `${sa}歳で資金ショート`,
-        shortInsight: "支出見直し・積立強化・退職延長を組み合わせて改善可能。",
+        shortInsight: "支出見直し・積立強化・退職延長等の組み合わせが論点となります。",
       };
     }
     return {
       score: 45,
       alert: "warn",
       headline: `${sa}歳で資金ショート（中長期で修正可能）`,
-      shortInsight: "中長期積立とリスク許容度に応じた配分で十分修正可能。",
+      shortInsight: "中長期積立とリスク許容度に応じた配分の見直しが論点となります。",
     };
   }
 
@@ -55,7 +55,7 @@ function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
       score: 35,
       alert: "bad",
       headline: `${endAge}歳時点で純資産マイナス`,
-      shortInsight: "繰上返済・不動産見直しによる抜本的な家計再構築を推奨。",
+      shortInsight: "繰上返済・不動産見直しを含む家計の再構築が論点となります。",
     };
   }
   if (nw < 5_000_000) {
@@ -63,7 +63,7 @@ function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
       score: 55,
       alert: "warn",
       headline: `${endAge}歳まで完走するも余裕わずか`,
-      shortInsight: "生活防衛資金（年収1〜2年分）の確保を優先。",
+      shortInsight: "生活防衛資金（年収1〜2年分）の確保が論点となります。",
     };
   }
   if (nw < 20_000_000) {
@@ -71,7 +71,7 @@ function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
       score: 65,
       alert: "warn",
       headline: "老後資金は最低限確保",
-      shortInsight: "NISA・iDeCo最大活用で老後余裕度を改善。",
+      shortInsight: "NISA・iDeCoの非課税枠活用の余地があります。",
     };
   }
   if (nw < 50_000_000) {
@@ -79,7 +79,7 @@ function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
       score: 75,
       alert: "good",
       headline: "老後資金は概ね安定",
-      shortInsight: "インフレ耐性強化のため株式・投信での分散運用を継続。",
+      shortInsight: "インフレ耐性確保のため株式・投信での分散運用が一般的に論じられます。",
     };
   }
   if (nw < 100_000_000) {
@@ -87,7 +87,7 @@ function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
       score: 85,
       alert: "good",
       headline: "余裕ある資産形成",
-      shortInsight: "相続税対策の検討時期。生前贈与・保険活用が有効。",
+      shortInsight: "相続税の課税対象となる規模に近づく時期。生前贈与・保険活用等が論点となります。",
     };
   }
   if (nw < 300_000_000) {
@@ -95,14 +95,14 @@ function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
       score: 92,
       alert: "good",
       headline: "資産計画は非常に良好",
-      shortInsight: "暦年贈与・教育資金贈与等の制度活用で資産移転戦略を。",
+      shortInsight: "暦年贈与・教育資金贈与等の制度を活用できる規模です。",
     };
   }
   return {
     score: 98,
     alert: "good",
     headline: "富裕層レベルの資産計画",
-    shortInsight: "法人化・家族信託等を含む包括的な相続戦略の構築が必須。",
+    shortInsight: "法人化・家族信託等を含む相続戦略が論点となる規模です。",
   };
 }
 

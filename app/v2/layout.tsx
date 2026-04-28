@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { ConsentDialog } from "@/components/ConsentDialog";
+import { Footer } from "@/components/Footer";
+
 const TABS = [
   { href: "/v2/detail", label: "詳細入力" },
   { href: "/v2/result", label: "結果出力" },
-  { href: "/v2/suggest", label: "改善提案" },
+  { href: "/v2/suggest", label: "シナリオ比較" },
 ];
 
 export default function V2Layout({ children }: { children: React.ReactNode }) {
@@ -119,6 +122,8 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {children}
+      <Footer />
+      <ConsentDialog />
     </div>
   );
 }

@@ -178,7 +178,7 @@ export default function SuggestPage() {
         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">
           Scenario Analysis
         </p>
-        <h1 className="text-2xl font-bold text-[#0a0a0a]">改善シナリオ分析</h1>
+        <h1 className="text-2xl font-bold text-[#0a0a0a]">シナリオ比較 ／ What-if 分析</h1>
         <p className="mt-2 text-xs leading-relaxed text-[#0a0a0a]/60">
           各パラメータを変えた場合の影響を試算します。詳細入力の変更がリアルタイムで反映されます。
         </p>
@@ -321,7 +321,7 @@ export default function SuggestPage() {
           style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
         >
           <p className="text-sm text-[#0a0a0a]/50">
-            詳細入力でデータを入力すると改善提案が表示されます。
+            詳細入力でデータを入力するとシナリオ比較が表示されます。
           </p>
         </div>
       )}
