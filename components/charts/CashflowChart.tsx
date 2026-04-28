@@ -5,7 +5,6 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
-  Legend,
   Line,
   ReferenceLine,
   ResponsiveContainer,
@@ -21,13 +20,12 @@ interface CashflowChartProps {
   lifeEvents?: LifeEvent[];
 }
 
-const yenToOkuMan = (yen: number): string => {
-  const sign = yen < 0 ? "-" : "";
+const fmtAbs = (yen: number): string => {
   const abs = Math.abs(Math.round(yen));
   const oku = Math.floor(abs / 100_000_000);
   const man = Math.floor((abs % 100_000_000) / 10_000);
-  if (oku > 0) return `${sign}${oku}億${man.toLocaleString()}万`;
-  return `${sign}${man.toLocaleString()}万`;
+  if (oku > 0) return `${oku}億${man > 0 ? man.toLocaleString() + "万" : ""}`;
+  return `${man.toLocaleString()}万`;
 };
 
 const axisFmt = (yen: number): string => {
@@ -38,21 +36,16 @@ const axisFmt = (yen: number): string => {
 };
 
 const FILLS = {
-  income: "#475569",
-  expense: "#94a3b8",
-  invest: "#dde6ef",
-  cf: "#c8383a",
+  income: "#334155",   // ダークスレート — 収入（上方向）
+  expense: "#9ca3af",  // ミディアムグレー — 支出（下方向）
+  invest: "#93c5fd",   // ライトブルー — 投資積立（下方向、支出と明確に区別）
+  cf: "#c8383a",       // レッド — 収支ライン
 };
-
-const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
-  { key: "income", label: "収入", desc: "給与・副業・年金・配偶者収入の合計（手取り換算）" },
-  { key: "expense", label: "支出", desc: "生活費・住居・教育・保険・介護・ライフイベント等" },
-  { key: "invest", label: "投資積立", desc: "投信・株・金・DCへの月々の積立額（資産側に蓄積）" },
-];
 
 export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   const pathname = usePathname();
   const isV3 = pathname?.startsWith("/v3") ?? false;
+
   const data = rows.map((r) => ({
     age: r.age,
     収入: Math.round(r.income),
@@ -78,6 +71,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
           INCOME · EXPENSE · NET
         </span>
       </div>
+
       <div className="h-[260px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 4 }}>
@@ -95,6 +89,10 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               axisLine={{ stroke: "#0a0a0a", strokeWidth: 2 }}
               width={48}
             />
+
+            {/* 0円ライン（収入ゾーンと支出ゾーンの境界） */}
+            <ReferenceLine y={0} stroke="#0a0a0a" strokeWidth={2} />
+
             <Tooltip
               content={({ payload, label }) => {
                 if (!payload?.length) return null;
@@ -104,93 +102,91 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                 ).filter(Boolean) as typeof payload;
                 const cfEntry = sorted.find((e) => e.dataKey === "収支");
                 const cf = Number(cfEntry?.value ?? 0);
+
                 return (
                   <div
                     style={{
                       background: "#ffffff",
                       border: "2.5px solid #0a0a0a",
                       borderRadius: 12,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      padding: "10px 14px",
-                      minWidth: 200,
+                      padding: "14px 18px",
+                      minWidth: 230,
                     }}
                   >
-                    <p style={{ color: "#0a0a0a", fontWeight: 700, margin: "0 0 6px", fontSize: 13 }}>
-                      {label}歳 時点
+                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: "0 0 12px", fontSize: 17 }}>
+                      {label}歳
                     </p>
-                    {sorted.map((entry) => (
-                      <div
-                        key={entry.dataKey as string}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          margin: "3px 0",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-block",
-                            width: 10,
-                            height: 10,
-                            background: entry.color as string,
-                            border: entry.dataKey === "収支" ? "none" : "1px solid #0a0a0a30",
-                          }}
-                        />
-                        <span style={{ color: "#0a0a0a", flex: 1 }}>{entry.name}</span>
-                        <span
-                          style={{
-                            color: entry.dataKey === "収支" ? "#c8383a" : "#0a0a0a",
-                            fontWeight: 800,
-                          }}
+                    {sorted.map((entry) => {
+                      const key = entry.dataKey as string;
+                      const val = Number(entry.value ?? 0);
+                      const absVal = Math.abs(val);
+                      const isCF = key === "収支";
+                      const isIncome = key === "収入";
+                      const sign = isCF ? (val >= 0 ? "+" : "−") : isIncome ? "+" : "−";
+                      const valueColor = isCF
+                        ? cf < 0
+                          ? "#c8383a"
+                          : "#22863a"
+                        : "#0a0a0a";
+                      return (
+                        <div
+                          key={key}
+                          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}
                         >
-                          {yenToOkuMan(Math.abs(Number(entry.value) || 0))}
-                        </span>
-                      </div>
-                    ))}
-                    <p
+                          <span
+                            style={{
+                              display: "inline-block",
+                              width: 13,
+                              height: 13,
+                              flexShrink: 0,
+                              background: isCF ? "transparent" : (entry.color as string),
+                              border: isCF
+                                ? `3px solid ${FILLS.cf}`
+                                : "1px solid #0a0a0a20",
+                              borderRadius: isCF ? 2 : 0,
+                            }}
+                          />
+                          <span style={{ color: "#0a0a0a", flex: 1, fontSize: 13, fontWeight: 700 }}>
+                            {entry.name}
+                          </span>
+                          <span style={{ color: valueColor, fontWeight: 800, fontSize: 16 }}>
+                            {sign}{fmtAbs(absVal)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <div
                       style={{
-                        marginTop: 6,
-                        paddingTop: 6,
-                        borderTop: "1px dashed #0a0a0a30",
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: cf < 0 ? "#c8383a" : "#0a0a0a",
+                        marginTop: 10,
+                        paddingTop: 10,
+                        borderTop: "1.5px dashed #0a0a0a20",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: cf < 0 ? "#c8383a" : "#22863a",
                       }}
                     >
                       {cf < 0
-                        ? "⚠ 当年の収支がマイナス（資産取り崩し or 借入）"
-                        : "収支プラス（現金が積み上がる年）"}
-                    </p>
+                        ? "⚠ 収支マイナス → 資産を取り崩す年"
+                        : "✓ 収支プラス → 現金が積み上がる年"}
+                    </div>
                   </div>
                 );
               }}
               cursor={{ fill: "rgba(10,10,10,0.05)" }}
             />
-            <Legend
-              wrapperStyle={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-              }}
-              iconType="square"
-              formatter={(value) => (
-                <span style={{ color: "#0a0a0a" }}>{value}</span>
-              )}
-            />
-            <Bar dataKey="収入" stackId="bb-cf" fill={FILLS.income} stroke={FILLS.income} strokeWidth={0.5} />
-            <Bar dataKey="支出" stackId="bb-cf" fill={FILLS.expense} stroke={FILLS.expense} strokeWidth={0.5} />
-            <Bar dataKey="投資積立" stackId="bb-cf" fill={FILLS.invest} stroke={FILLS.invest} strokeWidth={0.5} />
+
+            <Bar dataKey="収入" stackId="bb-cf" fill={FILLS.income} stroke="none" />
+            <Bar dataKey="支出" stackId="bb-cf" fill={FILLS.expense} stroke="none" />
+            <Bar dataKey="投資積立" stackId="bb-cf" fill={FILLS.invest} stroke="none" />
             <Line
               type="linear"
               dataKey="収支"
               stroke={FILLS.cf}
               strokeWidth={2.5}
               dot={false}
-              activeDot={{ r: 4, stroke: "#0a0a0a", strokeWidth: 2 }}
+              activeDot={{ r: 5, stroke: "#0a0a0a", strokeWidth: 2 }}
             />
+
             {lifeEvents.map((ev, idx) => (
               <ReferenceLine
                 key={`${ev.age}-${ev.label}`}
@@ -224,6 +220,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+
       {lifeEvents.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
           {lifeEvents.map((ev, idx) => (
@@ -241,39 +238,67 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
         </div>
       )}
 
-      {/* このグラフの読み方 */}
+      {/* グラフの読み方 */}
       <div
-        className="mt-4 rounded-xl p-3"
-        style={{ background: "#ffffff", border: "1.5px solid #0a0a0a30" }}
+        className="mt-4 overflow-hidden rounded-xl"
+        style={{ border: "1.5px solid #0a0a0a20" }}
       >
-        <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
-          このグラフの読み方 ／ HOW TO READ
-        </p>
-
-        <p className="mb-1.5 text-[10px] font-bold text-[#0a0a0a]">■ 棒グラフ ＝ その年の現金フロー</p>
-        <ul className="mb-3 flex flex-col gap-1 pl-1">
-          {ITEMS.map((it) => (
-            <li key={it.key} className="flex items-start gap-2 text-[10px] leading-relaxed">
+        {/* ゾーン構造図 */}
+        <div style={{ background: "#ffffff", padding: "10px 14px", borderBottom: "1px solid #0a0a0a10" }}>
+          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/55">
+            グラフの構造 ／ CHART STRUCTURE
+          </p>
+          <div className="overflow-hidden rounded-lg" style={{ border: "1.5px solid #0a0a0a20" }}>
+            {/* 収入ゾーン（上） */}
+            <div
+              className="flex items-center gap-2 px-3 py-2"
+              style={{ background: "#f8f9fb", borderBottom: "2px solid #0a0a0a" }}
+            >
               <span
-                className="mt-0.5 inline-block h-3 w-3 shrink-0"
-                style={{ background: FILLS[it.key], border: "1px solid #0a0a0a40" }}
+                style={{ background: FILLS.income, width: 12, height: 12, display: "inline-block", flexShrink: 0 }}
               />
-              <span className="text-[#0a0a0a]">
-                <span className="font-bold">{it.label}</span>
-                <span className="text-[#0a0a0a]/60"> ／ {it.desc}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
+              <span className="text-[11px] font-bold text-[#0a0a0a]">↑ 0より上 = 収入</span>
+              <span className="text-[10px] text-[#0a0a0a]/50">給与・年金・副業の年間手取り</span>
+            </div>
+            {/* 0ラインバー */}
+            <div className="flex items-center justify-center py-1" style={{ background: "#e0e0dd" }}>
+              <span className="text-[9px] font-bold tracking-widest text-[#0a0a0a]/50">── 0円ライン ──</span>
+            </div>
+            {/* 支出ゾーン（下） */}
+            <div className="px-3 py-2" style={{ background: "#f0f0ee" }}>
+              <div className="mb-1.5 flex items-center gap-2">
+                <span
+                  style={{ background: FILLS.expense, width: 12, height: 12, display: "inline-block", flexShrink: 0 }}
+                />
+                <span className="text-[11px] font-bold text-[#0a0a0a]">↓ 0より下 = 支出</span>
+                <span className="text-[10px] text-[#0a0a0a]/50">生活費・住居費・教育費等</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  style={{ background: FILLS.invest, width: 12, height: 12, display: "inline-block", flexShrink: 0 }}
+                />
+                <span className="text-[11px] font-bold text-[#0a0a0a]">↓↓ さらに下 = 投資積立</span>
+                <span className="text-[10px] text-[#0a0a0a]/50">NISA・DC・株への積立額</span>
+              </div>
+            </div>
+          </div>
+          <p className="mt-2 text-[9px] text-[#0a0a0a]/45">
+            ※ 職歴が未入力の場合、収入ゾーンは表示されません（基本設定で設定してください）
+          </p>
+        </div>
 
-        <p className="mb-1.5 text-[10px] font-bold text-[#0a0a0a]">━━ 線 ＝ 年間収支</p>
-        <p className="pl-1 text-[10px] leading-relaxed text-[#0a0a0a]/60">
-          <span
-            className="mr-1.5 inline-block h-[3px] w-4 align-middle"
-            style={{ background: FILLS.cf }}
-          />
-          収入から支出と積立を差し引いた金額。マイナスの年は資産を取り崩して補填します。
-        </p>
+        {/* 収支ライン説明 */}
+        <div style={{ background: "#ffffff", padding: "10px 14px" }}>
+          <div className="mb-1 flex items-center gap-2">
+            <span
+              style={{ display: "inline-block", width: 18, height: 3, background: FILLS.cf, flexShrink: 0 }}
+            />
+            <span className="text-[11px] font-bold text-[#0a0a0a]">赤い線 = 年間収支</span>
+          </div>
+          <p className="text-[10px] leading-relaxed text-[#0a0a0a]/55">
+            収入 − 支出 − 投資積立 の結果。線がマイナスの年は不足分を資産（貯蓄・投資）から取り崩します。
+          </p>
+        </div>
       </div>
     </div>
   );
