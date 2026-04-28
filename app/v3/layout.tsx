@@ -7,9 +7,9 @@ import { ConsentDialog } from "@/components/ConsentDialog";
 import { Footer } from "@/components/Footer";
 
 const TABS = [
-  { href: "/v2/detail", label: "詳細入力" },
-  { href: "/v2/result", label: "結果出力" },
-  { href: "/v2/suggest", label: "シナリオ比較" },
+  { href: "/v3/detail", label: "詳細入力" },
+  { href: "/v3/result", label: "結果出力" },
+  { href: "/v3/suggest", label: "シナリオ比較" },
 ];
 
 export default function V2Layout({ children }: { children: React.ReactNode }) {
@@ -106,26 +106,25 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
+          <Link
+            href="/v2/detail"
+            className="text-[10px] font-bold tracking-[0.1em] text-[#0a0a0a]/55 transition-colors hover:text-[#0a0a0a]"
+            title="v2 安定版に戻る"
+          >
+            ← v2
+          </Link>
           <span
             className="inline-flex items-center text-[10px] font-bold uppercase tracking-[0.1em] text-white"
             style={{
               height: 20,
               padding: "0 8px",
-              background: "#66666a",
+              background: "#c8383a",
               border: "2px solid #0a0a0a",
               borderRadius: 8,
             }}
-            title="v2.0-stable: 安定版（編集なし）"
           >
-            VER 2 / STABLE
+            VER 3
           </span>
-          <Link
-            href="/v3/detail"
-            className="text-[10px] font-bold tracking-[0.1em] text-[#0a0a0a]/55 transition-colors hover:text-[#0a0a0a]"
-            title="v3 開発版に進む"
-          >
-            v3 →
-          </Link>
         </div>
       </header>
 
