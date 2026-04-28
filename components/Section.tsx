@@ -1,10 +1,17 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
 import { useUiStore } from "@/store/ui-store";
 
 export type SectionStatus = "default" | "entered";
+
+// v3 で左カラムのセクションヘッダーをスティッキー表示するためのcontext。
+// 既定値は false で v2 等では従来通りの挙動を維持。
+export const StickyHeaderContext = createContext<{ enabled: boolean; topPx: number }>({
+  enabled: false,
+  topPx: 56,
+});
 
 interface SectionProps {
   id: string;
@@ -25,6 +32,7 @@ export function Section({
 }: SectionProps) {
   const open = useUiStore((s) => s.open[id] ?? false);
   const toggle = useUiStore((s) => s.toggle);
+  const { enabled: stickyEnabled, topPx } = useContext(StickyHeaderContext);
 
   return (
     <section
@@ -40,6 +48,19 @@ export function Section({
         type="button"
         onClick={() => toggle(id)}
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        style={
+          stickyEnabled
+            ? {
+                position: "sticky",
+                top: topPx,
+                zIndex: 5,
+                background: "#f0f0ee",
+                borderTopLeftRadius: 10,
+                borderTopRightRadius: 10,
+                boxShadow: open ? "0 2px 0 0 #0a0a0a" : "none",
+              }
+            : undefined
+        }
       >
         <span className="flex flex-1 items-start gap-3">
           <span

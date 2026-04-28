@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { HealthHeader } from "@/components/HealthHeader";
 import { ResultsPanel } from "@/components/ResultsPanel";
+import { StickyHeaderContext } from "@/components/Section";
 import { AssetsMegaSection } from "@/components/sections/mega/AssetsMegaSection";
 import { ExpenseMegaSection } from "@/components/sections/mega/ExpenseMegaSection";
 import { IncomeMegaSection } from "@/components/sections/mega/IncomeMegaSection";
@@ -28,12 +29,14 @@ export default function DetailPage() {
     <main className="px-4 py-6 pb-24 sm:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
-          <div className="flex flex-col gap-2">
-            <SettingsMegaSection />
-            <IncomeMegaSection />
-            <AssetsMegaSection />
-            <ExpenseMegaSection />
-          </div>
+          <StickyHeaderContext.Provider value={{ enabled: true, topPx: 56 }}>
+            <div className="flex flex-col gap-2">
+              <SettingsMegaSection />
+              <IncomeMegaSection />
+              <AssetsMegaSection />
+              <ExpenseMegaSection />
+            </div>
+          </StickyHeaderContext.Provider>
 
           <aside className="flex flex-col gap-4 sm:sticky sm:top-[64px] sm:max-h-[calc(100vh-72px)] sm:self-start sm:overflow-y-auto sm:pr-1">
             <HealthHeader result={result} plan={plan} />
