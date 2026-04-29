@@ -139,21 +139,50 @@ export function HealthHeader({
 
   // 詳細入力ページ: コンパクト1行表示
   if (isV3Detail) {
+    const kpis = [
+      {
+        label: `最終純資産（${plan.endAge}歳）`,
+        value: fmt(result.finalNetWorth),
+        alert: result.finalNetWorth < 0,
+      },
+      {
+        label: "ショート年齢",
+        value: shortfallText,
+        alert: !!result.shortfallAge,
+      },
+      {
+        label: `退職時（${lastJobEndAge}歳）`,
+        value: nwAtRetire !== null ? fmt(nwAtRetire) : "—",
+        alert: nwAtRetire !== null && nwAtRetire < 0,
+      },
+      {
+        label: "65歳時点",
+        value: nwAt65 !== null ? fmt(nwAt65) : "—",
+        alert: nwAt65 !== null && nwAt65 < 0,
+      },
+    ];
+
     return (
       <div
-        className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-3 py-2"
-        style={{ background: c.light, border: `1.5px solid ${c.main}40` }}
+        className="flex flex-wrap items-stretch overflow-hidden rounded-xl"
+        style={{ background: "#ffffff", border: "2px solid #0a0a0a" }}
       >
-        {/* スコアバッジ */}
-        <div className="flex shrink-0 items-center gap-1.5">
+        {/* スコア */}
+        <div
+          className="flex shrink-0 items-center gap-2 px-3 py-2"
+          style={{ background: c.light, borderRight: "2px solid #0a0a0a" }}
+        >
           <div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white tabular-nums"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white tabular-nums"
             style={{ background: c.main }}
           >
             {health.score}
           </div>
           <div>
-            <p className="text-[7px] font-bold uppercase tracking-[0.12em]" style={{ color: c.text }}>
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.18em]"
+              style={{ color: c.text }}
+            >
               診断スコア
             </p>
             <p className="text-[10px] font-bold leading-tight text-[#0a0a0a]">
@@ -162,51 +191,26 @@ export function HealthHeader({
           </div>
         </div>
 
-        <span className="h-5 w-px shrink-0" style={{ background: "#0a0a0a25" }} />
-
         {/* 主要指標 4項目 */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <div className="flex flex-col">
-            <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/50">
-              最終純資産（{plan.endAge}歳）
+        {kpis.map((item, i) => (
+          <div
+            key={item.label}
+            className="flex flex-col justify-center px-3 py-2"
+            style={{
+              borderRight: i < kpis.length - 1 ? "1.5px solid #0a0a0a20" : "none",
+            }}
+          >
+            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
+              {item.label}
             </p>
             <p
               className="text-xs font-bold tabular-nums leading-tight"
-              style={{ color: result.finalNetWorth < 0 ? "#c8383a" : "#0a0a0a" }}
+              style={{ color: item.alert ? "#c8383a" : "#0a0a0a" }}
             >
-              {fmt(result.finalNetWorth)}
+              {item.value}
             </p>
           </div>
-          <div className="flex flex-col">
-            <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/50">ショート</p>
-            <p
-              className="text-xs font-bold tabular-nums leading-tight"
-              style={{ color: result.shortfallAge ? "#c8383a" : "#0a0a0a" }}
-            >
-              {shortfallText}
-            </p>
-          </div>
-          <div className="flex flex-col">
-            <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/50">
-              退職時（{lastJobEndAge}歳）
-            </p>
-            <p
-              className="text-xs font-bold tabular-nums leading-tight"
-              style={{ color: nwAtRetire !== null && nwAtRetire < 0 ? "#c8383a" : "#0a0a0a" }}
-            >
-              {nwAtRetire !== null ? fmt(nwAtRetire) : "—"}
-            </p>
-          </div>
-          <div className="flex flex-col">
-            <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/50">65歳純資産</p>
-            <p
-              className="text-xs font-bold tabular-nums leading-tight"
-              style={{ color: nwAt65 !== null && nwAt65 < 0 ? "#c8383a" : "#0a0a0a" }}
-            >
-              {nwAt65 !== null ? fmt(nwAt65) : "—"}
-            </p>
-          </div>
-        </div>
+        ))}
       </div>
     );
   }
