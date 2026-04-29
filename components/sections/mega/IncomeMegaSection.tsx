@@ -250,8 +250,8 @@ export function IncomeMegaSection() {
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <NumberField label="入社" value={j.start} onChange={(v) => updateJob(i, { start: v })} unit="歳" />
-                    <NumberField label="退職" value={j.end} onChange={(v) => updateJob(i, { end: v })} unit="歳" />
+                    <NumberField label="入社年齢" value={j.start} onChange={(v) => updateJob(i, { start: v })} unit="歳" />
+                    <NumberField label="退社年齢" value={j.end} onChange={(v) => updateJob(i, { end: v })} unit="歳" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <NumberField label="退職金" value={j.sev} onChange={(v) => updateJob(i, { sev: v })} unit="円" />

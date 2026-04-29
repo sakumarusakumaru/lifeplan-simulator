@@ -264,7 +264,7 @@ export function SettingsMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="税金・社会保険（VER2）" defaultOpen={false}>
+        <CollapsibleSubGroup title="税金・社会保険" defaultOpen={false}>
           <div className="flex flex-col gap-3">
             <div
               className="grid grid-cols-2 gap-0 overflow-hidden"

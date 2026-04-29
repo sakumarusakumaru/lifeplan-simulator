@@ -84,7 +84,7 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
           href="/"
           className="shrink-0 text-sm font-bold uppercase tracking-[0.18em] text-[#0a0a0a] transition-colors hover:text-[#c8383a]"
         >
-          LIFE PLAN SIMULATOR v3
+          LIFE PLAN SIMULATOR <span style={{ fontSize: "0.75em", fontWeight: 400, color: "#0a0a0a66", letterSpacing: "0.08em" }}>ver3</span>
         </Link>
 
         <span className="text-[#0a0a0a]/30">|</span>
