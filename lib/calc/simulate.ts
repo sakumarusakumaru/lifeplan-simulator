@@ -23,6 +23,8 @@ export function simulate(input: PlanInput): SimulationSummary {
     c: input.cashBal,
     f: input.fundBal,
     s: input.stockBal,
+    fNisa: input.fundNisaBal,
+    sNisa: input.stockNisaBal,
     k: input.cryptoBal,
     g: input.goldBal,
     dc: input.dcBal,
@@ -254,17 +256,28 @@ export function simulate(input: PlanInput): SimulationSummary {
     const ins = calcInsuranceY(input.ins, age, infl);
 
     const tF = age < input.saveFundEndAge ? input.saveFundM * 12 : 0;
+    const tFN = age < input.saveFundNisaEndAge ? input.saveFundNisaM * 12 : 0;
     const tS = age < input.saveStockEndAge ? input.saveStockM * 12 : 0;
+    const tSN = age < input.saveStockNisaEndAge ? input.saveStockNisaM * 12 : 0;
     const tK = age < input.saveCryptoEndAge ? input.saveCryptoM * 12 : 0;
     const tG = age < input.saveGoldEndAge ? input.saveGoldM * 12 : 0;
     const tD = age < input.saveDcEndAge ? input.saveDcM * 12 : 0;
 
-    const cf = net + reInc + inherit - (basic + home + edu + ins + care + lifeExp + otherLoanPay) - (tF + tS + tK + tG + tD);
+    const cf = net + reInc + inherit - (basic + home + edu + ins + care + lifeExp + otherLoanPay) - (tF + tFN + tS + tSN + tK + tG + tD);
 
     ass.c += cf;
     if (ass.c > 0) ass.c *= 1 + input.cashRate;
-    ass.f = (ass.f + tF) * (1 + input.fundR / 100);
-    ass.s = (ass.s + tS) * (1 + input.stockR / 100);
+
+    // 譲渡益課税（CGT）20.315% を課税口座の運用益にマーク・トゥ・マーケットで適用。
+    // NISAは非課税のため利回りそのまま。マーク・トゥ・マーケットは保守的（実際の実現課税より重め）だが
+    // FP視点で「NISA を最大限活用すべき」が伝わる近似。
+    const CGT = 0.20315;
+    const fEffR = (input.fundR / 100) * (1 - CGT);
+    const sEffR = (input.stockR / 100) * (1 - CGT);
+    ass.f = (ass.f + tF) * (1 + fEffR);
+    ass.fNisa = (ass.fNisa + tFN) * (1 + input.fundR / 100);
+    ass.s = (ass.s + tS) * (1 + sEffR);
+    ass.sNisa = (ass.sNisa + tSN) * (1 + input.stockR / 100);
     ass.k = (ass.k + tK) * (1 + input.cryptoR / 100);
     ass.g = (ass.g + tG) * (1 + input.goldR / 100);
     ass.dc = (ass.dc + tD) * (1 + input.dcR / 100);
@@ -290,7 +303,9 @@ export function simulate(input: PlanInput): SimulationSummary {
       const remaining = Math.max(0, ln.remainMonths - (age - input.curAge) * 12);
       return acc + ln.monthlyPay * remaining;
     }, 0);
-    const nw = ass.c + ass.f + ass.s + ass.k + ass.g + ass.dc - hlBal - reLoanRemain - otherLoanRemain;
+    const nw =
+      ass.c + ass.f + ass.s + ass.fNisa + ass.sNisa + ass.k + ass.g + ass.dc -
+      hlBal - reLoanRemain - otherLoanRemain;
 
     rows.push({
       age,
@@ -302,7 +317,7 @@ export function simulate(input: PlanInput): SimulationSummary {
       net,
       income: net + reInc + inherit,
       exp: basic + home + edu + ins + care + lifeExp + otherLoanPay,
-      inv: tF + tS + tK + tD,
+      inv: tF + tFN + tS + tSN + tK + tD,
       edu,
       eduT,
       eduJ,

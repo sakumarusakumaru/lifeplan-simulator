@@ -96,7 +96,8 @@ export type DrawOrderMode =
   | "fund-stock-crypto"
   | "stock-fund-crypto";
 
-export type DrawAsset = "f" | "s" | "k" | "dc" | "g";
+// f/s = 課税口座（特定口座等）／ fNisa/sNisa = NISA口座（非課税）
+export type DrawAsset = "f" | "s" | "fNisa" | "sNisa" | "k" | "dc" | "g";
 
 export interface JukuMonthly {
   pre: number;
@@ -160,14 +161,22 @@ export interface PlanInput {
 
   cashBal: number;
   cashRate: number;
-  fundBal: number;
+  // 投信・株は「課税口座（特定口座等）」と「NISA口座（非課税）」を分離して管理。
+  // 課税口座は譲渡益課税（CGT 20.315%）が運用利回りに掛かる。NISA は完全非課税。
+  fundBal: number;          // 課税口座 投信残高
   fundR: number;
-  saveFundM: number;
+  saveFundM: number;        // 課税口座への月積立
   saveFundEndAge: number;
-  stockBal: number;
+  fundNisaBal: number;      // NISA口座 投信残高
+  saveFundNisaM: number;    // NISA口座への月積立
+  saveFundNisaEndAge: number;
+  stockBal: number;         // 課税口座 株残高
   stockR: number;
   saveStockM: number;
   saveStockEndAge: number;
+  stockNisaBal: number;     // NISA口座 株残高
+  saveStockNisaM: number;
+  saveStockNisaEndAge: number;
   cryptoBal: number;
   cryptoR: number;
   saveCryptoM: number;
@@ -249,8 +258,10 @@ export interface PensionBreakdown {
 
 export interface AssetSnapshot {
   c: number;
-  f: number;
-  s: number;
+  f: number;       // 投信（課税口座）
+  s: number;       // 株（課税口座）
+  fNisa: number;   // 投信（NISA・非課税）
+  sNisa: number;   // 株（NISA・非課税）
   k: number;
   dc: number;
   g: number;

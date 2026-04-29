@@ -46,7 +46,7 @@ function buildVerdict(
   const curExp = Math.round((cur?.exp ?? 0) / 10000);
   const monthlyDeficit = Math.round((curExp - curIncome) / 12);
   const totalCashAssets = Math.round(
-    (plan.cashBal + plan.fundBal + plan.stockBal) / 10000,
+    (plan.cashBal + plan.fundBal + plan.fundNisaBal + plan.stockBal + plan.stockNisaBal) / 10000,
   );
   const monthlyExp = Math.round(curExp / 12);
   const livingDefenseMonths =
@@ -209,7 +209,9 @@ export default function ResultPage() {
   const financialAssets =
     plan.cashBal +
     plan.fundBal +
+    plan.fundNisaBal +
     plan.stockBal +
+    plan.stockNisaBal +
     plan.cryptoBal +
     plan.goldBal +
     plan.dcBal;
@@ -421,7 +423,7 @@ export default function ResultPage() {
           <SummaryCard
             label="年間積立"
             value={fmtMan(cur?.inv ?? 0)}
-            sub={`投信 ${fmtMan(plan.saveFundM * 12)} / 株 ${fmtMan(plan.saveStockM * 12)} / DC ${fmtMan(plan.saveDcM * 12)}`}
+            sub={`投信(課税) ${fmtMan(plan.saveFundM * 12)} / 投信(NISA) ${fmtMan(plan.saveFundNisaM * 12)} / 株(課税) ${fmtMan(plan.saveStockM * 12)} / 株(NISA) ${fmtMan(plan.saveStockNisaM * 12)} / DC ${fmtMan(plan.saveDcM * 12)}`}
           />
         </div>
 
@@ -429,8 +431,10 @@ export default function ResultPage() {
           assets={(
             [
               { label: "現金・預金", value: plan.cashBal, color: "#64748b", category: "current" },
-              { label: "投信", value: plan.fundBal, color: "#94a3b8", category: "current" },
-              { label: "株", value: plan.stockBal, color: "#b8c6d4", category: "current" },
+              { label: "投信(NISA・非課税)", value: plan.fundNisaBal, color: "#22863a", category: "current" },
+              { label: "投信(課税口座)", value: plan.fundBal, color: "#94a3b8", category: "current" },
+              { label: "株(NISA・非課税)", value: plan.stockNisaBal, color: "#16a34a", category: "current" },
+              { label: "株(課税口座)", value: plan.stockBal, color: "#b8c6d4", category: "current" },
               { label: "仮想通貨", value: plan.cryptoBal, color: "#a78bfa", category: "current" },
               { label: "金・コモディティ", value: plan.goldBal, color: "#c9aa7c", category: "current" },
               { label: "DC", value: plan.dcBal, color: "#dde6ef", category: "fixed" },

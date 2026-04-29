@@ -84,8 +84,8 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
   const data = rows.map((r) => ({
     age: r.age,
     現金: Math.round(r.ass.c),
-    投信: Math.round(r.ass.f),
-    株: Math.round(r.ass.s),
+    投信: Math.round(r.ass.f + r.ass.fNisa),
+    株: Math.round(r.ass.s + r.ass.sNisa),
     仮想通貨: Math.round(r.ass.k || 0),
     金: Math.round(r.ass.g || 0),
     DC: Math.round(r.ass.dc),

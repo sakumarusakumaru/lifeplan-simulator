@@ -37,8 +37,10 @@ const fmtMan = (yen: number) => {
 };
 
 const DRAW_LABEL: Record<DrawAsset, string> = {
-  f: "投信",
-  s: "株",
+  f: "投信(課税)",
+  s: "株(課税)",
+  fNisa: "投信(NISA)",
+  sNisa: "株(NISA)",
   k: "仮想通貨",
   g: "金・コモディティ",
   dc: "確定拠出年金",
@@ -90,6 +92,31 @@ function Quad({
   );
 }
 
+// 利回りを上位で共通指定するNISA/課税の入力（残高・月積立・積立終了の3項目）
+function Pair({
+  bal,
+  setBal,
+  saveM,
+  setSaveM,
+  saveEnd,
+  setSaveEnd,
+}: {
+  bal: number;
+  setBal: (v: number) => void;
+  saveM: number;
+  setSaveM: (v: number) => void;
+  saveEnd: number;
+  setSaveEnd: (v: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <NumberField label="残高" value={bal} onChange={setBal} unit="円" />
+      <NumberField label="積立(月)" value={saveM} onChange={setSaveM} unit="円" />
+      <NumberField label="積立終了" value={saveEnd} onChange={setSaveEnd} unit="歳" />
+    </div>
+  );
+}
+
 export function AssetsMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
@@ -110,7 +137,9 @@ export function AssetsMegaSection() {
   const totalBal =
     plan.cashBal +
     plan.fundBal +
+    plan.fundNisaBal +
     plan.stockBal +
+    plan.stockNisaBal +
     plan.cryptoBal +
     plan.goldBal +
     plan.dcBal;
@@ -140,30 +169,138 @@ export function AssetsMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="投信">
-          <Quad
-            bal={plan.fundBal}
-            setBal={(v) => setField("fundBal", v)}
-            r={plan.fundR}
-            setR={(v) => setField("fundR", v)}
-            saveM={plan.saveFundM}
-            setSaveM={(v) => setField("saveFundM", v)}
-            saveEnd={plan.saveFundEndAge}
-            setSaveEnd={(v) => setField("saveFundEndAge", v)}
-          />
+        <CollapsibleSubGroup title="投信（NISA / 課税）">
+          {/* 共通の利回り */}
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <PercentField
+              label="想定利回り(年・共通)"
+              value={plan.fundR}
+              onChange={(v) => setField("fundR", v)}
+            />
+          </div>
+
+          {/* NISA（非課税）— 緑帯 */}
+          <div
+            className="mb-3 overflow-hidden rounded-lg"
+            style={{ border: "2px solid #22863a40" }}
+          >
+            <div
+              className="flex items-center gap-2 px-3 py-1.5"
+              style={{ background: "#f0fff4" }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#22863a]">
+                NISA口座（非課税）
+              </span>
+              <span className="text-[9px] text-[#0a0a0a]/55">
+                つみたて枠 月10万 / 成長枠 月20万 / 生涯1,800万円まで
+              </span>
+            </div>
+            <div className="px-3 pt-2 pb-3">
+              <Pair
+                bal={plan.fundNisaBal}
+                setBal={(v) => setField("fundNisaBal", v)}
+                saveM={plan.saveFundNisaM}
+                setSaveM={(v) => setField("saveFundNisaM", v)}
+                saveEnd={plan.saveFundNisaEndAge}
+                setSaveEnd={(v) => setField("saveFundNisaEndAge", v)}
+              />
+            </div>
+          </div>
+
+          {/* 課税口座 — グレー帯 */}
+          <div
+            className="overflow-hidden rounded-lg"
+            style={{ border: "2px solid #0a0a0a30" }}
+          >
+            <div
+              className="flex items-center gap-2 px-3 py-1.5"
+              style={{ background: "#f0f0ee" }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0a0a0a]/70">
+                課税口座（特定口座等）
+              </span>
+              <span className="text-[9px] text-[#0a0a0a]/55">
+                譲渡益・分配金に20.315%課税
+              </span>
+            </div>
+            <div className="px-3 pt-2 pb-3">
+              <Pair
+                bal={plan.fundBal}
+                setBal={(v) => setField("fundBal", v)}
+                saveM={plan.saveFundM}
+                setSaveM={(v) => setField("saveFundM", v)}
+                saveEnd={plan.saveFundEndAge}
+                setSaveEnd={(v) => setField("saveFundEndAge", v)}
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-[#0a0a0a]/55">
+            ※ FP視点：非課税のNISAを優先的に活用し、つみたて枠（月10万）・成長枠（月20万）の合計年360万円・生涯1,800万円まで非課税で運用できます。
+          </p>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="株" defaultOpen={false}>
-          <Quad
-            bal={plan.stockBal}
-            setBal={(v) => setField("stockBal", v)}
-            r={plan.stockR}
-            setR={(v) => setField("stockR", v)}
-            saveM={plan.saveStockM}
-            setSaveM={(v) => setField("saveStockM", v)}
-            saveEnd={plan.saveStockEndAge}
-            setSaveEnd={(v) => setField("saveStockEndAge", v)}
-          />
+        <CollapsibleSubGroup title="株（NISA / 課税）" defaultOpen={false}>
+          <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <PercentField
+              label="想定利回り(年・共通)"
+              value={plan.stockR}
+              onChange={(v) => setField("stockR", v)}
+            />
+          </div>
+
+          <div
+            className="mb-3 overflow-hidden rounded-lg"
+            style={{ border: "2px solid #22863a40" }}
+          >
+            <div
+              className="flex items-center gap-2 px-3 py-1.5"
+              style={{ background: "#f0fff4" }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#22863a]">
+                NISA口座（非課税）
+              </span>
+              <span className="text-[9px] text-[#0a0a0a]/55">
+                成長投資枠で個別株・ETF も対象
+              </span>
+            </div>
+            <div className="px-3 pt-2 pb-3">
+              <Pair
+                bal={plan.stockNisaBal}
+                setBal={(v) => setField("stockNisaBal", v)}
+                saveM={plan.saveStockNisaM}
+                setSaveM={(v) => setField("saveStockNisaM", v)}
+                saveEnd={plan.saveStockNisaEndAge}
+                setSaveEnd={(v) => setField("saveStockNisaEndAge", v)}
+              />
+            </div>
+          </div>
+
+          <div
+            className="overflow-hidden rounded-lg"
+            style={{ border: "2px solid #0a0a0a30" }}
+          >
+            <div
+              className="flex items-center gap-2 px-3 py-1.5"
+              style={{ background: "#f0f0ee" }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0a0a0a]/70">
+                課税口座（特定口座等）
+              </span>
+              <span className="text-[9px] text-[#0a0a0a]/55">
+                譲渡益・配当に20.315%課税
+              </span>
+            </div>
+            <div className="px-3 pt-2 pb-3">
+              <Pair
+                bal={plan.stockBal}
+                setBal={(v) => setField("stockBal", v)}
+                saveM={plan.saveStockM}
+                setSaveM={(v) => setField("saveStockM", v)}
+                saveEnd={plan.saveStockEndAge}
+                setSaveEnd={(v) => setField("saveStockEndAge", v)}
+              />
+            </div>
+          </div>
         </CollapsibleSubGroup>
 
         <CollapsibleSubGroup title="確定拠出年金 (DC)" defaultOpen={false}>

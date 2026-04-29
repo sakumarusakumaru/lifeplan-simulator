@@ -26,14 +26,20 @@ export const DEFAULT_PLAN: PlanInput = {
 
   cashBal: 5_000_000,
   cashRate: 0.01,
-  fundBal: 3_000_000,
+  fundBal: 3_000_000,            // 課税口座（特定口座等）
   fundR: 4.0,
-  saveFundM: 50000,
+  saveFundM: 50000,              // 課税口座への月積立
   saveFundEndAge: 60,
+  fundNisaBal: 0,                // NISA投信残高（非課税・新規ユーザーのみ手動入力推奨）
+  saveFundNisaM: 0,              // NISAつみたて枠への月積立
+  saveFundNisaEndAge: 60,
   stockBal: 1_000_000,
   stockR: 5.0,
   saveStockM: 0,
   saveStockEndAge: 60,
+  stockNisaBal: 0,
+  saveStockNisaM: 0,
+  saveStockNisaEndAge: 60,
   cryptoBal: 0,
   cryptoR: 0,
   saveCryptoM: 0,

@@ -7,8 +7,10 @@ import type { DrawAsset } from "@/lib/calc/types";
 import { usePlanStore } from "@/store/plan-store";
 
 const DRAW_LABEL: Record<DrawAsset, string> = {
-  f: "投信",
-  s: "株",
+  f: "投信(課税)",
+  s: "株(課税)",
+  fNisa: "投信(NISA)",
+  sNisa: "株(NISA)",
   k: "仮想通貨",
   g: "金・コモディティ",
   dc: "確定拠出年金",
