@@ -26,6 +26,7 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
 
   const plan = usePlanStore((s) => s.plan);
   const patch = usePlanStore((s) => s.patch);
+  const reset = usePlanStore((s) => s.reset);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // 入力データをJSONでDL（detailタブ用）
@@ -164,6 +165,19 @@ export default function V2Layout({ children }: { children: React.ReactNode }) {
 
         {/* ページ別アクション（VER 3 バッジは廃止） */}
         <div className="no-print ml-auto flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm("入力内容をすべて初期値に戻しますか？\nこの操作は取り消せません。")) {
+                reset();
+              }
+            }}
+            className="px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#c8383a] hover:text-white hover:border-[#c8383a]"
+            style={headerBtnStyle}
+            title="すべての入力をデフォルト値に戻す"
+          >
+            初期化
+          </button>
           {onDetail && (
             <>
               <button
