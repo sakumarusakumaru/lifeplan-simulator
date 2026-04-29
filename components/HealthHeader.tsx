@@ -123,6 +123,7 @@ export function HealthHeader({
 }) {
   const pathname = usePathname();
   const isV3 = pathname?.startsWith("/v3") ?? false;
+  const isV3Detail = pathname?.startsWith("/v3/detail") ?? false;
   const health = computeHealth(result, plan);
   const c = ALERT_COLORS[health.alert];
   const nwSeries = result.rows.map((r) => r.nw);
@@ -135,6 +136,80 @@ export function HealthHeader({
   const nwAtRetire = retireRow ? retireRow.nw : null;
   const nwAt65 = result.rows.find((r) => r.age === 65)?.nw ?? null;
   const shortfallText = result.shortfallAge ? `${result.shortfallAge}歳` : "なし";
+
+  // 詳細入力ページ: コンパクト1行表示
+  if (isV3Detail) {
+    return (
+      <div
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-3 py-2"
+        style={{ background: c.light, border: `1.5px solid ${c.main}40` }}
+      >
+        {/* スコアバッジ */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <div
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white tabular-nums"
+            style={{ background: c.main }}
+          >
+            {health.score}
+          </div>
+          <div>
+            <p className="text-[7px] font-bold uppercase tracking-[0.12em]" style={{ color: c.text }}>
+              診断スコア
+            </p>
+            <p className="text-[10px] font-bold leading-tight text-[#0a0a0a]">
+              {health.headline}
+            </p>
+          </div>
+        </div>
+
+        <span className="h-5 w-px shrink-0" style={{ background: "#0a0a0a25" }} />
+
+        {/* 主要指標 4項目 */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex flex-col">
+            <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/50">
+              最終純資産（{plan.endAge}歳）
+            </p>
+            <p
+              className="text-xs font-bold tabular-nums leading-tight"
+              style={{ color: result.finalNetWorth < 0 ? "#c8383a" : "#0a0a0a" }}
+            >
+              {fmt(result.finalNetWorth)}
+            </p>
+          </div>
+          <div className="flex flex-col">
+            <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/50">ショート</p>
+            <p
+              className="text-xs font-bold tabular-nums leading-tight"
+              style={{ color: result.shortfallAge ? "#c8383a" : "#0a0a0a" }}
+            >
+              {shortfallText}
+            </p>
+          </div>
+          <div className="flex flex-col">
+            <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/50">
+              退職時（{lastJobEndAge}歳）
+            </p>
+            <p
+              className="text-xs font-bold tabular-nums leading-tight"
+              style={{ color: nwAtRetire !== null && nwAtRetire < 0 ? "#c8383a" : "#0a0a0a" }}
+            >
+              {nwAtRetire !== null ? fmt(nwAtRetire) : "—"}
+            </p>
+          </div>
+          <div className="flex flex-col">
+            <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/50">65歳純資産</p>
+            <p
+              className="text-xs font-bold tabular-nums leading-tight"
+              style={{ color: nwAt65 !== null && nwAt65 < 0 ? "#c8383a" : "#0a0a0a" }}
+            >
+              {nwAt65 !== null ? fmt(nwAt65) : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

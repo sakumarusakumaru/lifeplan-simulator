@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { AssetsChart } from "@/components/charts/AssetsChart";
@@ -931,17 +931,35 @@ function BSColumnGrouped({
         barSide === "right" ? "items-end text-right" : "items-start text-left"
       }`}
     >
-      {ordered.map((item) => (
-        <BSLegendItem
-          key={item.segment.label}
-          segment={item.segment}
-          groupLabel={item.groupLabel}
-          showGroup={item.isGroupHead}
-          barSide={barSide}
-          hovered={hovered}
-          setHovered={setHovered}
-        />
-      ))}
+      {ordered.map((item, idx) => {
+        const needsDivider =
+          idx > 0 &&
+          ordered[idx - 1].groupLabel === null &&
+          item.groupLabel !== null;
+        return (
+          <Fragment key={item.segment.label}>
+            {needsDivider && (
+              <li
+                aria-hidden
+                style={{
+                  height: 1,
+                  background: "#0a0a0a",
+                  flexShrink: 0,
+                  margin: "4px 0",
+                }}
+              />
+            )}
+            <BSLegendItem
+              segment={item.segment}
+              groupLabel={item.groupLabel}
+              showGroup={item.isGroupHead}
+              barSide={barSide}
+              hovered={hovered}
+              setHovered={setHovered}
+            />
+          </Fragment>
+        );
+      })}
     </ul>
   );
 
@@ -1015,7 +1033,7 @@ function BSLegendItem({
             [{groupLabel}]
           </p>
         )}
-        <p className="leading-tight text-[#0a0a0a]/70">{segment.label}</p>
+        <p className="whitespace-nowrap text-[9px] leading-tight text-[#0a0a0a]/70">{segment.label}</p>
         <p
           className="font-bold tabular-nums leading-tight"
           style={{
