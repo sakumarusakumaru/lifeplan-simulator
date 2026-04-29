@@ -289,7 +289,7 @@ export function SettingsMegaSection() {
                   color: detailed ? "#ffffff" : "#0a0a0a",
                 }}
               >
-                詳細（FP級計算）
+                詳細モード
               </button>
             </div>
 

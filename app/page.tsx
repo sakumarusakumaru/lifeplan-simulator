@@ -1,235 +1,186 @@
 "use client";
 
-import { useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { MobileStickyBar } from "@/components/MobileStickyBar";
-import { ResultsPanel } from "@/components/ResultsPanel";
-import { AssetsSection } from "@/components/sections/AssetsSection";
-import { BasicSection } from "@/components/sections/BasicSection";
-import { EducationSection } from "@/components/sections/EducationSection";
-import { ExpenseSection } from "@/components/sections/ExpenseSection";
-import { HousingSection } from "@/components/sections/HousingSection";
-import { IncomeSection } from "@/components/sections/IncomeSection";
-import { InsuranceSection } from "@/components/sections/InsuranceSection";
-import { PensionSection } from "@/components/sections/PensionSection";
-import { RealEstateSection } from "@/components/sections/RealEstateSection";
-import { simulate } from "@/lib/calc/simulate";
-import { usePlanStore } from "@/store/plan-store";
+const CONSENT_KEY = "lp_consent_v1";
 
-const fmt = (yen: number) => {
-  const man = Math.round(yen / 10000);
-  if (Math.abs(man) >= 10000) return `${(man / 10000).toFixed(1)}億`;
-  return `${man.toLocaleString()}万`;
-};
+export default function LandingPage() {
+  const router = useRouter();
+  const [agreed, setAgreed] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
 
-export default function Home() {
-  const hydrated = usePlanStore((s) => s.hydrated);
-  const plan = usePlanStore((s) => s.plan);
-  const reset = usePlanStore((s) => s.reset);
-  const result = useMemo(() => simulate(plan), [plan]);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CONSENT_KEY);
+      if (stored) {
+        setHasPrev(true);
+        setAgreed(true);
+      }
+    } catch {
+      // localStorage 不可の環境（プライベートブラウジング等）はそのまま
+    }
+  }, []);
 
-  if (!hydrated) {
-    return (
-      <main className="flex min-h-screen items-center justify-center text-xs font-bold uppercase tracking-[0.2em] text-[#0a0a0a]/60">
-        loading...
-      </main>
-    );
-  }
-
-  const shortfall = result.shortfallAge;
-  const nw = result.finalNetWorth;
-
-  const insight = shortfall
-    ? `⚠ ${shortfall}歳で資金不足の見込み`
-    : nw >= 0
-      ? `${plan.endAge}歳まで黒字の見込み`
-      : `資産がマイナスになる見込み`;
-
-  const insightAlert = !!shortfall || nw < 0;
+  const handleEnter = () => {
+    if (!agreed) return;
+    try {
+      localStorage.setItem(CONSENT_KEY, new Date().toISOString());
+    } catch {
+      // 失敗しても遷移する
+    }
+    router.push("/v3/detail");
+  };
 
   return (
-    <>
-      {/* ── STICKY HEADER ── */}
-      <header
-        className="sticky top-0 z-50 flex items-center justify-between gap-3 px-4 py-2.5 sm:px-8"
-        style={{
-          background: "#f0f0ee",
-          borderBottom: "2.5px solid #0a0a0a",
-        }}
-      >
-        {/* LEFT: logo */}
-        <div className="flex shrink-0 items-center gap-2.5">
-          <span className="text-sm font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">
-            LIFEPLAN SIMULATOR
-          </span>
-          <Badge label="BETA" tone="action" />
+    <main
+      className="min-h-screen px-4 py-10 sm:px-8 sm:py-14"
+      style={{ background: "#f0f0ee" }}
+    >
+      <div className="mx-auto max-w-2xl">
+        {/* タイトル */}
+        <div className="mb-8 border-b-2 border-[#0a0a0a] pb-4">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">
+            LIFE PLAN SIMULATOR v3
+          </p>
+          <h1 className="text-3xl font-bold leading-tight text-[#0a0a0a]">
+            人生のお金を、
+            <br />
+            自分で試算してみるツール
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-[#0a0a0a]/65">
+            年齢・収入・支出・資産・住居・教育・年金などを入力すると、
+            毎年の純資産推移と資金ショート時期を試算します。
+          </p>
         </div>
 
-        {/* CENTER: key KPIs + insight */}
-        <div className="hidden flex-1 items-center justify-center gap-6 lg:flex">
-          <KpiChip
-            label="最終純資産"
-            value={fmt(nw)}
-            alert={nw < 0}
-          />
-          <KpiChip
-            label="資金ショート"
-            value={shortfall ? `${shortfall}歳` : "なし"}
-            alert={!!shortfall}
-          />
-          <span
-            className="text-[10px] font-bold tracking-wide"
-            style={{ color: insightAlert ? "#c8383a" : "#0a0a0a99" }}
+        {/* 重要な注意事項 */}
+        <div
+          className="mb-6 overflow-hidden rounded-xl"
+          style={{ background: "#fff8e7", border: "2.5px solid #c8383a" }}
+        >
+          <div
+            className="px-4 py-2.5"
+            style={{ background: "#c8383a" }}
           >
-            {insight}
-          </span>
-        </div>
-
-        {/* RIGHT: actions */}
-        <div className="flex shrink-0 items-center gap-2">
-          <PrimaryButton>ログイン</PrimaryButton>
-          <Button
-            onClick={() => {
-              if (confirm("入力内容を初期化しますか？")) reset();
-            }}
-          >
-            初期化
-          </Button>
-        </div>
-      </header>
-
-      {/* ── MAIN ── */}
-      <main className="px-4 py-4 pb-24 sm:px-8 sm:pb-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-[220px_1fr] md:grid-cols-[1fr_2fr]">
-            <div className="flex flex-col gap-2">
-              <BasicSection />
-              <IncomeSection />
-              <PensionSection />
-              <AssetsSection />
-              <ExpenseSection />
-              <HousingSection />
-              <EducationSection />
-              <RealEstateSection />
-              <InsuranceSection />
-            </div>
-
-            <aside className="sm:sticky sm:top-[56px] sm:max-h-[calc(100vh-56px)] sm:self-start sm:overflow-y-auto sm:pr-1">
-              <ResultsPanel />
-            </aside>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white">
+              ⚠ 重要 ／ ご利用前に必ずお読みください
+            </p>
           </div>
+          <div className="px-5 py-4">
+            <ul className="flex flex-col gap-2.5 text-[13px] leading-relaxed text-[#0a0a0a]/85">
+              <li className="flex gap-2">
+                <span className="shrink-0 font-bold text-[#c8383a]">1.</span>
+                <span>
+                  本サイトは
+                  <span className="font-bold">個人が運営する情報提供のための計算ツール</span>
+                  です。
+                  <span className="font-bold">投資・保険・税務・法務に関する助言は一切行いません。</span>
+                  運営者は資格を有するファイナンシャルプランナー・税理士等ではありません。
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 font-bold text-[#c8383a]">2.</span>
+                <span>
+                  入力されたデータは
+                  <span className="font-bold">お使いのブラウザ内（localStorage）にのみ保存</span>
+                  され、
+                  <span className="font-bold">運営者のサーバーには一切送信されません</span>
+                  。第三者への提供・販売も一切ありません。
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 font-bold text-[#c8383a]">3.</span>
+                <span>
+                  計算結果は前提条件（インフレ率・運用利回り・税率・耐用年数等）下の
+                  <span className="font-bold">概算</span>
+                  です。実際の年金額・税額・運用成果は経済情勢や制度改正により変動し、
+                  <span className="font-bold">将来を保証するものではありません</span>。
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 font-bold text-[#c8383a]">4.</span>
+                <span>
+                  個別の商品選択・税務判断・契約に関わる意思決定は、必ず
+                  <span className="font-bold">登録のある専門家（FP・税理士・社労士・弁護士等）</span>
+                  にご相談ください。
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0 font-bold text-[#c8383a]">5.</span>
+                <span>
+                  本サイトの利用により発生したいかなる損害（投資判断・税務判断・契約等を含む）についても、
+                  <span className="font-bold">運営者は一切の責任を負いません</span>。
+                </span>
+              </li>
+            </ul>
 
-          <MobileStickyBar />
-
-          {/* ── FOOTER ── */}
-          <footer
-            className="mt-10 border-t pt-4"
-            style={{ borderColor: "#0a0a0a30" }}
-          >
-            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
-              <p className="max-w-xl text-[9px] leading-relaxed text-[#0a0a0a]/45">
-                免責事項：本ツールの計算結果はあくまで概算であり、投資・財務・税務アドバイスを目的とするものではありません。
-                実際の資産運用・保険加入・税務申告等については、必ず専門家（FP・税理士・証券会社等）にご相談ください。
-                計算上の誤差・損害について当サービスは一切の責任を負いません。
-              </p>
-              <div className="flex items-center gap-3 text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/40">
-                <a href="/privacy" className="hover:text-[#0a0a0a]">プライバシーポリシー</a>
-                <span>·</span>
-                <a href="/terms" className="hover:text-[#0a0a0a]">利用規約</a>
-                <span>·</span>
-                <span>© 2026 SAKUMARU</span>
-                <span>·</span>
-                <span>v0.1.0-beta</span>
-              </div>
+            <div
+              className="mt-4 flex flex-wrap gap-3 border-t pt-3 text-[11px]"
+              style={{ borderColor: "#0a0a0a20" }}
+            >
+              <Link
+                href="/terms"
+                className="font-bold text-[#0a0a0a] underline hover:text-[#c8383a]"
+              >
+                → 利用規約を読む
+              </Link>
+              <Link
+                href="/privacy"
+                className="font-bold text-[#0a0a0a] underline hover:text-[#c8383a]"
+              >
+                → プライバシーポリシーを読む
+              </Link>
             </div>
-          </footer>
+          </div>
         </div>
-      </main>
-    </>
-  );
-}
 
-/* ── primitives ── */
+        {/* 同意チェック + 入場ボタン */}
+        <label
+          className="flex cursor-pointer items-start gap-3 rounded-xl p-4"
+          style={{
+            background: agreed ? "#f0fff4" : "#ffffff",
+            border: `2.5px solid ${agreed ? "#22863a" : "#0a0a0a"}`,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#22863a]"
+          />
+          <span className="flex-1 text-sm font-bold leading-snug text-[#0a0a0a]">
+            上記すべての内容を理解し、同意して利用します
+            {hasPrev && (
+              <span className="ml-2 text-[10px] font-medium text-[#0a0a0a]/50">
+                （前回の同意が記録されています）
+              </span>
+            )}
+          </span>
+        </label>
 
-function KpiChip({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/50">
-        {label}
-      </span>
-      <span
-        className="text-sm font-bold tabular-nums"
-        style={{ color: alert ? "#c8383a" : "#0a0a0a" }}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
+        <button
+          type="button"
+          onClick={handleEnter}
+          disabled={!agreed}
+          className="mt-4 w-full py-4 text-sm font-bold uppercase tracking-[0.16em] transition-all"
+          style={{
+            background: agreed ? "#0a0a0a" : "#d4d4d2",
+            color: agreed ? "#ffffff" : "#0a0a0a55",
+            border: `2.5px solid ${agreed ? "#0a0a0a" : "#0a0a0a30"}`,
+            borderRadius: 12,
+            cursor: agreed ? "pointer" : "not-allowed",
+          }}
+        >
+          同意してシミュレーターを開始 →
+        </button>
 
-function Button({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="px-3 text-xs font-bold transition-colors duration-150 hover:bg-[#0a0a0a] hover:text-white"
-      style={{
-        height: 32,
-        background: "#ffffff",
-        color: "#0a0a0a",
-        border: "2.5px solid #0a0a0a",
-        borderRadius: 8,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function PrimaryButton({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="px-4 text-xs font-bold text-white transition-colors duration-150 hover:bg-[#0a0a0a]"
-      style={{
-        height: 32,
-        background: "#c8383a",
-        border: "2.5px solid #0a0a0a",
-        borderRadius: 8,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Badge({ label, tone }: { label: string; tone: "action" | "calm" }) {
-  const bg = tone === "action" ? "#c8383a" : "#66666a";
-  return (
-    <span
-      className="inline-flex items-center text-[10px] font-bold uppercase tracking-[0.1em] text-white"
-      style={{
-        height: 20,
-        padding: "0 8px",
-        background: bg,
-        border: "2px solid #0a0a0a",
-        borderRadius: 8,
-      }}
-    >
-      {label}
-    </span>
+        <p className="mt-6 text-[11px] leading-relaxed text-[#0a0a0a]/45">
+          運営者：個人（さくまる）／ 連絡先：本サイトはお問い合わせ窓口を設けておりません。
+          サイトの利用は完全に自己責任でお願いします。
+        </p>
+      </div>
+    </main>
   );
 }

@@ -257,7 +257,7 @@ export function HealthHeader({
           className="shrink-0 text-[9px] font-bold uppercase tracking-[0.18em]"
           style={{ color: c.text }}
         >
-          FP INSIGHT
+          参考情報
         </span>
         <span className="text-[11px] leading-snug text-[#0a0a0a]/80">
           {health.shortInsight}

@@ -343,7 +343,10 @@ export default function ResultPage() {
               {/* FPコメント（4段構成） */}
               <div className="px-5 py-4">
                 <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
-                  FP COMMENT ／ 一般に整理される論点
+                  参考情報 ／ GENERAL INFORMATION
+                </p>
+                <p className="mb-3 rounded-md px-2.5 py-1.5 text-[10px] leading-relaxed text-[#0a0a0a]/55" style={{ background: "#fff8e7", border: "1px solid #c8383a30" }}>
+                  ※ 以下は一般的な制度情報・選択肢の整理です。個別の助言・推奨ではありません。意思決定の前に専門家にご相談ください。
                 </p>
                 <div className="whitespace-pre-line text-[12px] leading-[1.85] text-[#0a0a0a]/85" style={{ fontFeatureSettings: "'palt'" }}>
                   {v.body}
@@ -396,7 +399,7 @@ export default function ResultPage() {
             />
             <ProfileItem
               label="税計算"
-              value={plan.taxMode === "detailed" ? "詳細(FP級)" : "簡易"}
+              value={plan.taxMode === "detailed" ? "詳細モード" : "簡易モード"}
             />
           </div>
         </div>
@@ -511,7 +514,7 @@ export default function ResultPage() {
             <li>
               <span className="font-bold text-[#0a0a0a]">税・社会保険:</span>{" "}
               {plan.taxMode === "detailed"
-                ? "FP級の累進課税・控除・社会保険料を詳細計算"
+                ? "累進課税・各種控除・社会保険料を詳細モードで計算"
                 : `一律 ${plan.taxRate}% で簡易計算`}
             </li>
             <li>
