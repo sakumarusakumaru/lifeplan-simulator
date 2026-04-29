@@ -1,42 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LIFE PLAN SIMULATOR ver3
 
-## Getting Started
+個人の収支・資産・負債・年金・税金をもとに、老後までのキャッシュフローと資産推移を試算するWebシミュレーターです。FP相談級の入力項目と計算精度を目指しています。
 
-First, run the development server:
+> 免責事項: 本ツールは一般的な情報提供を目的としたものであり、個別の投資・税務・ファイナンシャルプランニングに関するアドバイスを提供するものではありません。実際の判断はFP・税理士等の専門家にご相談ください。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 特徴
+
+- 収入・支出・資産・負債・年金・税金をすべて入力し、1年単位でシミュレーション
+- 所得税累進・住民税・社会保険料・介護保険料を考慮した詳細税金計算モード
+- 新NISA対応（NISA口座と課税口座を分けて入力・試算）
+- 資産推移グラフ・年次キャッシュフローグラフ・バランスシートをリアルタイム更新
+- JSON でプランをエクスポート／インポート
+- PDFでの印刷・保存に対応
+- シナリオ比較（インフレ感度・収入増加・支出削減・積立増額・運用利回り等）
+
+---
+
+## 技術スタック
+
+| 項目 | 内容 |
+|---|---|
+| フレームワーク | Next.js 16 (App Router) |
+| 言語 | TypeScript |
+| スタイル | Tailwind CSS v4 |
+| 状態管理 | Zustand（localStorage永続化） |
+| グラフ | Recharts |
+| デプロイ | Vercel |
+
+---
+
+## ディレクトリ構成
+
+```
+app/
+├── page.tsx              # トップページ（同意ゲート）
+├── v3/
+│   ├── layout.tsx        # v3 共通ヘッダー・タブナビ
+│   ├── detail/           # 詳細入力ページ
+│   ├── result/           # 結果出力ページ
+│   └── suggest/          # シナリオ比較ページ
+├── terms/                # 利用規約
+└── privacy/              # プライバシーポリシー
+
+components/
+├── charts/               # AssetsChart・CashflowChart
+├── inputs/               # 入力コンポーネント（NumberField 等）
+├── sections/mega/        # 4つのメガセクション（設定・収入・資産・支出）
+├── HealthHeader.tsx      # 診断スコア＋主要指標バー
+├── ResultsPanel.tsx      # 結果パネル
+└── Footer.tsx            # フッター
+
+lib/calc/
+├── simulate.ts           # メインシミュレーションエンジン
+├── tax.ts                # 税金・社会保険計算
+├── drawOrder.ts          # 資産取り崩し順序ロジック
+├── types.ts              # 型定義
+└── ...
+
+store/
+└── plan-store.ts         # Zustand ストア（PlanInput・simulate結果）
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ローカル開発
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# 依存パッケージをインストール
+npm install
 
-## Learn More
+# 開発サーバーを起動
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+ブラウザで [http://localhost:3000](http://localhost:3000) を開く。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# 型チェック
+npx tsc --noEmit
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# プロダクションビルド
+npm run build
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 主な入力項目
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| セクション | 入力できること |
+|---|---|
+| 基本設定 | 本人・配偶者の生年月日、シミュレーション期間、インフレ率、税金モード |
+| 収入 | 就労収入（複数社）・昇給率・退職金、副業、公的年金、配偶者収入 |
+| 資産 | 現金・投信（NISA/課税）・株（NISA/課税）・仮想通貨・金・確定拠出年金 |
+| 支出 | 生活費・住居費・子どもの教育費、ライフイベント（一時支出） |
+| 負債 | 住宅ローン・不動産投資ローン・その他ローン |
+| 不動産 | 自宅・投資物件の評価額（物件種別×築年数で自動算出）・家賃収入 |
+
+---
+
+## バージョン履歴
+
+詳細は [CHANGELOG.md](./CHANGELOG.md) を参照。
+
+| バージョン | 内容 |
+|---|---|
+| v3.4 | 初期化ボタン・UI文言整理・BSラベル1行化 |
+| v3.3 | 新NISA対応（NISA/課税口座の分割入力） |
+| v3.2 | 法的対応（同意ゲート・利用規約・プライバシーポリシー） |
+| v3.1 | JSON/PDFエクスポート・シナリオ比較拡充 |
+| v3.0 | v3 本番化・スティッキーヘッダー・BSハイブリッド表示 |
+| v2.0 | メガセクション再編・税金詳細計算モード |
+| v1.0 | Next.js によるフルリビルド |
+
+---
 
 ## 関連
+
 - [[AGENTS]]
+- [[CHANGELOG]]
 - [[60_finance/tools/lifeplan-simulator/README]]
-- [[organize-addressable-assets]]
-- [[remote-content-predownload]]
