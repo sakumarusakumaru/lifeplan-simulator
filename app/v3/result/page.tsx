@@ -1013,17 +1013,15 @@ function BSLegendItem({
     <li
       onMouseEnter={() => setHovered(segment.label)}
       onMouseLeave={() => setHovered(null)}
-      className={`flex items-center gap-1.5 cursor-pointer transition-all overflow-hidden ${
+      className={`flex items-center gap-1.5 cursor-pointer transition-all ${
         barSide === "right" ? "flex-row-reverse" : ""
       }`}
-      style={{ height: segment.heightPx }}
+      style={{ height: segment.heightPx, overflow: "visible" }}
     >
       {swatch}
-      {/* 1行表示: ラベル + 金額をインラインで並べる */}
+      {/* 1行表示: ラベル → 金額（順序は常に固定・反転なし） */}
       <div
-        className={`flex min-w-0 items-baseline gap-1 transition-all ${
-          barSide === "right" ? "flex-row-reverse" : ""
-        }`}
+        className="flex min-w-0 items-baseline gap-1 transition-all"
         style={{
           transform: isHovered ? "scale(1.08)" : "scale(1)",
           transformOrigin: barSide === "right" ? "right center" : "left center",
