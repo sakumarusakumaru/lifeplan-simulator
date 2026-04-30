@@ -40,16 +40,20 @@ button {
   font-family: inherit;
 }
 
-/* PDF出力用：A4横・全幅に収める */
+/* PDF出力用：画面レイアウトをそのままA4横に縮小して書き出す */
 @media print {
   @page {
     size: A4 landscape;
-    margin: 10mm 12mm;
+    margin: 0;
+  }
+  /* 画面全体を約75%に縮小してA4横幅（297mm）に収める。
+     グリッドやチャートのレイアウトは一切崩さない。 */
+  html {
+    zoom: 0.72;
   }
   html,
   body {
     background: #ffffff !important;
-    width: 100% !important;
   }
   header,
   footer,
@@ -57,18 +61,7 @@ button {
     display: none !important;
   }
   main {
-    max-width: none !important;
-    width: 100% !important;
-    padding: 0 !important;
-  }
-  /* グリッドを1カラムに崩してフル幅で表示 */
-  .grid {
-    display: block !important;
-  }
-  /* チャート・テーブルが横幅に収まるよう */
-  * {
-    max-width: 100% !important;
-    overflow: visible !important;
+    padding: 8px !important;
   }
   section {
     page-break-inside: avoid;

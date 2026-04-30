@@ -178,7 +178,7 @@ export function SettingsMegaSection() {
               onChange={(v) => setField("infl", v)}
             />
             <NumberField
-              label="最低現金"
+              label="現金保有下限額"
               value={plan.cashFloor}
               onChange={(v) => setField("cashFloor", v)}
               unit="円"

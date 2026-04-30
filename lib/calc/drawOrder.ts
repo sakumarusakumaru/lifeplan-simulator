@@ -14,20 +14,37 @@ export const DRAW_LABEL: Record<DrawAsset | "c", string> = {
 };
 
 // FP視点の取崩順序の基本方針：
-//  1. 課税口座（特定口座等）の投信・株を先に取り崩す → 譲渡益課税の発生を抑え、
-//     NISA非課税枠を最後まで温存することで複利効果を最大化
-//  2. 60歳以降は DC を組み合わせる（退職所得控除・公的年金等控除を活用）
-//  3. NISA は最後に取り崩す
-//  4. 仮想通貨・金は最後（ボラティリティ高く分散効果として温存）
+//
+//  [原則] NISA は「常に最後」に取り崩す
+//    → NISA の非課税複利を最大限温存するため、他の資産をすべて使い切ってから。
+//
+//  [順序]
+//   1. 課税口座の安定資産（投信・株）を先に取り崩す
+//      → 含み益への譲渡益課税（20.315%）が発生するが、元本部分は無税。
+//        NISA より税コストが高いため先に使う。
+//   2. ハイボラ資産（仮想通貨・金）を課税安定資産の次に取り崩す
+//      → 暗号資産は雑所得として最大55%課税（NISA より不利）。
+//        金は分離課税・総合課税の選択適用。どちらも NISA より税コストが高い。
+//   3. DC（確定拠出年金）は60歳以降のみ取り崩し可能
+//      → 退職所得控除（一時金）または公的年金等控除（年金受給）が使える。
+//        受給開始年齢・税控除の最適化のため、ハイボラ資産の後に配置。
+//   4. NISA（投信・株）を最後に取り崩す
+//      → 非課税口座なので税コストが最小。最後まで複利成長させることが合理的。
+//
+//  [年齢別変化]
+//   < 60歳 : 課税投信→課税株→仮想通貨→金→NISA投信→NISA株  ※DC取崩不可
+//   ≥ 60歳 : 課税投信→課税株→仮想通貨→金→DC→NISA投信→NISA株
 export function resolveDrawOrder(
   mode: DrawOrderMode,
   customOrder: DrawAsset[],
   age: number,
 ): DrawAsset[] {
+  const under60 = age < 60;
+
   if (mode === "auto-tiered") {
-    if (age < 60) return ["f", "s", "fNisa", "sNisa", "k", "g"];
-    if (age < 65) return ["dc", "s", "f", "sNisa", "fNisa", "k", "g"];
-    return ["f", "s", "dc", "fNisa", "sNisa", "k", "g"];
+    return under60
+      ? ["f", "s", "k", "g", "fNisa", "sNisa"]
+      : ["f", "s", "k", "g", "dc", "fNisa", "sNisa"];
   }
 
   if (mode === "custom") {
@@ -39,29 +56,32 @@ export function resolveDrawOrder(
         seen.add(x);
       }
     }
+    // カスタムに含まれていないアセットを末尾に追加（抜け漏れ防止）
     for (const x of DRAW_ASSETS) {
       if (!seen.has(x)) ord.push(x);
     }
-    if (age < 60) return ord.filter((x) => x !== "dc");
-    return ord;
+    // DC は 60歳未満は取崩不可
+    return under60 ? ord.filter((x) => x !== "dc") : ord;
   }
 
+  // 投信→株→仮想通貨 プリセット（課税先・NISA後）
   if (mode === "fund-stock-crypto") {
-    return age < 60
-      ? ["f", "s", "fNisa", "sNisa", "k", "g"]
-      : ["f", "s", "dc", "fNisa", "sNisa", "k", "g"];
-  }
-  if (mode === "stock-fund-crypto") {
-    return age < 60
-      ? ["s", "f", "sNisa", "fNisa", "k", "g"]
-      : ["s", "f", "dc", "sNisa", "fNisa", "k", "g"];
+    return under60
+      ? ["f", "s", "k", "g", "fNisa", "sNisa"]
+      : ["f", "s", "k", "g", "dc", "fNisa", "sNisa"];
   }
 
-  return age < 60
-    ? ["f", "s", "fNisa", "sNisa", "k", "g"]
-    : age < 65
-      ? ["dc", "s", "f", "sNisa", "fNisa", "k", "g"]
-      : ["f", "s", "dc", "fNisa", "sNisa", "k", "g"];
+  // 株→投信→仮想通貨 プリセット（課税先・NISA後）
+  if (mode === "stock-fund-crypto") {
+    return under60
+      ? ["s", "f", "k", "g", "sNisa", "fNisa"]
+      : ["s", "f", "k", "g", "dc", "sNisa", "fNisa"];
+  }
+
+  // フォールバック（auto-tiered と同一）
+  return under60
+    ? ["f", "s", "k", "g", "fNisa", "sNisa"]
+    : ["f", "s", "k", "g", "dc", "fNisa", "sNisa"];
 }
 
 export function orderToText(ord: DrawAsset[]): string {

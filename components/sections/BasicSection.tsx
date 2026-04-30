@@ -133,9 +133,9 @@ export function BasicSection() {
           <PercentField label="税率（概算）" value={plan.taxRate} onChange={(v) => setField("taxRate", v)} step={1} />
         </div>
 
-        {/* 最低現金・取り崩し */}
+        {/* 現金保有下限額・取り崩し */}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
-          <NumberField label="最低現金" value={plan.cashFloor} onChange={(v) => setField("cashFloor", v)} unit="円" />
+          <NumberField label="現金保有下限額" value={plan.cashFloor} onChange={(v) => setField("cashFloor", v)} unit="円" />
           <SelectField label="取り崩し順序" value={plan.drawOrder} onChange={(v) => setField("drawOrder", v)} options={DRAW_ORDER_OPTIONS} />
         </div>
 

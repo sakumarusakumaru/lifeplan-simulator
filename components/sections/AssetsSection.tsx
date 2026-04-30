@@ -151,7 +151,7 @@ export function AssetsSection() {
         ) : null}
 
         <NumberField
-          label="最低現金（これを下回ると資産取り崩し）"
+          label="現金保有下限額（これを下回ると自動取り崩し）"
           value={plan.cashFloor}
           onChange={(v) => setField("cashFloor", v)}
           unit="円"
