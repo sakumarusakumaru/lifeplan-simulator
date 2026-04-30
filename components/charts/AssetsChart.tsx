@@ -48,13 +48,13 @@ const FILLS = {
 };
 
 const FILLS_HOVER = {
-  cash: "#334155",
-  fund: "#64748b",
-  stock: "#7d92a8",
-  crypto: "#7c3aed",
-  gold: "#a47f4d",
-  dc: "#a8b8c8",
-  nw: "#c8383a",
+  cash: "#334155",   // 現金: ダークスレート（そのまま）
+  fund: "#1a6fa8",   // 投資信託: 青系（現金のスレートと明確に差別化）
+  stock: "#2d7a6a",  // 株: ティール緑（投信の青・現金のグレーと区別）
+  crypto: "#7c3aed", // 仮想通貨: 紫（そのまま）
+  gold: "#a47f4d",   // 金: アンバー（そのまま）
+  dc: "#5a7fa0",     // DC: スチールブルー（そのまま）
+  nw: "#c8383a",     // 純資産: 赤（そのまま）
 };
 
 const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
