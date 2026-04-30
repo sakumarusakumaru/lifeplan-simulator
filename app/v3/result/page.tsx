@@ -1013,38 +1013,36 @@ function BSLegendItem({
     <li
       onMouseEnter={() => setHovered(segment.label)}
       onMouseLeave={() => setHovered(null)}
-      className={`flex items-center gap-1.5 cursor-pointer transition-all ${
+      className={`flex items-center gap-1.5 cursor-pointer transition-all overflow-hidden ${
         barSide === "right" ? "flex-row-reverse" : ""
       }`}
-      style={{
-        height: segment.heightPx,
-      }}
+      style={{ height: segment.heightPx }}
     >
       {swatch}
+      {/* 1行表示: ラベル + 金額をインラインで並べる */}
       <div
-        className="min-w-0 transition-all"
+        className={`flex min-w-0 items-baseline gap-1 transition-all ${
+          barSide === "right" ? "flex-row-reverse" : ""
+        }`}
         style={{
-          transform: isHovered ? "scale(1.15)" : "scale(1)",
+          transform: isHovered ? "scale(1.08)" : "scale(1)",
           transformOrigin: barSide === "right" ? "right center" : "left center",
         }}
       >
-        {showGroup && groupLabel && (
-          <p className="text-[8px] font-bold uppercase tracking-wide text-[#0a0a0a]/40 leading-none mb-0.5">
-            [{groupLabel}]
-          </p>
-        )}
-        <p className="whitespace-nowrap text-[9px] leading-tight text-[#0a0a0a]/70">{segment.label}</p>
-        <p
-          className="font-bold tabular-nums leading-tight"
+        <span className="truncate text-[9px] leading-none text-[#0a0a0a]/70">
+          {segment.label}
+        </span>
+        <span
+          className="shrink-0 font-bold tabular-nums leading-none"
           style={{
             color: isHovered ? segment.color : "#0a0a0a",
-            fontSize: isHovered ? "13px" : "11px",
+            fontSize: isHovered ? "12px" : "10px",
             transition: "all 0.15s",
             filter: isHovered ? "brightness(0.7)" : "none",
           }}
         >
           {fmtMan(segment.value)}
-        </p>
+        </span>
       </div>
     </li>
   );
