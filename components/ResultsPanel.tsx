@@ -62,219 +62,90 @@ export function ResultsPanel() {
 }
 
 function YearlyTable({ rows }: { rows: YearlyResult[] }) {
-  // 縦罫線（グループ境界）
-  const VBORDER = "1px solid rgba(255,255,255,0.22)";
-  const VBORDER_BODY = "1px solid rgba(10,10,10,0.12)";
+  const H1 = { background: "#0a0a0a", color: "#ffffff" } as const;
+  const H2_INC = { background: "#2a2a2a", color: "#ffffff" } as const;
+  const H2_EXP = { background: "#444444", color: "#ffffff" } as const;
+  const SEP = "1px solid rgba(10,10,10,0.10)";
+  const SEP_GROUP = "1.5px solid rgba(10,10,10,0.22)";
 
   return (
-    <div className="overflow-x-auto" style={{ borderTop: "2.5px solid #0a0a0a" }}>
+    <div className="overflow-x-auto" style={{ borderTop: "2px solid #0a0a0a" }}>
       <table
-        className="border-collapse text-[10px]"
-        style={{ minWidth: 1100, width: "100%" }}
+        className="border-collapse"
+        style={{ minWidth: 520, width: "100%", fontSize: 9 }}
       >
         <thead>
-          {/* 1段目: グループヘッダ */}
-          <tr className="text-white">
-            <th
-              rowSpan={2}
-              className="px-2 py-1.5 text-center font-bold tracking-wider"
-              style={{ background: "#0a0a0a", borderRight: VBORDER }}
-            >
-              AGE
+          {/* 1段目: グループラベル */}
+          <tr>
+            <th rowSpan={2} style={{ ...H1, borderRight: SEP_GROUP, padding: "4px 6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.12em", fontSize: 8 }}>
+              歳
             </th>
-            <th
-              colSpan={5}
-              className="px-2 py-1 text-center text-[10px] font-bold uppercase tracking-[0.14em]"
-              style={{ background: "#1e293b", borderRight: VBORDER }}
-            >
+            <th colSpan={3} style={{ ...H1, borderRight: SEP_GROUP, padding: "3px 6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.14em", fontSize: 7, textTransform: "uppercase" }}>
               収入 INCOME
             </th>
-            <th
-              colSpan={7}
-              className="px-2 py-1 text-center text-[10px] font-bold uppercase tracking-[0.14em]"
-              style={{ background: "#525252", borderRight: VBORDER }}
-            >
+            <th colSpan={3} style={{ ...H1, borderRight: SEP_GROUP, padding: "3px 6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.14em", fontSize: 7, textTransform: "uppercase" }}>
               支出 EXPENSE
             </th>
-            <th
-              rowSpan={2}
-              className="px-2 py-1.5 text-center text-[10px] font-bold leading-tight"
-              style={{ background: "#1e3a8a", borderRight: VBORDER }}
-            >
-              投資<br />積立
+            <th rowSpan={2} style={{ ...H1, borderRight: SEP, padding: "4px 6px", textAlign: "center", fontWeight: 700, fontSize: 8 }}>
+              CF
             </th>
-            <th
-              rowSpan={2}
-              className="px-2 py-1.5 text-center text-[10px] font-bold leading-tight"
-              style={{ background: "#0a0a0a", borderRight: VBORDER }}
-            >
-              収支<br />CF
-            </th>
-            <th
-              rowSpan={2}
-              className="px-2 py-1.5 text-center text-[10px] font-bold"
-              style={{ background: "#0a0a0a", borderRight: VBORDER }}
-            >
-              取崩
-            </th>
-            <th
-              rowSpan={2}
-              className="px-2 py-1.5 text-center text-[10px] font-bold"
-              style={{ background: "#0a0a0a" }}
-            >
+            <th rowSpan={2} style={{ ...H1, padding: "4px 6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.08em", fontSize: 8 }}>
               純資産
             </th>
           </tr>
-          {/* 2段目: 詳細ヘッダ */}
-          <tr className="text-white">
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#1e293b" }}
-            >
-              合計
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#334155" }}
-            >
-              給与
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#334155" }}
-            >
-              年金
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#334155" }}
-            >
-              不動産
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#334155", borderRight: VBORDER }}
-            >
-              相続他
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#525252" }}
-            >
-              合計
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#6b7280" }}
-            >
-              生活
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#6b7280" }}
-            >
-              住居
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#6b7280" }}
-            >
-              教育
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#6b7280" }}
-            >
-              保険
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#6b7280" }}
-            >
-              介護
-            </th>
-            <th
-              className="px-2 py-1 text-right text-[9px] font-bold"
-              style={{ background: "#6b7280", borderRight: VBORDER }}
-            >
-              他
-            </th>
+          {/* 2段目: 詳細ラベル */}
+          <tr>
+            <th style={{ ...H2_INC, borderRight: SEP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>合計</th>
+            <th style={{ ...H2_INC, borderRight: SEP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>給与</th>
+            <th style={{ ...H2_INC, borderRight: SEP_GROUP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>年金</th>
+            <th style={{ ...H2_EXP, borderRight: SEP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>合計</th>
+            <th style={{ ...H2_EXP, borderRight: SEP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>生活</th>
+            <th style={{ ...H2_EXP, borderRight: SEP_GROUP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>住居</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => {
-            const otherInc = r.inherit;
-            const otherExp = r.lifeExp + r.otherLoanPay;
             const cfColor = r.cf < 0 ? "#c8383a" : "#22863a";
             const cfSign = r.cf < 0 ? "−" : "+";
             const nwColor = r.nw < 0 ? "#c8383a" : "#0a0a0a";
-            const sub = "tabular-nums text-[#0a0a0a]/55";
-            const total = "tabular-nums font-bold text-[#0a0a0a]";
+            const rowBg = i % 2 === 0 ? "#f8f8f6" : "#ffffff";
+            const cell = { padding: "3px 6px", textAlign: "right" as const, tabularNums: true, borderTop: i === 0 ? "none" : SEP };
             return (
-              <tr
-                key={r.age}
-                style={{
-                  borderTop: i === 0 ? "none" : "1px solid rgba(10,10,10,0.08)",
-                  background: i % 2 === 0 ? "#f0f0ee" : "#e8e8e6",
-                }}
-              >
-                <td
-                  className="px-2 py-1 text-center font-bold tabular-nums"
-                  style={{ borderRight: VBORDER_BODY }}
-                >
+              <tr key={r.age} style={{ background: rowBg, borderTop: i === 0 ? "none" : SEP }}>
+                {/* 歳 */}
+                <td style={{ ...cell, textAlign: "center", fontWeight: 700, color: "#0a0a0a", borderRight: SEP_GROUP, background: "#f0f0ee" }}>
                   {r.age}
                 </td>
-                {/* 収入 */}
-                <td className={`px-2 py-1 text-right ${total}`}>{yenToOkuMan(r.income)}</td>
-                <td className={`px-2 py-1 text-right ${sub}`}>{yenToOkuMan(r.jobNet)}</td>
-                <td className={`px-2 py-1 text-right ${sub}`}>{yenToOkuMan(r.penNet)}</td>
-                <td className={`px-2 py-1 text-right ${sub}`}>{yenToOkuMan(r.reInc)}</td>
-                <td
-                  className={`px-2 py-1 text-right ${sub}`}
-                  style={{ borderRight: VBORDER_BODY }}
-                >
-                  {yenToOkuMan(otherInc)}
+                {/* 収入合計 */}
+                <td style={{ ...cell, fontWeight: 700, color: "#0a0a0a", borderRight: SEP }}>
+                  {yenToOkuMan(r.income)}
                 </td>
-                {/* 支出 */}
-                <td className={`px-2 py-1 text-right ${total}`}>{yenToOkuMan(r.exp)}</td>
-                <td className={`px-2 py-1 text-right ${sub}`}>{yenToOkuMan(r.basic)}</td>
-                <td className={`px-2 py-1 text-right ${sub}`}>{yenToOkuMan(r.home)}</td>
-                <td className={`px-2 py-1 text-right ${sub}`}>{yenToOkuMan(r.edu)}</td>
-                <td className={`px-2 py-1 text-right ${sub}`}>{yenToOkuMan(r.ins)}</td>
-                <td className={`px-2 py-1 text-right ${sub}`}>{yenToOkuMan(r.care)}</td>
-                <td
-                  className={`px-2 py-1 text-right ${sub}`}
-                  style={{ borderRight: VBORDER_BODY }}
-                >
-                  {yenToOkuMan(otherExp)}
+                {/* 給与 */}
+                <td style={{ ...cell, color: "rgba(10,10,10,0.5)", borderRight: SEP }}>
+                  {yenToOkuMan(r.jobNet)}
                 </td>
-                {/* 投資積立 */}
-                <td
-                  className="px-2 py-1 text-right tabular-nums font-bold"
-                  style={{ color: "#1e3a8a", borderRight: VBORDER_BODY }}
-                >
-                  {yenToOkuMan(r.inv)}
+                {/* 年金 */}
+                <td style={{ ...cell, color: "rgba(10,10,10,0.5)", borderRight: SEP_GROUP }}>
+                  {yenToOkuMan(r.penNet)}
                 </td>
-                {/* 収支 CF */}
-                <td
-                  className="px-2 py-1 text-right tabular-nums font-bold"
-                  style={{ color: cfColor, borderRight: VBORDER_BODY }}
-                >
-                  {cfSign}
-                  {yenToOkuMan(Math.abs(r.cf))}
+                {/* 支出合計 */}
+                <td style={{ ...cell, fontWeight: 700, color: "#0a0a0a", borderRight: SEP }}>
+                  {yenToOkuMan(r.exp)}
                 </td>
-                {/* 取崩 */}
-                <td
-                  className={`px-2 py-1 text-right ${sub}`}
-                  style={{ borderRight: VBORDER_BODY }}
-                >
-                  {yenToOkuMan(r.draw)}
+                {/* 生活費 */}
+                <td style={{ ...cell, color: "rgba(10,10,10,0.5)", borderRight: SEP }}>
+                  {yenToOkuMan(r.basic)}
+                </td>
+                {/* 住居費 */}
+                <td style={{ ...cell, color: "rgba(10,10,10,0.5)", borderRight: SEP_GROUP }}>
+                  {yenToOkuMan(r.home)}
+                </td>
+                {/* CF */}
+                <td style={{ ...cell, fontWeight: 700, color: cfColor, borderRight: SEP }}>
+                  {cfSign}{yenToOkuMan(Math.abs(r.cf))}
                 </td>
                 {/* 純資産 */}
-                <td
-                  className="px-2 py-1 text-right tabular-nums font-bold"
-                  style={{ color: nwColor }}
-                >
+                <td style={{ ...cell, fontWeight: 700, color: nwColor }}>
                   {yenToOkuMan(r.nw)}
                 </td>
               </tr>
