@@ -62,92 +62,97 @@ export function ResultsPanel() {
 }
 
 function YearlyTable({ rows }: { rows: YearlyResult[] }) {
-  const H1 = { background: "#0a0a0a", color: "#ffffff" } as const;
-  const H2_INC = { background: "#2a2a2a", color: "#ffffff" } as const;
-  const H2_EXP = { background: "#444444", color: "#ffffff" } as const;
-  const SEP = "1px solid rgba(10,10,10,0.10)";
-  const SEP_GROUP = "1.5px solid rgba(10,10,10,0.22)";
+  // デザイントークン（サイト統一）
+  const BG_H1  = "#0a0a0a";
+  const BG_INC = "#2a2a2a";
+  const BG_EXP = "#3d3d3d";
+  const FG     = "#ffffff";
+  const SEP    = "1px solid rgba(10,10,10,0.09)";
+  const SEP_G  = "1.5px solid rgba(10,10,10,0.20)";
+
+  // ヘッダーセル共通スタイル
+  const hBase: React.CSSProperties = { color: FG, fontWeight: 700, fontSize: 7, fontFamily: "inherit" };
+  const hTop  = (bg: string, extra?: React.CSSProperties): React.CSSProperties =>
+    ({ ...hBase, background: bg, padding: "3px 3px", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.12em", ...extra });
+  const hSub  = (bg: string, extra?: React.CSSProperties): React.CSSProperties =>
+    ({ ...hBase, background: bg, padding: "2px 3px", textAlign: "right", ...extra });
+
+  // ボディセル共通スタイル
+  const cBase: React.CSSProperties = { fontSize: 8, padding: "2px 4px", textAlign: "right", fontVariantNumeric: "tabular-nums" };
+  const cTotal = (extra?: React.CSSProperties): React.CSSProperties =>
+    ({ ...cBase, fontWeight: 700, color: "#0a0a0a", ...extra });
+  const cSub   = (extra?: React.CSSProperties): React.CSSProperties =>
+    ({ ...cBase, color: "rgba(10,10,10,0.48)", ...extra });
 
   return (
     <div className="overflow-x-auto" style={{ borderTop: "2px solid #0a0a0a" }}>
-      <table
-        className="border-collapse"
-        style={{ minWidth: 520, width: "100%", fontSize: 9 }}
-      >
+      <table className="border-collapse" style={{ minWidth: 680, width: "100%" }}>
         <thead>
-          {/* 1段目: グループラベル */}
+          {/* 1段目: グループヘッダー */}
           <tr>
-            <th rowSpan={2} style={{ ...H1, borderRight: SEP_GROUP, padding: "4px 6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.12em", fontSize: 8 }}>
-              歳
-            </th>
-            <th colSpan={3} style={{ ...H1, borderRight: SEP_GROUP, padding: "3px 6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.14em", fontSize: 7, textTransform: "uppercase" }}>
-              収入 INCOME
-            </th>
-            <th colSpan={3} style={{ ...H1, borderRight: SEP_GROUP, padding: "3px 6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.14em", fontSize: 7, textTransform: "uppercase" }}>
-              支出 EXPENSE
-            </th>
-            <th rowSpan={2} style={{ ...H1, borderRight: SEP, padding: "4px 6px", textAlign: "center", fontWeight: 700, fontSize: 8 }}>
-              CF
-            </th>
-            <th rowSpan={2} style={{ ...H1, padding: "4px 6px", textAlign: "center", fontWeight: 700, letterSpacing: "0.08em", fontSize: 8 }}>
-              純資産
-            </th>
+            <th rowSpan={2} style={hTop(BG_H1, { borderRight: SEP_G, padding: "4px 4px", fontSize: 8, letterSpacing: "0.08em" })}>歳</th>
+            <th colSpan={5} style={hTop(BG_H1, { borderRight: SEP_G })}>収入 INCOME</th>
+            <th colSpan={7} style={hTop(BG_H1, { borderRight: SEP_G })}>支出 EXPENSE</th>
+            <th rowSpan={2} style={hTop(BG_H1, { borderRight: SEP_G, padding: "4px 3px", fontSize: 8 })}>積立</th>
+            <th rowSpan={2} style={hTop(BG_H1, { borderRight: SEP_G, padding: "4px 3px", fontSize: 8 })}>CF</th>
+            <th rowSpan={2} style={hTop(BG_H1, { borderRight: SEP_G, padding: "4px 3px", fontSize: 8 })}>取崩</th>
+            <th rowSpan={2} style={hTop(BG_H1, { padding: "4px 3px", fontSize: 8 })}>純資産</th>
           </tr>
-          {/* 2段目: 詳細ラベル */}
+          {/* 2段目: 詳細ヘッダー */}
           <tr>
-            <th style={{ ...H2_INC, borderRight: SEP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>合計</th>
-            <th style={{ ...H2_INC, borderRight: SEP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>給与</th>
-            <th style={{ ...H2_INC, borderRight: SEP_GROUP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>年金</th>
-            <th style={{ ...H2_EXP, borderRight: SEP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>合計</th>
-            <th style={{ ...H2_EXP, borderRight: SEP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>生活</th>
-            <th style={{ ...H2_EXP, borderRight: SEP_GROUP, padding: "3px 6px", textAlign: "right", fontWeight: 700, fontSize: 7 }}>住居</th>
+            <th style={hSub(BG_INC)}>合計</th>
+            <th style={hSub(BG_INC)}>給与</th>
+            <th style={hSub(BG_INC)}>年金</th>
+            <th style={hSub(BG_INC)}>不動産</th>
+            <th style={hSub(BG_INC, { borderRight: SEP_G })}>相続他</th>
+            <th style={hSub(BG_EXP)}>合計</th>
+            <th style={hSub(BG_EXP)}>生活</th>
+            <th style={hSub(BG_EXP)}>住居</th>
+            <th style={hSub(BG_EXP)}>教育</th>
+            <th style={hSub(BG_EXP)}>保険</th>
+            <th style={hSub(BG_EXP)}>介護</th>
+            <th style={hSub(BG_EXP, { borderRight: SEP_G })}>他</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => {
-            const cfColor = r.cf < 0 ? "#c8383a" : "#22863a";
-            const cfSign = r.cf < 0 ? "−" : "+";
-            const nwColor = r.nw < 0 ? "#c8383a" : "#0a0a0a";
-            const rowBg = i % 2 === 0 ? "#f8f8f6" : "#ffffff";
-            const cell = { padding: "3px 6px", textAlign: "right" as const, tabularNums: true, borderTop: i === 0 ? "none" : SEP };
+            const otherInc = r.inherit;
+            const otherExp = r.lifeExp + r.otherLoanPay;
+            const cfColor  = r.cf < 0 ? "#c8383a" : "#22863a";
+            const cfSign   = r.cf < 0 ? "−" : "+";
+            const nwColor  = r.nw < 0 ? "#c8383a" : "#0a0a0a";
+            const rowBg    = i % 2 === 0 ? "#f8f8f6" : "#ffffff";
+            const bt       = i === 0 ? "none" : SEP;
             return (
-              <tr key={r.age} style={{ background: rowBg, borderTop: i === 0 ? "none" : SEP }}>
+              <tr key={r.age} style={{ background: rowBg, borderTop: bt }}>
                 {/* 歳 */}
-                <td style={{ ...cell, textAlign: "center", fontWeight: 700, color: "#0a0a0a", borderRight: SEP_GROUP, background: "#f0f0ee" }}>
+                <td style={{ ...cBase, textAlign: "center", fontWeight: 700, color: "#0a0a0a", background: "#f0f0ee", borderRight: SEP_G }}>
                   {r.age}
                 </td>
-                {/* 収入合計 */}
-                <td style={{ ...cell, fontWeight: 700, color: "#0a0a0a", borderRight: SEP }}>
-                  {yenToOkuMan(r.income)}
-                </td>
-                {/* 給与 */}
-                <td style={{ ...cell, color: "rgba(10,10,10,0.5)", borderRight: SEP }}>
-                  {yenToOkuMan(r.jobNet)}
-                </td>
-                {/* 年金 */}
-                <td style={{ ...cell, color: "rgba(10,10,10,0.5)", borderRight: SEP_GROUP }}>
-                  {yenToOkuMan(r.penNet)}
-                </td>
-                {/* 支出合計 */}
-                <td style={{ ...cell, fontWeight: 700, color: "#0a0a0a", borderRight: SEP }}>
-                  {yenToOkuMan(r.exp)}
-                </td>
-                {/* 生活費 */}
-                <td style={{ ...cell, color: "rgba(10,10,10,0.5)", borderRight: SEP }}>
-                  {yenToOkuMan(r.basic)}
-                </td>
-                {/* 住居費 */}
-                <td style={{ ...cell, color: "rgba(10,10,10,0.5)", borderRight: SEP_GROUP }}>
-                  {yenToOkuMan(r.home)}
-                </td>
+                {/* 収入 */}
+                <td style={cTotal()}>{yenToOkuMan(r.income)}</td>
+                <td style={cSub()}>{yenToOkuMan(r.jobNet)}</td>
+                <td style={cSub()}>{yenToOkuMan(r.penNet)}</td>
+                <td style={cSub()}>{yenToOkuMan(r.reInc)}</td>
+                <td style={cSub({ borderRight: SEP_G })}>{yenToOkuMan(otherInc)}</td>
+                {/* 支出 */}
+                <td style={cTotal()}>{yenToOkuMan(r.exp)}</td>
+                <td style={cSub()}>{yenToOkuMan(r.basic)}</td>
+                <td style={cSub()}>{yenToOkuMan(r.home)}</td>
+                <td style={cSub()}>{yenToOkuMan(r.edu)}</td>
+                <td style={cSub()}>{yenToOkuMan(r.ins)}</td>
+                <td style={cSub()}>{yenToOkuMan(r.care)}</td>
+                <td style={cSub({ borderRight: SEP_G })}>{yenToOkuMan(otherExp)}</td>
+                {/* 積立 */}
+                <td style={{ ...cBase, fontWeight: 700, color: "#0a0a0a", borderRight: SEP_G }}>{yenToOkuMan(r.inv)}</td>
                 {/* CF */}
-                <td style={{ ...cell, fontWeight: 700, color: cfColor, borderRight: SEP }}>
+                <td style={{ ...cBase, fontWeight: 700, color: cfColor, borderRight: SEP_G }}>
                   {cfSign}{yenToOkuMan(Math.abs(r.cf))}
                 </td>
+                {/* 取崩 */}
+                <td style={cSub({ borderRight: SEP_G })}>{yenToOkuMan(r.draw)}</td>
                 {/* 純資産 */}
-                <td style={{ ...cell, fontWeight: 700, color: nwColor }}>
-                  {yenToOkuMan(r.nw)}
-                </td>
+                <td style={{ ...cBase, fontWeight: 700, color: nwColor }}>{yenToOkuMan(r.nw)}</td>
               </tr>
             );
           })}
