@@ -82,7 +82,7 @@ function YearlyTable({ rows }: { rows: YearlyResult[] }) {
   const cTotal = (extra?: React.CSSProperties): React.CSSProperties =>
     ({ ...cBase, fontWeight: 700, color: "#0a0a0a", ...extra });
   const cSub   = (extra?: React.CSSProperties): React.CSSProperties =>
-    ({ ...cBase, color: "rgba(10,10,10,0.48)", ...extra });
+    ({ ...cBase, color: "rgba(10,10,10,0.68)", ...extra });
 
   return (
     <div className="overflow-x-auto" style={{ borderTop: "2px solid #0a0a0a" }}>
