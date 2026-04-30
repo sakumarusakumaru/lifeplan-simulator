@@ -35,24 +35,69 @@ export function ResultsPanel() {
 
       <div
         style={{
-          background: "#f0f0ee",
-          border: isV3 ? "none" : "2.5px solid #0a0a0a",
+          border: "2px solid #0a0a0a",
           borderRadius: 12,
+          overflow: "hidden",
         }}
       >
         <button
           type="button"
           onClick={() => setShowTable((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-3 text-left"
+          className="group flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#0a0a0a]"
+          style={{ background: showTable ? "#0a0a0a" : "#ffffff" }}
         >
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">
-            年次サマリー · {result.rows.length}年
-          </span>
+          {/* 左: アイコン + ラベル */}
+          <div className="flex items-center gap-2.5">
+            <span
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded"
+              style={{
+                background: showTable ? "#ffffff18" : "#0a0a0a",
+                border: showTable ? "1.5px solid #ffffff40" : "none",
+              }}
+            >
+              <svg
+                width="12" height="12" viewBox="0 0 12 12" fill="none"
+                className={`transition-transform duration-200 ${showTable ? "rotate-180" : ""}`}
+              >
+                <rect x="1" y="2" width="10" height="1.5" rx="0.75"
+                  fill={showTable ? "#ffffff" : "#f0f0ee"} />
+                <rect x="1" y="5.25" width="7" height="1.5" rx="0.75"
+                  fill={showTable ? "#ffffff" : "#f0f0ee"} />
+                <rect x="1" y="8.5" width="4.5" height="1.5" rx="0.75"
+                  fill={showTable ? "#ffffff" : "#f0f0ee"} />
+              </svg>
+            </span>
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-[0.18em]"
+                style={{ color: showTable ? "#ffffff" : "#0a0a0a" }}
+              >
+                年次サマリー
+              </p>
+              <p
+                className="text-[8px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: showTable ? "#ffffff80" : "#0a0a0a55" }}
+              >
+                {result.rows.length}年分の収支・資産推移
+              </p>
+            </div>
+          </div>
+
+          {/* 右: 開閉バッジ */}
           <span
-            aria-hidden
-            className={`text-base font-bold text-[#0a0a0a] transition-transform duration-200 ${showTable ? "rotate-180" : ""}`}
+            className="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] transition-colors"
+            style={{
+              background: showTable ? "#ffffff18" : "#0a0a0a",
+              color: showTable ? "#ffffff" : "#f0f0ee",
+              border: showTable ? "1px solid #ffffff30" : "none",
+            }}
           >
-            ▾
+            {showTable ? "閉じる" : "開く"}
+            <span
+              className={`inline-block transition-transform duration-200 ${showTable ? "rotate-180" : ""}`}
+            >
+              ▾
+            </span>
           </span>
         </button>
         {showTable ? <YearlyTable rows={result.rows} /> : null}
