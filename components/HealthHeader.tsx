@@ -164,14 +164,11 @@ export function HealthHeader({
 
     return (
       <div
-        className="flex flex-wrap items-stretch overflow-hidden rounded-xl"
+        className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl px-3 py-2"
         style={{ background: "#ffffff", border: "2px solid #0a0a0a" }}
       >
-        {/* スコア */}
-        <div
-          className="flex shrink-0 items-center gap-2 px-3 py-2"
-          style={{ background: c.light, borderRight: "2px solid #0a0a0a" }}
-        >
+        {/* スコアバッジ */}
+        <div className="flex shrink-0 items-center gap-2">
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white tabular-nums"
             style={{ background: c.main }}
@@ -179,10 +176,7 @@ export function HealthHeader({
             {health.score}
           </div>
           <div>
-            <p
-              className="text-[9px] font-bold uppercase tracking-[0.18em]"
-              style={{ color: c.text }}
-            >
+            <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/55">
               診断スコア
             </p>
             <p className="text-[10px] font-bold leading-tight text-[#0a0a0a]">
@@ -191,16 +185,17 @@ export function HealthHeader({
           </div>
         </div>
 
+        {/* 縦区切り線 */}
+        <span
+          aria-hidden
+          className="h-7 w-px shrink-0"
+          style={{ background: "#0a0a0a20" }}
+        />
+
         {/* 主要指標 4項目 */}
-        {kpis.map((item, i) => (
-          <div
-            key={item.label}
-            className="flex flex-col justify-center px-3 py-2"
-            style={{
-              borderRight: i < kpis.length - 1 ? "1.5px solid #0a0a0a20" : "none",
-            }}
-          >
-            <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
+        {kpis.map((item) => (
+          <div key={item.label} className="flex shrink-0 flex-col">
+            <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
               {item.label}
             </p>
             <p
