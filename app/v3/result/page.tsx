@@ -951,8 +951,6 @@ function BSColumnGrouped({
             )}
             <BSLegendItem
               segment={item.segment}
-              groupLabel={item.groupLabel}
-              showGroup={item.isGroupHead}
               barSide={barSide}
               hovered={hovered}
               setHovered={setHovered}
@@ -982,15 +980,11 @@ function BSColumnGrouped({
 
 function BSLegendItem({
   segment,
-  groupLabel,
-  showGroup,
   barSide,
   hovered,
   setHovered,
 }: {
   segment: BSSegment;
-  groupLabel: string | null;
-  showGroup: boolean;
   barSide: "left" | "right";
   hovered: string | null;
   setHovered: (s: string | null) => void;

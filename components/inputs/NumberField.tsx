@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Field } from "./Field";
 
@@ -30,12 +30,14 @@ export function NumberField({
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState(() => (value === 0 ? "" : String(value)));
 
-  // value が外部から変わったとき（フォーカス外）にテキストを同期
-  useEffect(() => {
+  // value が外部から変わったとき（フォーカス外）にテキストを同期（レンダー中の状態調整パターン）
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     if (!focused) {
       setText(value === 0 ? "" : String(value));
     }
-  }, [value, focused]);
+  }
 
   const clamp = (n: number) => {
     let v = n;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Field } from "./Field";
 
@@ -29,9 +29,12 @@ export function SliderField({
 }: SliderFieldProps) {
   const [text, setText] = useState(() => String(value));
 
-  useEffect(() => {
+  // value が外部から変わったときの同期（レンダー中の状態調整パターン）
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
     setText(String(value));
-  }, [value]);
+  }
 
   const clamp = (n: number) => {
     let v = n;

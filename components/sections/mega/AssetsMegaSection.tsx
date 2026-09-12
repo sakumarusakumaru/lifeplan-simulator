@@ -10,7 +10,6 @@ import { Section } from "@/components/Section";
 import { computeRealEstateValue } from "@/lib/calc/finance";
 import type {
   BuildingStructure,
-  DrawAsset,
   RealEstate,
   RealEstateType,
 } from "@/lib/calc/types";
@@ -34,16 +33,6 @@ const fmtMan = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
   const abs = Math.abs(Math.round(yen / 10000));
   return `${sign}${abs.toLocaleString()}万円`;
-};
-
-const DRAW_LABEL: Record<DrawAsset, string> = {
-  f: "投信(課税)",
-  s: "株(課税)",
-  fNisa: "投信(NISA)",
-  sNisa: "株(NISA)",
-  k: "仮想通貨",
-  g: "金・コモディティ",
-  dc: "確定拠出年金",
 };
 
 const NEW_RE = (): RealEstate => ({
@@ -125,14 +114,6 @@ export function AssetsMegaSection() {
     setField("res", plan.res.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const addRe = () => setField("res", [...plan.res, NEW_RE()]);
   const removeRe = (i: number) => setField("res", plan.res.filter((_, idx) => idx !== i));
-
-  const moveCustom = (i: number, dir: -1 | 1) => {
-    const order = [...plan.drawCustomOrder];
-    const j = i + dir;
-    if (j < 0 || j >= order.length) return;
-    [order[i], order[j]] = [order[j], order[i]];
-    setField("drawCustomOrder", order);
-  };
 
   const totalBal =
     plan.cashBal +

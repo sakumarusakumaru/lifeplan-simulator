@@ -42,3 +42,7 @@ v3 で v2 と異なる挙動にしたい場合：
 ```bash
 git checkout v2.0-stable -- app/v2/ components/  # v2 の状態を復元
 ```
+
+## 関連
+- [[70_invention/lifeplan-simulator/README]]
+- [[70_invention/lifeplan-simulator/CHANGELOG]]

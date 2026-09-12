@@ -9,8 +9,10 @@ export function ConsentDialog() {
   const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
+    // SSRハイドレーション整合のため、localStorage参照はマウント後の同期が必須
     try {
       const stored = localStorage.getItem(CONSENT_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (!stored) setNeedsConsent(true);
     } catch {
       // localStorage 不可の環境では同意ダイアログを出さない（プライベートブラウジング等）

@@ -12,9 +12,11 @@ export default function LandingPage() {
   const [hasPrev, setHasPrev] = useState(false);
 
   useEffect(() => {
+    // SSRハイドレーション整合のため、localStorage参照はマウント後の同期が必須
     try {
       const stored = localStorage.getItem(CONSENT_KEY);
       if (stored) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setHasPrev(true);
         setAgreed(true);
       }
