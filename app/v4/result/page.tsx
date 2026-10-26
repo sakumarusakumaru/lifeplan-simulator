@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
@@ -216,13 +216,6 @@ export default function ResultPage() {
 
   // 現状サマリー（curAge時点の年次データ）
   const cur = result.rows[0];
-  const financialAssets =
-    plan.cashBal +
-    plan.nisaBal +
-    plan.tokuBal +
-    plan.cryptoBal +
-    plan.goldBal +
-    plan.dcBal;
   const realEstateLoan = plan.res.reduce((acc, r) => acc + r.bal, 0);
   const realEstateValue = useMemo(() => {
     const yr = new Date().getFullYear();
@@ -257,11 +250,6 @@ export default function ResultPage() {
     (acc, ln) => acc + ln.monthlyPay * ln.remainMonths,
     0,
   );
-  // 不動産（簿価）= 物件種別と築年数から推定した現在評価額（手動上書き優先）
-  const totalAssetsNow = financialAssets + realEstateValue + homeValue;
-  const totalLiabilitiesNow =
-    (plan.useHomeLoan ? plan.hlBal : 0) + realEstateLoan + otherLoanBal;
-  const netWorthNow = totalAssetsNow - totalLiabilitiesNow;
 
   // 年金月額の試算
   const selfPenY =
@@ -435,27 +423,27 @@ export default function ResultPage() {
           />
         </div>
 
-        <BalanceSheetVis
-          assets={(
-            [
-              { label: "現金・預金", value: plan.cashBal, color: "#64748b", category: "current" },
-              { label: "NISA口座", value: plan.nisaBal, color: "#22863a", category: "current" },
-              { label: "特定口座", value: plan.tokuBal, color: "#94a3b8", category: "current" },
-              { label: "暗号資産", value: plan.cryptoBal, color: "#a78bfa", category: "current" },
-              { label: "金・コモディティ", value: plan.goldBal, color: "#c9aa7c", category: "current" },
-              { label: "iDeCo・DC", value: plan.dcBal, color: "#dde6ef", category: "fixed" },
-              { label: "自宅（評価額）", value: homeValue, color: "#a05f3a", category: "fixed" },
-              { label: "不動産投資（評価額）", value: realEstateValue, color: "#8b6f4e", category: "fixed" },
-            ] as const
-          ).filter((a) => a.value > 0)}
-          liabilities={(
-            [
-              { label: "その他ローン残高", value: otherLoanBal, color: "#d4a017", category: "current" },
-              { label: "住宅ローン残高", value: plan.useHomeLoan ? plan.hlBal : 0, color: "#c8383a", category: "fixed" },
-              { label: "不動産投資ローン残高", value: realEstateLoan, color: "#e88a8c", category: "fixed" },
-            ] as const
-          ).filter((l) => l.value > 0)}
-          netWorth={netWorthNow}
+        <BalanceSheetTimeline
+          plan={plan}
+          result={result}
+          real={realValue}
+          now={{
+            assets: [
+              { label: "現金・預金", value: plan.cashBal, color: BS_COLORS.cash, category: "current" },
+              { label: "NISA口座", value: plan.nisaBal, color: BS_COLORS.nisa, category: "current" },
+              { label: "特定口座", value: plan.tokuBal, color: BS_COLORS.toku, category: "current" },
+              { label: "暗号資産", value: plan.cryptoBal, color: BS_COLORS.crypto, category: "current" },
+              { label: "金・コモディティ", value: plan.goldBal, color: BS_COLORS.gold, category: "current" },
+              { label: "iDeCo・DC", value: plan.dcBal, color: BS_COLORS.dc, category: "fixed" },
+              { label: "自宅（評価額）", value: homeValue, color: BS_COLORS.home, category: "fixed" },
+              { label: "不動産投資（評価額）", value: realEstateValue, color: BS_COLORS.re, category: "fixed" },
+            ],
+            liabilities: [
+              { label: "その他ローン残高", value: otherLoanBal, color: BS_COLORS.otherLoan, category: "current" },
+              { label: "住宅ローン残高", value: plan.useHomeLoan ? plan.hlBal : 0, color: BS_COLORS.homeLoan, category: "fixed" },
+              { label: "不動産投資ローン残高", value: realEstateLoan, color: BS_COLORS.reLoan, category: "fixed" },
+            ],
+          }}
         />
       </ReportSection>
 
@@ -678,6 +666,213 @@ interface BSSegment extends BSItem {
 const BS_BAR_HEIGHT = 280;
 const BS_BAR_WIDTH = 112;
 const BS_MIN_SEG_HEIGHT = 22; // 凡例側の最小高と揃えるためのバー側最小セグメント高
+
+const BS_COLORS = {
+  cash: "#64748b",
+  nisa: "#22863a",
+  toku: "#94a3b8",
+  crypto: "#a78bfa",
+  gold: "#c9aa7c",
+  dc: "#dde6ef",
+  home: "#a05f3a",
+  re: "#8b6f4e",
+  otherLoan: "#d4a017",
+  homeLoan: "#c8383a",
+  reLoan: "#e88a8c",
+  shortage: "#7f1d1d",
+};
+
+// 自宅の評価額（指定した西暦年時点。築年数で減価）
+function propertyValues(plan: PlanInput, year: number) {
+  const home = plan.homeOwned
+    ? computeRealEstateValue(
+        {
+          name: "自宅",
+          rent: 0,
+          cost: 0,
+          propTax: 0,
+          bal: 0,
+          rate: 0,
+          term: 0,
+          start: 0,
+          propType: plan.homePropType ?? "house",
+          structure: plan.homeStructure ?? "wood",
+          builtYear: plan.homeBuiltYear ?? year,
+          purchasePrice: plan.homePurchasePrice ?? 0,
+          landRatio: plan.homeLandRatio ?? 50,
+          // 手動上書きは「今の評価額」なので、将来は上書き額から築年数分を同じ比率で減価させる
+          currentValueOverride: 0,
+        },
+        year,
+      )
+    : 0;
+  return { home };
+}
+
+// 将来の年のバランスシート（年末時点）
+function futureBalanceSheet(plan: PlanInput, row: SimulationSummary["rows"][number], real: boolean) {
+  const t = row.age - plan.curAge;
+  const thisYear = new Date().getFullYear();
+  const year = thisYear + t;
+  const f = real ? deflator(plan, row.age) : 1;
+
+  // 評価額: 今の値（手動上書きがあればそれ）に、築年数による減価の比率を掛ける
+  const nowV = propertyValues(plan, thisYear);
+  const futV = propertyValues(plan, year);
+  const nowHomeShown = plan.homeOwned && (plan.homeCurrentValueOverride ?? 0) > 0 ? plan.homeCurrentValueOverride : nowV.home;
+  const home = nowV.home > 0 ? (nowHomeShown * futV.home) / nowV.home : 0;
+  let re = 0;
+  for (const r of plan.res) {
+    const n = computeRealEstateValue({ ...r, currentValueOverride: 0 }, thisYear);
+    const fu = computeRealEstateValue({ ...r, currentValueOverride: 0 }, year);
+    const shown = (r.currentValueOverride ?? 0) > 0 ? r.currentValueOverride : n;
+    re += n > 0 ? (shown * fu) / n : 0;
+  }
+
+  const otherLoan = plan.otherLoans.reduce(
+    (acc, ln) => acc + ln.monthlyPay * Math.max(0, ln.remainMonths - (t + 1) * 12),
+    0,
+  );
+  const reLoan = row.reD.reduce((acc, d) => acc + d.bal, 0);
+  const a = row.ass;
+  const assets: BSItem[] = [
+    { label: "現金・預金", value: Math.max(0, a.c), color: BS_COLORS.cash, category: "current" },
+    { label: "NISA口座", value: a.nisa, color: BS_COLORS.nisa, category: "current" },
+    { label: "特定口座", value: a.toku, color: BS_COLORS.toku, category: "current" },
+    { label: "暗号資産", value: a.k, color: BS_COLORS.crypto, category: "current" },
+    { label: "金・コモディティ", value: a.g, color: BS_COLORS.gold, category: "current" },
+    { label: "iDeCo・DC", value: a.dc, color: BS_COLORS.dc, category: "fixed" },
+    { label: "自宅（評価額）", value: home / f, color: BS_COLORS.home, category: "fixed" },
+    { label: "不動産投資（評価額）", value: re / f, color: BS_COLORS.re, category: "fixed" },
+  ];
+  const liabilities: BSItem[] = [
+    { label: "資金不足（累計）", value: Math.max(0, -a.c), color: BS_COLORS.shortage, category: "current" },
+    { label: "その他ローン残高", value: otherLoan / f, color: BS_COLORS.otherLoan, category: "current" },
+    { label: "住宅ローン残高", value: row.hlBal, color: BS_COLORS.homeLoan, category: "fixed" },
+    { label: "不動産投資ローン残高", value: reLoan, color: BS_COLORS.reLoan, category: "fixed" },
+  ];
+  return { assets, liabilities };
+}
+
+// 年齢スライダーつきのバランスシート。左端=現在（入力値）、右へ動かすと将来の年末時点
+function BalanceSheetTimeline({
+  plan,
+  result,
+  real,
+  now,
+}: {
+  plan: PlanInput;
+  result: SimulationSummary;
+  real: boolean;
+  now: { assets: BSItem[]; liabilities: BSItem[] };
+}) {
+  const [age, setAge] = useState(plan.curAge);
+  const [playing, setPlaying] = useState(false);
+  const minAge = plan.curAge;
+  const maxAge = plan.endAge;
+  const shownAge = Math.min(maxAge, Math.max(minAge, age));
+
+  useEffect(() => {
+    if (!playing) return;
+    const id = window.setInterval(() => {
+      setAge((a) => {
+        if (a >= maxAge) {
+          setPlaying(false);
+          return a;
+        }
+        return a + 1;
+      });
+    }, 180);
+    return () => window.clearInterval(id);
+  }, [playing, maxAge]);
+
+  const isNow = shownAge === minAge;
+  const row = result.rows.find((r) => r.age === shownAge);
+  const sheet = isNow || !row ? now : futureBalanceSheet(plan, row, real);
+  const assets = sheet.assets.filter((x) => x.value > 0);
+  const liabilities = sheet.liabilities.filter((x) => x.value > 0);
+  const netWorth =
+    assets.reduce((a, x) => a + x.value, 0) - liabilities.reduce((a, x) => a + x.value, 0);
+
+  const retireAge = plan.jobs.length ? Math.max(...plan.jobs.map((j) => j.end)) : null;
+  const marks = [
+    { label: "今", age: minAge },
+    retireAge !== null && retireAge > minAge && retireAge < maxAge ? { label: `退職 ${retireAge}歳`, age: retireAge } : null,
+    plan.penStartA > minAge && plan.penStartA < maxAge && plan.penStartA !== retireAge
+      ? { label: `年金 ${plan.penStartA}歳`, age: plan.penStartA }
+      : null,
+    { label: `${maxAge}歳`, age: maxAge },
+  ].filter(Boolean) as { label: string; age: number }[];
+  const year = new Date().getFullYear() + (shownAge - minAge);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="rounded-xl bg-white px-4 py-3" style={{ border: "2px solid #0a0a0a18" }}>
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-sm font-bold text-[#0a0a0a]">
+            {isNow ? "現在（入力した残高）" : `${shownAge}歳の年末時点`}
+            <span className="ml-2 text-[11px] font-normal text-[#0a0a0a]/55">
+              {year}年{real && !isNow ? "・今の価値" : ""}
+            </span>
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (shownAge >= maxAge) setAge(minAge);
+                setPlaying((p) => !p);
+              }}
+              className="rounded-md px-2.5 py-1 text-[11px] font-bold text-white"
+              style={{ background: "#0a0a0a" }}
+              aria-label={playing ? "一時停止" : "再生"}
+            >
+              {playing ? "❚❚ 停止" : "▶ 再生"}
+            </button>
+          </div>
+        </div>
+        <input
+          type="range"
+          min={minAge}
+          max={maxAge}
+          step={1}
+          value={shownAge}
+          onChange={(e) => {
+            setPlaying(false);
+            setAge(Number(e.target.value));
+          }}
+          className="w-full accent-[#c8383a]"
+          aria-label="バランスシートの年齢"
+        />
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {marks.map((m) => (
+            <button
+              key={m.label}
+              type="button"
+              onClick={() => {
+                setPlaying(false);
+                setAge(m.age);
+              }}
+              className="rounded-md px-2 py-0.5 text-[10px] font-bold"
+              style={{
+                background: shownAge === m.age ? "#0a0a0a" : "#f0f0ee",
+                color: shownAge === m.age ? "#fff" : "#0a0a0a",
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        {!isNow ? (
+          <p className="mt-2 text-[10px] leading-relaxed text-[#0a0a0a]/55">
+            金融資産・ローン残高はシミュレーションの年末値。自宅・不動産は築年数による減価で評価（地価の変動は見込まない）。
+            {liabilities.some((l) => l.label === "資金不足（累計）") ? "「資金不足」は現金がマイナスになった累計額です。" : ""}
+          </p>
+        ) : null}
+      </div>
+      <BalanceSheetVis assets={assets} liabilities={liabilities} netWorth={netWorth} />
+    </div>
+  );
+}
 
 function BalanceSheetVis({
   assets,
