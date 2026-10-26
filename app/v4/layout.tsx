@@ -8,6 +8,7 @@ import { ConsentDialog } from "@/components/v4/ConsentDialog";
 import { Footer } from "@/components/v4/Footer";
 import type { PlanInput } from "@/lib/v4/calc/types";
 import { migrateV3Plan, usePlanStore } from "@/store/v4/plan-store";
+import { useUiStore } from "@/store/v4/ui-store";
 
 const TABS = [
   { href: "/v4/detail", label: "詳細入力" },
@@ -30,6 +31,10 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   const patch = usePlanStore((s) => s.patch);
   const reset = usePlanStore((s) => s.reset);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const realValue = useUiStore((s) => s.realValue);
+  const setRealValue = useUiStore((s) => s.setRealValue);
+  // 30年後の1,000万円が今の価値でいくらか（バナーの例示用）
+  const example30 = Math.round(1000 / Math.pow(1 + plan.infl / 100, 30));
 
   // 入力データをJSONでDL（detailタブ用）
   const exportPlan = () => {
@@ -169,6 +174,32 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
 
         {/* ページ別アクション（VER 3 バッジは廃止） */}
         <div className="no-print ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto">
+          <div
+            className="flex shrink-0 overflow-hidden text-[10px] font-bold"
+            style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
+            role="group"
+            aria-label="金額の表示方法"
+            title="将来の金額を、そのときの金額（名目）で見るか、物価上昇を割り戻した今の価値で見るか"
+          >
+            {[
+              { v: false, label: "名目" },
+              { v: true, label: "今の価値" },
+            ].map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => setRealValue(o.v)}
+                aria-pressed={realValue === o.v}
+                className="px-2 py-1 transition-colors"
+                style={{
+                  background: realValue === o.v ? "#0a0a0a" : "#ffffff",
+                  color: realValue === o.v ? "#ffffff" : "#0a0a0a",
+                }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
           <Link
             href="/guide"
             className="shrink-0 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
@@ -245,6 +276,15 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+      {realValue ? (
+        <div
+          className="px-4 py-1.5 text-[11px] leading-relaxed sm:px-8"
+          style={{ background: "#eef6fc", borderBottom: "1.5px solid #1a6fa840", color: "#0a0a0a" }}
+        >
+          <span className="font-bold" style={{ color: "#1a6fa8" }}>今のお金の価値で表示中</span>
+          ：将来の金額を物価上昇率（年{plan.infl.toFixed(1)}%）で割り戻しています。例：30年後の1,000万円 → 今の約{example30.toLocaleString()}万円。入力欄の金額はそのままです。
+        </div>
+      ) : null}
       {children}
       <Footer />
       <ConsentDialog />

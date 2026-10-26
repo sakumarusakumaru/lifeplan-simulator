@@ -16,6 +16,8 @@ const DEFAULT_OPEN: Record<string, boolean> = {
 interface UiStore {
   open: Record<string, boolean>;
   hydrated: boolean;
+  realValue: boolean; // 結果を「今のお金の価値」で表示する
+  setRealValue: (v: boolean) => void;
   setOpen: (id: string, open: boolean) => void;
   toggle: (id: string) => void;
   openAll: () => void;
@@ -28,6 +30,8 @@ export const useUiStore = create<UiStore>()(
     (set) => ({
       open: DEFAULT_OPEN,
       hydrated: false,
+      realValue: false,
+      setRealValue: (v) => set({ realValue: v }),
       setOpen: (id, open) =>
         set((s) => ({ open: { ...s.open, [id]: open } })),
       toggle: (id) =>
@@ -43,8 +47,8 @@ export const useUiStore = create<UiStore>()(
       setHydrated: () => set({ hydrated: true }),
     }),
     {
-      name: "lp_ui_v1",
-      partialize: (state) => ({ open: state.open }),
+      name: "lp_ui_v4",
+      partialize: (state) => ({ open: state.open, realValue: state.realValue }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();
       },

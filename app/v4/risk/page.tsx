@@ -19,9 +19,12 @@ import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { ageOn } from "@/lib/v4/calc/age";
-import { requiredCoverage, simulate } from "@/lib/v4/calc/simulate";
+import { deflator } from "@/lib/v4/calc/realValue";
+import { requiredCoverage } from "@/lib/v4/calc/simulate";
 import type { RiskInput, YearlyResult } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
+import { useSimResult } from "@/store/v4/useSimResult";
+import { useUiStore } from "@/store/v4/ui-store";
 
 const INK = "#0a0a0a";
 const RED = "#c8383a";
@@ -119,9 +122,12 @@ export default function RiskPage() {
     [plan, risk, who, deathAge],
   );
 
-  const base = useMemo(() => simulate(effPlan), [effPlan]);
-  const death = useMemo(() => simulate(effPlan, { death: true }), [effPlan]);
-  const need = useMemo(() => requiredCoverage(effPlan), [effPlan]);
+  const real = useUiStore((s) => s.realValue);
+  const base = useSimResult(effPlan);
+  const death = useSimResult(effPlan, { death: true });
+  const needNominal = useMemo(() => requiredCoverage(effPlan), [effPlan]);
+  // 保険金は死亡時に受け取る額。「今の価値」表示なら死亡時点までの物価で割り戻す
+  const need = real ? needNominal / deflator(effPlan, deathAge) : needNominal;
 
   if (!hydrated) {
     return (
@@ -132,7 +138,8 @@ export default function RiskPage() {
   }
 
   const deathRow = death.rows.find((r) => r.age === deathAge);
-  const lumpOther = (deathRow?.deathLump ?? 0) - (risk.deathInsurance || 0);
+  const lumpOther =
+    (deathRow?.deathLump ?? 0) - (risk.deathInsurance || 0) / (real ? deflator(effPlan, deathAge) : 1);
   const survTotal = death.rows.reduce((a, r) => a + r.survKiso + r.survKosei + r.survChukorei, 0);
   const firstSurv = death.rows.find((r) => r.dead && r.survKiso + r.survKosei + r.survChukorei > 0);
   const phases = buildPhases(death.rows);

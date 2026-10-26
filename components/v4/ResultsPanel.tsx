@@ -5,9 +5,9 @@ import { useMemo, useState } from "react";
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
 import { generateLifeEvents } from "@/lib/v4/calc/generateLifeEvents";
-import { simulate } from "@/lib/v4/calc/simulate";
 import type { YearlyResult } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
+import { useSimResult } from "@/store/v4/useSimResult";
 
 const yenToOkuMan = (yen: number): string => {
   const sign = yen < 0 ? "-" : "";
@@ -20,7 +20,7 @@ const yenToOkuMan = (yen: number): string => {
 
 export function ResultsPanel() {
   const plan = usePlanStore((s) => s.plan);
-  const result = useMemo(() => simulate(plan), [plan]);
+  const result = useSimResult(plan);
   const [showTable, setShowTable] = useState(false);
 
   const lifeEvents = useMemo(() => generateLifeEvents(plan), [plan]);

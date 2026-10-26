@@ -6,6 +6,7 @@ import Link from "next/link";
 import { dcSelfLimit } from "@/lib/v4/calc/rules";
 import { simulate } from "@/lib/v4/calc/simulate";
 import { usePlanStore } from "@/store/v4/plan-store";
+import { useDisplayConverter } from "@/store/v4/useSimResult";
 import type { DrawOrderMode, PlanInput } from "@/lib/v4/calc/types";
 
 const fmt = (yen: number) => {
@@ -44,11 +45,12 @@ const CAT_LABEL: Record<Cat, string> = {
 
 export default function SuggestPage() {
   const plan = usePlanStore((s) => s.plan);
-  const base = useMemo(() => simulate(plan), [plan]);
+  const { convert } = useDisplayConverter();
+  const base = useMemo(() => convert(simulate(plan), plan), [plan, convert]);
 
   // すべてのシナリオをひとつの useMemo で計算（プラン変化時のみ再評価）
   const candidates: Scenario[] = useMemo(() => {
-    const sim = (mod: (p: PlanInput) => PlanInput) => simulate(mod(plan));
+    const sim = (mod: (p: PlanInput) => PlanInput) => convert(simulate(mod(plan)), plan);
     const last = plan.jobs.length > 0 ? Math.max(...plan.jobs.map((j) => j.end)) : plan.penStartA;
 
     const list: (Scenario | null)[] = [];
@@ -263,7 +265,7 @@ export default function SuggestPage() {
     }
 
     return list.filter(Boolean) as Scenario[];
-  }, [plan]);
+  }, [plan, convert]);
 
   // 表示対象：
   //  - プラスになるシナリオ（最終純資産が増える、or 資金ショートが改善する）

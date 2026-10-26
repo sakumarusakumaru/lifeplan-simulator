@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
 import { HealthHeader } from "@/components/v4/HealthHeader";
 import { ResultsPanel } from "@/components/v4/ResultsPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
@@ -10,13 +8,13 @@ import { AssetsMegaSection } from "@/components/v4/sections/mega/AssetsMegaSecti
 import { ExpenseMegaSection } from "@/components/v4/sections/mega/ExpenseMegaSection";
 import { IncomeMegaSection } from "@/components/v4/sections/mega/IncomeMegaSection";
 import { SettingsMegaSection } from "@/components/v4/sections/mega/SettingsMegaSection";
-import { simulate } from "@/lib/v4/calc/simulate";
 import { usePlanStore } from "@/store/v4/plan-store";
+import { useSimResult } from "@/store/v4/useSimResult";
 
 export default function DetailPage() {
   const hydrated = usePlanStore((s) => s.hydrated);
   const plan = usePlanStore((s) => s.plan);
-  const result = useMemo(() => simulate(plan), [plan]);
+  const result = useSimResult(plan);
 
   if (!hydrated) {
     return (

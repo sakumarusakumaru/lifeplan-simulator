@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
+import { deflator } from "@/lib/v4/calc/realValue";
+import { useUiStore } from "@/store/v4/ui-store";
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 
 type AlertLevel = "good" | "warn" | "bad";
@@ -20,8 +22,10 @@ const fmt = (yen: number) => {
   return `${sign}${abs.toLocaleString()}万`;
 };
 
-function computeHealth(result: SimulationSummary, plan: PlanInput): Health {
-  const nw = result.finalNetWorth;
+// 判定は表示モードに関係なく「今の価値」の最終純資産で行う（名目のままだと遠い将来ほど甘く出るため）
+function computeHealth(result: SimulationSummary, plan: PlanInput, real: boolean): Health {
+  const last = result.rows[result.rows.length - 1];
+  const nw = real || !last ? result.finalNetWorth : result.finalNetWorth / deflator(plan, last.age);
   const endAge = plan.endAge;
   const curAge = plan.curAge;
 
@@ -124,7 +128,8 @@ export function HealthHeader({
   const pathname = usePathname();
   const isV3 = pathname?.startsWith("/v4") ?? false;
   const isV3Detail = pathname?.startsWith("/v4/detail") ?? false;
-  const health = computeHealth(result, plan);
+  const real = useUiStore((s) => s.realValue);
+  const health = computeHealth(result, plan, real);
   const c = ALERT_COLORS[health.alert];
   const nwSeries = result.rows.map((r) => r.nw);
 

@@ -8,9 +8,11 @@ import { CashflowChart } from "@/components/v4/charts/CashflowChart";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
 import { ageOn, kidAge } from "@/lib/v4/calc/age";
 import { computeRealEstateValue } from "@/lib/v4/calc/finance";
-import { simulate } from "@/lib/v4/calc/simulate";
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
+import { useSimResult } from "@/store/v4/useSimResult";
+import { useUiStore } from "@/store/v4/ui-store";
+import { deflator } from "@/lib/v4/calc/realValue";
 
 const fmt = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
@@ -35,8 +37,12 @@ interface Verdict {
 function buildVerdict(
   plan: PlanInput,
   result: SimulationSummary,
+  real: boolean,
 ): Verdict {
   const nw = result.finalNetWorth;
+  // 判定は表示モードに関係なく「今の価値」で行う
+  const lastRow = result.rows[result.rows.length - 1];
+  const nwJudge = real || !lastRow ? nw : nw / deflator(plan, lastRow.age);
   const sa = result.shortfallAge;
   const endAge = plan.endAge;
   const curAge = plan.curAge;
@@ -94,7 +100,7 @@ function buildVerdict(
   // ─────────────────────────
   // 純資産マイナス（完走するがマイナス）
   // ─────────────────────────
-  if (nw < 0) {
+  if (nwJudge < 0) {
     return {
       score: 35,
       level: "bad",
@@ -110,7 +116,7 @@ function buildVerdict(
   // ─────────────────────────
   // ${endAge}まで完走するが余裕わずか
   // ─────────────────────────
-  if (nw < 10_000_000) {
+  if (nwJudge < 10_000_000) {
     return {
       score: 55,
       level: "warn",
@@ -126,7 +132,7 @@ function buildVerdict(
   // ─────────────────────────
   // 概ね安定（1,000万〜5,000万）
   // ─────────────────────────
-  if (nw < 50_000_000) {
+  if (nwJudge < 50_000_000) {
     return {
       score: 75,
       level: "good",
@@ -142,7 +148,7 @@ function buildVerdict(
   // ─────────────────────────
   // 余裕ある（5,000万〜1億）
   // ─────────────────────────
-  if (nw < 100_000_000) {
+  if (nwJudge < 100_000_000) {
     return {
       score: 85,
       level: "good",
@@ -158,7 +164,7 @@ function buildVerdict(
   // ─────────────────────────
   // 非常に良好（1〜3億）
   // ─────────────────────────
-  if (nw < 300_000_000) {
+  if (nwJudge < 300_000_000) {
     return {
       score: 92,
       level: "good",
@@ -188,9 +194,10 @@ function buildVerdict(
 
 export default function ResultPage() {
   const plan = usePlanStore((s) => s.plan);
-  const result = useMemo(() => simulate(plan), [plan]);
+  const result = useSimResult(plan);
 
-  const v = buildVerdict(plan, result);
+  const realValue = useUiStore((s) => s.realValue);
+  const v = buildVerdict(plan, result, realValue);
 
   // プロフィール
   const selfAge = ageOn(plan.selfBirth, undefined) ?? plan.curAge;
