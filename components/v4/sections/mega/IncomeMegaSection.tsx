@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
@@ -9,8 +11,11 @@ import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { Section } from "@/components/v4/Section";
 import { calcPension } from "@/lib/v4/calc/pension";
+import { sevPlanOf, simulate } from "@/lib/v4/calc/simulate";
+import { taishokuShotokuKojo } from "@/lib/v4/calc/tax";
 import type {
   Job,
+  PlanInput,
   PensionCategory,
   PensionInput,
   PensionMode,
@@ -199,6 +204,92 @@ function PensionPreview({
   );
 }
 
+const SEV_METHOD_OPTIONS: { value: "lump" | "annuity" | "mix"; label: string }[] = [
+  { value: "lump", label: "一時金でまとめて受け取る" },
+  { value: "annuity", label: "年金（分割）で受け取る" },
+  { value: "mix", label: "一部を一時金、残りを年金" },
+];
+
+// 退職金の受け取り方を選び、3通りの「受取総額」と「税・社会保険を引いた手取り」を比べる
+function SeverancePicker({ plan, index, update }: { plan: PlanInput; index: number; update: (p: Partial<Job>) => void }) {
+  const j = plan.jobs[index];
+  const method = j.sevMethod ?? "lump";
+  const cmp = useMemo(() => {
+    const withJob = (o: Partial<Job>): PlanInput => ({ ...plan, jobs: plan.jobs.map((x, k) => (k === index ? { ...x, ...o } : x)) });
+    const cost = (r: ReturnType<typeof simulate>) => r.rows.reduce((a, x) => a + x.taxWage + x.sevTax, 0);
+    const none = cost(simulate(withJob({ sev: 0 })));
+    const one = (o: Partial<Job>) => {
+      const p = withJob(o);
+      const sp = sevPlanOf(p.jobs[index]);
+      const extra = cost(simulate(p)) - none;
+      return { total: sp.total, net: sp.total - extra, extra };
+    };
+    const yrs = j.sevYears ?? 10;
+    const rate = j.sevRate ?? 1.5;
+    return [
+      { key: "lump", label: "一時金", ...one({ sevMethod: "lump" }) },
+      { key: "annuity", label: `年金（${yrs}年）`, ...one({ sevMethod: "annuity", sevYears: yrs, sevRate: rate }) },
+      { key: "mix", label: `一部年金（一時金${j.sevLumpPct ?? 50}%）`, ...one({ sevMethod: "mix", sevYears: yrs, sevRate: rate, sevLumpPct: j.sevLumpPct ?? 50 }) },
+    ];
+  }, [plan, index, j.sevYears, j.sevRate, j.sevLumpPct]);
+  const best = cmp.reduce((a, b) => (b.net > a.net ? b : a));
+  const man = (v: number) => `${Math.round(v / 10000).toLocaleString()}万円`;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg p-2.5" style={{ background: "#f0f0ee", border: "1.5px solid #0a0a0a20" }}>
+      <SelectField label="退職金の受け取り方" value={method} onChange={(v) => update({ sevMethod: v })} options={SEV_METHOD_OPTIONS} />
+      {method !== "lump" ? (
+        <div className="grid grid-cols-2 items-start gap-2">
+          <NumberField label="年金で受け取る年数" value={j.sevYears ?? 10} onChange={(v) => update({ sevYears: v })} unit="年" min={1} max={30} />
+          <PercentField
+            label="給付利率(年)"
+            value={j.sevRate ?? 1.5}
+            onChange={(v) => update({ sevRate: v })}
+            hint="会社の規程で年1〜3%程度が多い。分割中も残りに利息がつく"
+          />
+          {method === "mix" ? (
+            <PercentField label="一時金の割合" value={j.sevLumpPct ?? 50} onChange={(v) => update({ sevLumpPct: v })} step={10} min={0} max={100} />
+          ) : null}
+        </div>
+      ) : null}
+      <ul className="flex flex-col gap-1">
+        {cmp.map((c) => {
+          const selected = c.key === method;
+          return (
+            <li
+              key={c.key}
+              className="rounded-md bg-white px-2.5 py-2"
+              style={{ border: selected ? "2px solid #0a0a0a" : "1px solid #0a0a0a20" }}
+            >
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[12px] font-bold">{c.label}</span>
+                {selected ? <span className="text-[9px] text-[#0a0a0a]/55">選択中</span> : null}
+                {c.key === best.key ? (
+                  <span className="rounded px-1 text-[9px] font-bold text-white" style={{ background: "#22863a" }}>
+                    手取り最大
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-[11px] tabular-nums text-[#0a0a0a]/75">
+                <span>受取 {man(c.total)}</span>
+                <span>− 税・社保 {man(Math.max(0, c.extra))}</span>
+                <span>
+                  ＝ 手取り <b className="text-[13px] text-[#0a0a0a]">{man(c.net)}</b>
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-[10px] leading-relaxed text-[#0a0a0a]/60">
+        一時金は「退職所得」として勤続年数に応じた控除があり（この勤務先は勤続{Math.max(1, j.end - j.start)}年で{man(taishokuShotokuKojo(Math.max(1, j.end - j.start)))}まで非課税）、超えた分も半分にしてから課税されるので、税金が軽く済むことが多いです。
+        年金は利息がつく分だけ総額は増えますが、毎年ほかの年金と合わせて課税され、国民健康保険・介護保険の保険料も上がります。
+        「税・社保」は、この退職金があることで一生のあいだに増える税金と社会保険料の合計です。
+      </p>
+    </div>
+  );
+}
+
 export function IncomeMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
@@ -257,6 +348,7 @@ export function IncomeMegaSection() {
                     <NumberField label="退職金" value={j.sev} onChange={(v) => updateJob(i, { sev: v })} unit="円" hint="退職所得（勤続年数の控除＋1/2課税）で計算" />
                     <NumberField label="退職金 受取" value={j.sevAge} onChange={(v) => updateJob(i, { sevAge: v })} unit="歳" />
                   </div>
+                  {j.sev > 0 ? <SeverancePicker plan={plan} index={i} update={(p) => updateJob(i, p)} /> : null}
                 </div>
               </ListItemCard>
             ))}

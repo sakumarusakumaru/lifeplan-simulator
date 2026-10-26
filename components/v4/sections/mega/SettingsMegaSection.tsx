@@ -8,10 +8,9 @@ import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
+import { DrawOrderEditor } from "@/components/v4/DrawOrderEditor";
 import { Section } from "@/components/v4/Section";
 import { ageOn } from "@/lib/v4/calc/age";
-import { DRAW_LABEL } from "@/lib/v4/calc/drawOrder";
-import type { DrawOrderMode } from "@/lib/v4/calc/types";
 import { calcHouseholdTax } from "@/lib/v4/calc/tax";
 import { usePlanStore } from "@/store/v4/plan-store";
 
@@ -24,11 +23,6 @@ const fmtMan = (yen: number) => {
 const SPOUSE_WORK_OPTIONS = [
   { value: "work" as const, label: "就労中" },
   { value: "none" as const, label: "就労なし" },
-];
-
-const DRAW_ORDER_OPTIONS: { value: DrawOrderMode; label: string }[] = [
-  { value: "auto", label: "おすすめ（特定口座→金→暗号資産→NISA）" },
-  { value: "custom", label: "自分で順番を決める" },
 ];
 
 function AgeDisplay({ birth }: { birth: string }) {
@@ -189,80 +183,9 @@ export function SettingsMegaSection() {
               value={plan.cashFloor}
               onChange={(v) => setField("cashFloor", v)}
               unit="円"
+              hint="手元に最低限残しておく預金。これを下回る年に運用資産を売る"
             />
-            <SelectField
-              label="取り崩し順序"
-              value={plan.drawOrder}
-              onChange={(v) => setField("drawOrder", v)}
-              options={DRAW_ORDER_OPTIONS}
-            />
-            {plan.drawOrder === "custom" ? (
-              <div
-                className="flex flex-col gap-1.5 rounded-lg p-2"
-                style={{ background: "#f0f0ee", border: "1.5px solid #0a0a0a30" }}
-              >
-                <p className="px-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">
-                  カスタム順序（上から先に取り崩し）
-                </p>
-                {plan.drawCustomOrder.map((code, i) => {
-                  const move = (dir: -1 | 1) => {
-                    const order = [...plan.drawCustomOrder];
-                    const j = i + dir;
-                    if (j < 0 || j >= order.length) return;
-                    [order[i], order[j]] = [order[j], order[i]];
-                    setField("drawCustomOrder", order);
-                  };
-                  return (
-                    <div
-                      key={code}
-                      className="flex items-center gap-2 px-2.5 py-1.5"
-                      style={{
-                        background: "#ffffff",
-                        border: "2px solid #0a0a0a",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#66666a]">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span className="flex-1 text-xs font-bold text-[#0a0a0a]">
-                        {DRAW_LABEL[code]}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => move(-1)}
-                        disabled={i === 0}
-                        className="px-2 py-0.5 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#0a0a0a]"
-                        style={{
-                          border: "2px solid #0a0a0a",
-                          borderRadius: 6,
-                          background: "#f0f0ee",
-                          color: "#0a0a0a",
-                        }}
-                        aria-label="上へ"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => move(1)}
-                        disabled={i === plan.drawCustomOrder.length - 1}
-                        className="px-2 py-0.5 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#0a0a0a]"
-                        style={{
-                          border: "2px solid #0a0a0a",
-                          borderRadius: 6,
-                          background: "#f0f0ee",
-                          color: "#0a0a0a",
-                        }}
-                        aria-label="下へ"
-                      >
-                        ↓
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
+            <DrawOrderEditor />
             <CheckboxField
               label="現金不足時に借金を許容（資産売却しない）"
               value={plan.allowNegCash}

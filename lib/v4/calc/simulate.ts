@@ -188,6 +188,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     // ── 給与・副業 ──
     let job = 0;
     let sevGross = 0;
+    let sevAnnuity = 0;
     const sevJobs: { from: number; to: number; amount: number }[] = [];
     for (const j of input.jobs) {
       if (selfGone) {
@@ -195,14 +196,24 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         if (age === deathAge && age >= j.start && age < j.end && j.sev > 0) {
           deathLump += j.sev * Math.min(1, (age - j.start) / Math.max(1, j.end - j.start));
         }
+        // 退職金を年金で受け取っている途中なら、残りを遺族が一時金で受け取る（保証期間つきを想定）
+        if (age === deathAge && j.sev > 0) {
+          const plan = sevPlanOf(j);
+          const k = age - j.sevAge;
+          if (plan.annual > 0 && k >= 1 && k < plan.years) deathLump += presentValue(plan.annual, plan.rate, plan.years - k);
+        }
         continue;
       }
       if (age >= j.start && age < j.end) {
         job += j.inc * Math.pow(1 + (j.raise || 0) / 100, age - j.start);
       }
-      if (age === j.sevAge && j.sev > 0) {
-        sevGross += j.sev;
-        sevJobs.push({ from: j.start, to: j.end, amount: j.sev });
+      if (j.sev > 0) {
+        const plan = sevPlanOf(j);
+        if (age === j.sevAge && plan.lump > 0) {
+          sevGross += plan.lump;
+          sevJobs.push({ from: j.start, to: j.end, amount: plan.lump });
+        }
+        if (plan.annual > 0 && age >= j.sevAge && age < j.sevAge + plan.years) sevAnnuity += plan.annual;
       }
     }
     let side = 0;
@@ -387,7 +398,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     let socialIns = 0;
     let hlDeduct = 0;
     let marginal = input.taxRate / 100;
-    const ordinaryGross = job + side + spouseJob + pen + dcAnnuity;
+    const ordinaryGross = job + side + spouseJob + pen + dcAnnuity + sevAnnuity;
     const kidsDependent = kidAgesNow.some((a) => a <= 22);
     if (input.taxMode === "detailed" && selfGone) {
       // 本人が亡くなった後: 遺族（配偶者）だけで税・社会保険を計算
@@ -418,7 +429,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         age,
         wageY: job,
         workStyle: selfWorkStyle,
-        penY: selfPenY + kakyuu + dcAnnuity,
+        penY: selfPenY + kakyuu + dcAnnuity + sevAnnuity,
         otherShotokuY: side + reProfitTot,
         dcSelfContribY: dcSelf,
         dependentOfSpouse: false,
@@ -456,7 +467,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       const penRate = (input.taxRatePen ?? 10) / 100;
       const raw =
         (job + side + spouseJob + Math.max(0, reProfitTot) - dcSelf) * rate +
-        (pen + dcAnnuity) * penRate;
+        (pen + dcAnnuity + sevAnnuity) * penRate;
       hlDeduct = Math.min(Math.max(0, raw), hlCredit);
       tax = Math.max(0, raw - hlDeduct);
     }
@@ -606,20 +617,29 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     let saleTax = 0;
     if (!input.allowNegCash && ass.c < input.cashFloor) {
       let need = input.cashFloor - ass.c;
-      const ord = resolveDrawOrder(input.drawOrder, input.drawCustomOrder);
+      const taxRateOf = (key: DrawAsset) =>
+        key === "nisa"
+          ? 0
+          : key === "k"
+            ? year >= 2028
+              ? CAPITAL_GAIN_TAX // 2028年〜 申告分離課税20.315%（金商法改正の施行が前提）
+              : (input.cryptoTaxRate ?? 30) / 100
+            : CAPITAL_GAIN_TAX;
+      const gainOf = (key: DrawAsset) => (ass[key] > 0 ? Math.max(0, 1 - cost[key] / ass[key]) : 0);
+      // おすすめ: 課税される口座の中から「1円売るのにかかる税金」が少ないものを毎年選んで先に売り、NISAは最後
+      const ord =
+        input.drawOrder === "custom"
+          ? resolveDrawOrder(input.drawOrder, input.drawCustomOrder)
+          : ([
+              ...(["toku", "g", "k"] as DrawAsset[]).sort((a, b) => gainOf(a) * taxRateOf(a) - gainOf(b) * taxRateOf(b)),
+              "nisa",
+            ] as DrawAsset[]);
       for (const key of ord) {
         if (need <= 0) break;
         const bal = ass[key as DrawAsset];
         if (bal <= 0) continue;
-        const gainRatio = Math.max(0, 1 - cost[key] / bal);
-        const rate =
-          key === "nisa"
-            ? 0
-            : key === "k"
-              ? year >= 2028
-                ? CAPITAL_GAIN_TAX // 2028年〜 申告分離課税20.315%（金商法改正の施行が前提）
-                : (input.cryptoTaxRate ?? 30) / 100
-              : CAPITAL_GAIN_TAX;
+        const gainRatio = gainOf(key);
+        const rate = taxRateOf(key);
         const netPerYen = 1 - gainRatio * rate;
         const gross = Math.min(bal, need / netPerYen);
         const taxPaid = gross * gainRatio * rate;
@@ -693,6 +713,11 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       saleTax,
       nisaCost: cost.nisa,
       nisaOverflow,
+      sevAnnuity,
+      latentTax:
+        Math.max(0, ass.toku - cost.toku) * CAPITAL_GAIN_TAX +
+        Math.max(0, ass.g - cost.g) * CAPITAL_GAIN_TAX +
+        Math.max(0, ass.k - cost.k) * (year >= 2028 ? CAPITAL_GAIN_TAX : (input.cryptoTaxRate ?? 30) / 100),
       dead,
       survKiso: surv.kiso,
       survKosei: surv.kosei,
@@ -771,4 +796,26 @@ export function requiredCoverage(input: PlanInput): number {
     else lo = mid;
   }
   return Math.ceil(hi / 100_000) * 100_000;
+}
+
+// 退職金の受け取り方の内訳。年金部分は「元本を給付利率で運用しながら年数で取り崩す」年額
+export function sevPlanOf(j: {
+  sev: number;
+  sevMethod?: "lump" | "annuity" | "mix";
+  sevYears?: number;
+  sevRate?: number;
+  sevLumpPct?: number;
+}) {
+  const method = j.sevMethod ?? "lump";
+  const share = method === "lump" ? 1 : method === "annuity" ? 0 : Math.min(100, Math.max(0, j.sevLumpPct ?? 50)) / 100;
+  const lump = j.sev * share;
+  const principal = j.sev - lump;
+  const years = Math.max(1, Math.round(j.sevYears ?? 10));
+  const rate = Math.max(0, (j.sevRate ?? 1.5) / 100);
+  const annual = principal > 0 ? (rate > 0 ? (principal * rate) / (1 - Math.pow(1 + rate, -years)) : principal / years) : 0;
+  return { lump, annual, years, rate, total: lump + annual * years };
+}
+
+function presentValue(annual: number, rate: number, n: number) {
+  return rate > 0 ? (annual * (1 - Math.pow(1 + rate, -n))) / rate : annual * n;
 }

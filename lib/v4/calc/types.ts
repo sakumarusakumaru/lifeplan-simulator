@@ -35,6 +35,11 @@ export interface Job {
   raise: number;       // 昇給率(%/年・複利)
   sev: number;
   sevAge: number;
+  // 退職金の受け取り方: 一時金（退職所得）／年金（企業年金として分割）／一部を年金
+  sevMethod?: "lump" | "annuity" | "mix";
+  sevYears?: number;    // 年金で受け取る年数
+  sevRate?: number;     // 年金の給付利率（%/年）。分割中も残りに利息がつく
+  sevLumpPct?: number;  // 一部を年金にする場合の、一時金の割合（%）
 }
 
 export interface SideJob {
@@ -427,6 +432,8 @@ export interface YearlyResult {
   saleTax: number;       // 取り崩し時の売却益課税（特定口座・金・暗号資産）
   nisaCost: number;      // NISA 簿価残高（生涯枠1,800万の消化状況）
   nisaOverflow: number;  // NISA枠を超えて特定口座／現金に回った額
+  sevAnnuity: number;    // 退職金を年金で受け取っている分（公的年金等として課税）
+  latentTax: number;     // その年末に課税口座（特定口座・金・暗号資産）を全部売ったらかかる税金（含み益への課税）
   // もしもの備え（死亡シナリオのときだけ値が入る）
   dead: boolean;         // 死亡後の年か
   survKiso: number;      // 遺族基礎年金

@@ -33,7 +33,7 @@ const fmtDelta = (delta: number) => {
 };
 
 const DRAW_ORDER_LABEL: Record<DrawOrderMode, string> = {
-  auto: "おすすめ（特定口座→金→暗号資産→NISA）",
+  auto: "おすすめ（税金が少ない順・NISAは最後）",
   custom: "カスタム順序",
 };
 
@@ -314,7 +314,7 @@ export default function SuggestPage() {
     if (plan.drawOrder !== "auto") {
       list.push({
         title: "取り崩し順序をおすすめに変更",
-        detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 特定口座→金→暗号資産→NISA（非課税のNISAを最後まで残す）`,
+        detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 税金が少ないものから売り、非課税のNISAを最後まで残す`,
         result: sim((p) => ({ ...p, drawOrder: "auto" as DrawOrderMode })),
         category: "drawdown",
       });

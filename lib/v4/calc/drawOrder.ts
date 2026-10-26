@@ -13,10 +13,10 @@ export const DRAW_LABEL: Record<DrawAsset | "c" | "dc", string> = {
 
 // 取り崩し順序（現金が下限を割ったときに売る順番）
 //
-//  [自動] 特定口座 → 金 → 暗号資産 → NISA
-//   - NISA は売却益が非課税で、持ち続けるほど非課税の複利が効くため最後に回す
-//   - 特定口座は売却益に20.315%。元本部分には税がかからないので、含み益が小さいうちに使う方が有利
-//   - DC（iDeCo・企業型DC）は「取り崩す」ものではなく、受取開始年齢に一時金／年金で受け取る
+//  [おすすめ] simulate.ts の中で毎年決める: 特定口座・金・暗号資産のうち「1円売るのにかかる税金」
+//             （利益の割合 × 税率）が小さいものから売り、NISA は最後まで残す
+//  [自分で決める] ここで指定順に並べる（指定のないものは末尾）
+//   - DC（iDeCo・企業型DC）は取り崩さず、受取開始年齢に一時金／年金で受け取る
 export function resolveDrawOrder(mode: DrawOrderMode, customOrder: DrawAsset[]): DrawAsset[] {
   if (mode === "custom") {
     const seen = new Set<DrawAsset>();
