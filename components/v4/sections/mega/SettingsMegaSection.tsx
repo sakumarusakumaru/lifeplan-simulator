@@ -10,8 +10,9 @@ import { SelectField } from "@/components/v4/inputs/SelectField";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { Section } from "@/components/v4/Section";
 import { ageOn } from "@/lib/v4/calc/age";
-import type { DrawAsset, DrawOrderMode } from "@/lib/v4/calc/types";
-import { calcDetailedTaxV2 } from "@/lib/v4/calc/tax";
+import { DRAW_LABEL } from "@/lib/v4/calc/drawOrder";
+import type { DrawOrderMode } from "@/lib/v4/calc/types";
+import { calcHouseholdTax } from "@/lib/v4/calc/tax";
 import { usePlanStore } from "@/store/v4/plan-store";
 
 const fmtMan = (yen: number) => {
@@ -26,21 +27,9 @@ const SPOUSE_WORK_OPTIONS = [
 ];
 
 const DRAW_ORDER_OPTIONS: { value: DrawOrderMode; label: string }[] = [
-  { value: "auto-tiered", label: "自動（年齢別に最適化）" },
-  { value: "fund-stock-crypto", label: "投信→株→仮想通貨" },
-  { value: "stock-fund-crypto", label: "株→投信→仮想通貨" },
-  { value: "custom", label: "カスタム順序" },
+  { value: "auto", label: "おすすめ（特定口座→金→暗号資産→NISA）" },
+  { value: "custom", label: "自分で順番を決める" },
 ];
-
-const DRAW_LABEL: Record<DrawAsset, string> = {
-  f: "投信(課税)",
-  s: "株(課税)",
-  fNisa: "投信(NISA)",
-  sNisa: "株(NISA)",
-  k: "仮想通貨",
-  g: "金・コモディティ",
-  dc: "確定拠出年金",
-};
 
 function AgeDisplay({ birth }: { birth: string }) {
   const age = ageOn(birth, undefined);
@@ -72,8 +61,6 @@ export function SettingsMegaSection() {
   const sample = useMemo(() => {
     const selfWageY = plan.jobs.reduce((acc, j) => {
       return j.start <= plan.curAge && plan.curAge < j.end ? acc + j.inc : acc;
-    }, 0) + plan.sideJobs.reduce((acc, j) => {
-      return j.start <= plan.curAge && plan.curAge < j.end ? acc + j.inc : acc;
     }, 0);
     const spouseAge = ageOn(plan.spouseBirth, undefined);
     const spouseWageY = plan.spouseWork === "work"
@@ -86,21 +73,41 @@ export function SettingsMegaSection() {
       .map((k) => plan.curAge - k.offset)
       .filter((a) => a >= 0);
 
-    return calcDetailedTaxV2(
-      {
-        selfWageY,
-        spouseWageY,
-        selfPenY: 0,
-        spousePenY: 0,
-        selfAge: plan.curAge,
-        spouseAge: spouseAge ?? plan.curAge,
-        hasSpouse: spouseAge !== null,
-        numKidsForFuyo: 0,
-        selfWorking: selfWageY > 0,
-        spouseWorking: plan.spouseWork === "work" && spouseWageY > 0,
+    const year = new Date().getFullYear();
+    const selfStyle = plan.selfPension.category === "kokumin" ? "self-employed" : "employee";
+    const spouseStyle = plan.spousePension.category === "kokumin" ? "self-employed" : "employee";
+    const dcSelfY = plan.curAge < plan.saveDcEndAge ? plan.saveDcM * 12 : 0;
+    const r = calcHouseholdTax({
+      year,
+      self: {
+        age: plan.curAge,
+        wageY: selfWageY,
+        workStyle: selfStyle,
+        penY: 0,
+        otherShotokuY: 0,
+        dcSelfContribY: dcSelfY,
+        dependentOfSpouse: false,
       },
-      kidAgesNow,
-    );
+      spouse:
+        spouseAge !== null
+          ? {
+              age: spouseAge,
+              wageY: spouseWageY,
+              workStyle: spouseStyle,
+              penY: 0,
+              otherShotokuY: 0,
+              dcSelfContribY: 0,
+              dependentOfSpouse:
+                plan.spousePension.category === "dependent" &&
+                spouseWageY < 1_300_000 &&
+                selfStyle === "employee" &&
+                selfWageY > 0,
+            }
+          : null,
+      kidAges: kidAgesNow,
+      hlDeductCredit: 0,
+    });
+    return { ...r, netAfterTax: selfWageY + spouseWageY - r.total };
   }, [plan]);
 
   return (
@@ -296,12 +303,22 @@ export function SettingsMegaSection() {
             </div>
 
             {!detailed && (
-              <PercentField
-                label="税率（概算）"
-                value={plan.taxRate}
-                onChange={(v) => setField("taxRate", v)}
-                step={1}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <PercentField
+                  label="給与・副業の税・社保率"
+                  value={plan.taxRate}
+                  onChange={(v) => setField("taxRate", v)}
+                  step={1}
+                  hint="年収500〜800万で20〜25%が目安"
+                />
+                <PercentField
+                  label="年金の税・社保率"
+                  value={plan.taxRatePen ?? 10}
+                  onChange={(v) => setField("taxRatePen", v)}
+                  step={1}
+                  hint="公的年金等控除があるため8〜15%が目安"
+                />
+              </div>
             )}
 
             {detailed && (
@@ -314,14 +331,14 @@ export function SettingsMegaSection() {
                     詳細計算で考慮するもの
                   </p>
                   <ul className="ml-4 list-disc space-y-0.5">
-                    <li>給与所得控除・公的年金等控除（年齢別）</li>
-                    <li>基礎控除・配偶者控除・扶養控除（特定扶養含む）</li>
-                    <li>所得税の累進5〜45%</li>
-                    <li>復興特別所得税2.1%</li>
-                    <li>住民税10%（所得割）</li>
-                    <li>厚生年金・健康保険・雇用保険（自己負担）</li>
-                    <li>介護保険料（40〜64歳）</li>
-                    <li>退職後の国民健康保険料（簡易）</li>
+                    <li>2026年分の基礎控除104万・給与所得控除74万（「178万円の壁」）、2028年以降は本則に戻して計算</li>
+                    <li>配偶者控除・配偶者特別控除・扶養控除（16〜22歳）</li>
+                    <li>所得税の累進5〜45%・復興特別所得税（2037年まで）・住民税10%</li>
+                    <li>iDeCo・マッチング掛金の所得控除</li>
+                    <li>厚生年金・健康保険・介護・子ども子育て支援金・雇用保険（2026年度料率）</li>
+                    <li>自営業・退職後の国民年金・国民健康保険、75歳以上の後期高齢者医療</li>
+                    <li>退職金・DC一時金は退職所得として分離課税（受取時期の重複調整つき）</li>
+                    <li>住宅ローン控除・児童手当</li>
                   </ul>
                 </div>
 
@@ -333,22 +350,20 @@ export function SettingsMegaSection() {
                     {plan.curAge}歳時点の試算（現在の収入条件で）
                   </p>
                   <div className="grid grid-cols-2 gap-y-1.5 text-xs">
-                    <span className="text-[#0a0a0a]/60">所得税（本人）</span>
+                    <span className="text-[#0a0a0a]/60">所得税・復興税（本人）</span>
                     <span className="text-right font-bold tabular-nums">{fmtMan(sample.shotokuzeiSelf)}</span>
-                    <span className="text-[#0a0a0a]/60">復興特別税（本人）</span>
-                    <span className="text-right font-bold tabular-nums">{fmtMan(sample.fukkouSelf)}</span>
                     <span className="text-[#0a0a0a]/60">住民税（本人）</span>
                     <span className="text-right font-bold tabular-nums">{fmtMan(sample.juminSelf)}</span>
                     <span className="text-[#0a0a0a]/60">社会保険料（本人）</span>
-                    <span className="text-right font-bold tabular-nums">{fmtMan(sample.shahoSelf + sample.kaigoSelf)}</span>
+                    <span className="text-right font-bold tabular-nums">{fmtMan(sample.shahoSelf)}</span>
                     {sample.shotokuzeiSpouse + sample.juminSpouse + sample.shahoSpouse > 0 && (
                       <>
                         <span className="text-[#0a0a0a]/60">所得税・住民税（配偶者）</span>
                         <span className="text-right font-bold tabular-nums">
-                          {fmtMan(sample.shotokuzeiSpouse + sample.fukkouSpouse + sample.juminSpouse)}
+                          {fmtMan(sample.shotokuzeiSpouse + sample.juminSpouse)}
                         </span>
                         <span className="text-[#0a0a0a]/60">社会保険料（配偶者）</span>
-                        <span className="text-right font-bold tabular-nums">{fmtMan(sample.shahoSpouse + sample.kaigoSpouse)}</span>
+                        <span className="text-right font-bold tabular-nums">{fmtMan(sample.shahoSpouse)}</span>
                       </>
                     )}
                     <span className="col-span-2 my-1.5 h-px" style={{ background: "#0a0a0a30" }} />

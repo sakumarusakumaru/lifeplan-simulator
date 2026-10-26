@@ -7,7 +7,7 @@ import { useRef } from "react";
 import { ConsentDialog } from "@/components/v4/ConsentDialog";
 import { Footer } from "@/components/v4/Footer";
 import type { PlanInput } from "@/lib/v4/calc/types";
-import { usePlanStore } from "@/store/v4/plan-store";
+import { migrateV3Plan, usePlanStore } from "@/store/v4/plan-store";
 
 const TABS = [
   { href: "/v4/detail", label: "詳細入力" },
@@ -55,7 +55,9 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
         if (!("curAge" in data) || !("endAge" in data)) {
           throw new Error("ライフプランデータではありません");
         }
-        patch(data as Partial<PlanInput>);
+        // ver3 で保存したJSONも読めるように変換する
+        const isV3 = "fundBal" in data || "fundNisaBal" in data;
+        patch(isV3 ? migrateV3Plan(data) : (data as Partial<PlanInput>));
         alert("データを読み込みました");
       } catch (err) {
         alert(
@@ -89,7 +91,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
 
         <span className="text-[#0a0a0a]/30">|</span>
 
-        <nav className="flex items-center gap-0.5 overflow-x-auto">
+        <nav className="flex shrink-0 items-center gap-0.5">
           {TABS.map((tab, i) => {
             const active = i === activeIdx;
             const passed = activeIdx >= 0 && i < activeIdx;
@@ -164,7 +166,23 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* ページ別アクション（VER 3 バッジは廃止） */}
-        <div className="no-print ml-auto flex shrink-0 items-center gap-1.5">
+        <div className="no-print ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto">
+          <Link
+            href="/guide"
+            className="shrink-0 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+            style={headerBtnStyle}
+            title="使い方ガイドを開く"
+          >
+            使い方
+          </Link>
+          <Link
+            href="/v3/detail"
+            className="hidden shrink-0 px-2.5 py-1 text-[10px] font-bold text-[#0a0a0a]/55 transition-colors hover:bg-[#0a0a0a] hover:text-white xl:inline-block"
+            style={{ ...headerBtnStyle, borderColor: "#0a0a0a40" }}
+            title="以前のver3を開く（入力データは別保存）"
+          >
+            ver3
+          </Link>
           <button
             type="button"
             onClick={() => {
@@ -172,7 +190,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
                 reset();
               }
             }}
-            className="px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#c8383a] hover:text-white hover:border-[#c8383a]"
+            className="shrink-0 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#c8383a] hover:text-white hover:border-[#c8383a]"
             style={headerBtnStyle}
             title="すべての入力をデフォルト値に戻す"
           >
@@ -183,7 +201,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={exportPlan}
-                className="px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+                className="shrink-0 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
                 style={headerBtnStyle}
                 title="現在の入力データをJSONとしてダウンロード"
               >
@@ -192,7 +210,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+                className="shrink-0 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
                 style={headerBtnStyle}
                 title="保存したJSONを読み込んで反映"
               >
@@ -215,7 +233,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => window.print()}
-              className="px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+              className="shrink-0 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
               style={headerBtnStyle}
               title="ブラウザの印刷からPDFとして保存"
             >

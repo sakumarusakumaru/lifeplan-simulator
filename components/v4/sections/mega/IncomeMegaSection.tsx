@@ -25,7 +25,7 @@ const PEN_MODE_OPTIONS: { value: PensionMode; label: string }[] = [
 
 const PEN_CATEGORY_SELF_OPTIONS: { value: PensionCategory; label: string }[] = [
   { value: "kosei", label: "2号 会社員・公務員（厚生年金 + 国民年金）" },
-  { value: "kokumin", label: "1号 自営業・無職（国民年金のみ）" },
+  { value: "kokumin", label: "1号 自営業・フリーランス（国民年金のみ）" },
 ];
 
 const PEN_CATEGORY_SPOUSE_OPTIONS: { value: PensionCategory; label: string }[] = [
@@ -254,7 +254,7 @@ export function IncomeMegaSection() {
                     <NumberField label="退社年齢" value={j.end} onChange={(v) => updateJob(i, { end: v })} unit="歳" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <NumberField label="退職金" value={j.sev} onChange={(v) => updateJob(i, { sev: v })} unit="円" />
+                    <NumberField label="退職金" value={j.sev} onChange={(v) => updateJob(i, { sev: v })} unit="円" hint="退職所得（勤続年数の控除＋1/2課税）で計算" />
                     <NumberField label="退職金 受取" value={j.sevAge} onChange={(v) => updateJob(i, { sevAge: v })} unit="歳" />
                   </div>
                 </div>
@@ -274,7 +274,7 @@ export function IncomeMegaSection() {
               >
                 <div className="grid grid-cols-1 gap-2">
                   <TextField label="名称" value={j.name} onChange={(v) => updateSide(i, { name: v })} />
-                  <NumberField label="年収" value={j.inc} onChange={(v) => updateSide(i, { inc: v })} unit="円" />
+                  <NumberField label="年間の所得（売上−経費）" value={j.inc} onChange={(v) => updateSide(i, { inc: v })} unit="円" hint="雑所得・事業所得として本業と合算して課税" />
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
                     <NumberField label="開始年齢" value={j.start} onChange={(v) => updateSide(i, { start: v })} unit="歳" />
                     <NumberField label="終了年齢" value={j.end} onChange={(v) => updateSide(i, { end: v })} unit="歳" />
@@ -292,6 +292,13 @@ export function IncomeMegaSection() {
               label="配偶者分も年金収入に含める"
               value={plan.useSpousePen}
               onChange={(v) => setField("useSpousePen", v)}
+            />
+            <PercentField
+              label="年金額の改定率（年）"
+              value={plan.penIndex ?? 0}
+              onChange={(v) => setField("penIndex", v)}
+              step={0.1}
+              hint={`物価・賃金に連動するが、マクロ経済スライドで物価（${plan.infl.toFixed(1)}%）より低めに改定されるのが基本。2026年度は+1.9%`}
             />
             <PensionEditor
               kicker="本人"

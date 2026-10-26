@@ -1,82 +1,213 @@
-// 日本の税・社会保険料の精密計算（2024年度ベース、簡略化版）
+// 日本の税・社会保険料の計算（ver4 / 2026年10月時点の制度）
+//
+// 年（西暦）ごとに制度を切り替える:
+//   - 基礎控除: 令和8・9年分(2026-27)は合計所得489万以下で104万（本則62万＋特例42万）、
+//               2028年分以後は本則62万（＋132万以下は恒久特例37万）。住民税は43万で据置き
+//   - 給与所得控除の最低保障: 2026-27年分は74万（特例）、2028年分以後は69万
+//   - 復興特別所得税(2.1%)は2037年分まで
 //
 // 含めるもの:
-//   - 給与所得控除
-//   - 公的年金等控除
-//   - 基礎控除・配偶者控除・扶養控除
-//   - 社会保険料控除（健康保険・厚生年金・雇用保険を概算）
-//   - 所得税（累進5-45%）
-//   - 復興特別所得税（所得税の2.1%）
-//   - 住民税（10%一律・所得割のみ）
-//   - 退職所得控除（退職金）
+//   - 給与所得控除 / 青色申告特別控除（自営業）/ 公的年金等控除（年齢別）
+//   - 基礎控除・配偶者控除・配偶者特別控除・扶養控除（16-18歳）・特定扶養（19-22歳）
+//   - 社会保険料控除・小規模企業共済等掛金控除（iDeCo・マッチング拠出）
+//   - 所得税（累進5-45%）・復興特別所得税・住民税（所得割10%＋均等割）
+//   - 会社員の社会保険（厚生年金・健康保険・介護・子ども子育て支援金・雇用保険）
+//   - 自営業・退職後の国民年金・国民健康保険、65歳以上の介護保険、75歳以上の後期高齢者医療
+//   - 住宅ローン控除（所得税→住民税の順に控除）
+//   - 退職所得（退職金・DC一時金）の分離課税
 //
 // 含めないもの（簡略化）:
-//   - 各種税額控除（住宅ローン控除・配当控除など）
-//   - ふるさと納税の控除
-//   - 国民健康保険料の精密計算（自営業時）
-//   - 介護保険料（40-65歳の上乗せ）
-//   - 後期高齢者医療保険料（75歳以上）
+//   - 住民税が前年所得に課税されるタイムラグ
+//   - 医療費控除・生命保険料控除・ふるさと納税・配当控除
+//   - 国保・後期高齢者医療の自治体ごとの料率差（全国平均的な水準で概算）
 
 const MAN = 10000;
 
-// 給与所得控除（2020年改正後）
-function kyuyoShotokuKojo(wageY: number): number {
-  if (wageY <= 162.5 * MAN) return 55 * MAN;
-  if (wageY <= 180 * MAN) return wageY * 0.4 - 10 * MAN;
-  if (wageY <= 360 * MAN) return wageY * 0.3 + 8 * MAN;
-  if (wageY <= 660 * MAN) return wageY * 0.2 + 44 * MAN;
-  if (wageY <= 850 * MAN) return wageY * 0.1 + 110 * MAN;
-  return 195 * MAN;
+// ─────────────────────────────────────────
+// 社会保険料率（2026年度・本人負担分）
+// ─────────────────────────────────────────
+export const SHAHO_2026 = {
+  kosei: 0.183 / 2,        // 厚生年金 18.3% の折半
+  kenpo: 0.099 / 2,        // 協会けんぽ 全国平均 9.9%（大阪支部 10.13%）
+  kaigo: 0.0162 / 2,       // 介護保険（40-64歳）1.62%
+  kodomo: 0.0023 / 2,      // 子ども・子育て支援金 0.23%（2026年4月〜）
+  koyo: 0.005,             // 雇用保険（一般の事業）労働者負担 0.5%
+  koseiMonthlyCap: 65 * MAN,   // 厚生年金 標準報酬月額の上限（2027-09〜68万→2029-09〜75万に段階引上げ）
+  koseiBonusCap: 150 * MAN,    // 厚生年金 標準賞与 1回の上限
+  kenpoMonthlyCap: 139 * MAN,  // 健康保険 標準報酬月額の上限
+  kenpoBonusCapY: 573 * MAN,   // 健康保険 標準賞与 年間上限
+};
+
+// 国民年金保険料（令和8年度・月額）
+export const KOKUMIN_HOKENRYO_M = 17_920;
+
+// 年収を「月給×12＋賞与（月給×2を年2回）」とみなして社会保険の上限を当てる
+function splitWage(wageY: number) {
+  const monthly = wageY / 16;
+  const bonusEach = monthly * 2;
+  return { monthly, bonusEach };
 }
 
-// 公的年金等控除（簡略・公的年金等収入のみのケース）
+function koseiBase(wageY: number, year: number): number {
+  const { monthly, bonusEach } = splitWage(wageY);
+  // 標準報酬月額の上限は 2027-09 68万 / 2028-09 71万 / 2029-09 75万（年単位で近似）
+  const cap =
+    year >= 2030 ? 75 * MAN :
+    year >= 2029 ? 71 * MAN :
+    year >= 2028 ? 68 * MAN :
+    SHAHO_2026.koseiMonthlyCap;
+  return Math.min(monthly, cap) * 12 + Math.min(bonusEach, SHAHO_2026.koseiBonusCap) * 2;
+}
+
+function kenpoBase(wageY: number): number {
+  const { monthly, bonusEach } = splitWage(wageY);
+  return (
+    Math.min(monthly, SHAHO_2026.kenpoMonthlyCap) * 12 +
+    Math.min(bonusEach * 2, SHAHO_2026.kenpoBonusCapY)
+  );
+}
+
+// 会社員の社会保険料（本人負担）
+export function calcEmployeeShaho(wageY: number, age: number, year: number) {
+  if (wageY <= 0) return { pension: 0, health: 0, kaigo: 0, total: 0 };
+  const kb = kenpoBase(wageY);
+  const pension = age < 70 ? koseiBase(wageY, year) * SHAHO_2026.kosei : 0;
+  const health = age < 75 ? kb * (SHAHO_2026.kenpo + SHAHO_2026.kodomo) : 0;
+  const kaigo = age >= 40 && age < 65 ? kb * SHAHO_2026.kaigo : 0;
+  const koyo = wageY * SHAHO_2026.koyo;
+  return {
+    pension: Math.round(pension),
+    health: Math.round(health + koyo),
+    kaigo: Math.round(kaigo),
+    total: Math.round(pension + health + kaigo + koyo),
+  };
+}
+
+// 国民健康保険料（1人分・全国平均的な料率で概算）
+//   所得割: (所得 - 43万) × 医療・支援分 約9.5%（40-64歳は介護分 約2.5%を加算）
+//   均等割: 医療・支援分 約5万（40-64歳は介護分 約1.7万を加算）
+//   上限: 医療・支援 92万 / 介護 17万
+export function calcKokuho(shotokuY: number, age: number): number {
+  if (age >= 75) return 0;
+  const base = Math.max(0, shotokuY - 43 * MAN);
+  const iryo = Math.min(92 * MAN, base * 0.095 + 5 * MAN);
+  const kaigo = age >= 40 && age < 65 ? Math.min(17 * MAN, base * 0.025 + 1.7 * MAN) : 0;
+  return Math.round(iryo + kaigo);
+}
+
+// 後期高齢者医療保険料（75歳以上・概算）
+export function calcKoki(shotokuY: number): number {
+  const base = Math.max(0, shotokuY - 43 * MAN);
+  return Math.round(Math.min(85 * MAN, base * 0.095 + 5 * MAN));
+}
+
+// 介護保険料 第1号（65歳以上・概算。所得段階で変わるため2段階で近似）
+export function calcKaigo1(shotokuY: number): number {
+  return shotokuY > 300 * MAN ? 11 * MAN : 7.8 * MAN;
+}
+
+// ─────────────────────────────────────────
+// 所得控除・所得計算
+// ─────────────────────────────────────────
+
+// 給与所得控除（最低保障: 2026-27年分 74万 / 2028年分以後 69万）
+export function kyuyoShotokuKojo(wageY: number, year: number): number {
+  if (wageY <= 0) return 0;
+  const min = year <= 2027 ? 74 * MAN : 69 * MAN;
+  let k: number;
+  if (wageY <= 180 * MAN) k = wageY * 0.4 - 10 * MAN;
+  else if (wageY <= 360 * MAN) k = wageY * 0.3 + 8 * MAN;
+  else if (wageY <= 660 * MAN) k = wageY * 0.2 + 44 * MAN;
+  else if (wageY <= 850 * MAN) k = wageY * 0.1 + 110 * MAN;
+  else k = 195 * MAN;
+  return Math.min(wageY, Math.max(min, k));
+}
+
+// 公的年金等控除（公的年金等以外の合計所得 1,000万以下のケース）
 export function koutekiNenkinKojo(penY: number, age: number): number {
   if (penY <= 0) return 0;
+  let k: number;
   if (age >= 65) {
-    if (penY <= 330 * MAN) return 110 * MAN;
-    if (penY <= 410 * MAN) return penY * 0.25 + 27.5 * MAN;
-    if (penY <= 770 * MAN) return penY * 0.15 + 68.5 * MAN;
-    if (penY <= 1000 * MAN) return penY * 0.05 + 145.5 * MAN;
-    return 195.5 * MAN;
+    if (penY <= 330 * MAN) k = 110 * MAN;
+    else if (penY <= 410 * MAN) k = penY * 0.25 + 27.5 * MAN;
+    else if (penY <= 770 * MAN) k = penY * 0.15 + 68.5 * MAN;
+    else if (penY <= 1000 * MAN) k = penY * 0.05 + 145.5 * MAN;
+    else k = 195.5 * MAN;
+  } else {
+    if (penY <= 130 * MAN) k = 60 * MAN;
+    else if (penY <= 410 * MAN) k = penY * 0.25 + 27.5 * MAN;
+    else if (penY <= 770 * MAN) k = penY * 0.15 + 68.5 * MAN;
+    else if (penY <= 1000 * MAN) k = penY * 0.05 + 145.5 * MAN;
+    else k = 195.5 * MAN;
   }
-  if (penY <= 130 * MAN) return 60 * MAN;
-  if (penY <= 410 * MAN) return penY * 0.25 + 27.5 * MAN;
-  if (penY <= 770 * MAN) return penY * 0.15 + 68.5 * MAN;
-  if (penY <= 1000 * MAN) return penY * 0.05 + 145.5 * MAN;
-  return 195.5 * MAN;
+  return Math.min(penY, k);
 }
 
-// 社会保険料率（厚生年金・健康保険・雇用保険の本人負担分・概算）
-//   厚生年金 18.3% ÷ 2 = 9.15%
-//   健康保険 9.84%平均 ÷ 2 = 4.92%（協会けんぽ）
-//   雇用保険 0.6%
-//   合計 約 14.67%
-// 標準報酬月額の上限65万までで頭打ちの簡易対応:
-//   年収 65×12+賞与上限 ≈ 約 1100万 で社保が頭打ち
-const SHAHO_RATE = 0.1467;
-const SHAHO_CAP = 1100 * MAN; // ざっくり上限
-
-export function calcShakaiHoken(wageY: number): number {
-  const base = Math.min(wageY, SHAHO_CAP);
-  return Math.round(base * SHAHO_RATE);
+// 所得税の基礎控除（年・合計所得で変わる）
+export function kisoKojoIncomeTax(goukei: number, year: number): number {
+  if (goukei > 2500 * MAN) return 0;
+  if (goukei > 2450 * MAN) return 16 * MAN;
+  if (goukei > 2400 * MAN) return 32 * MAN;
+  if (goukei > 2350 * MAN) return 48 * MAN;
+  if (year <= 2027) {
+    // 令和8・9年分
+    if (goukei <= 489 * MAN) return 104 * MAN;
+    if (goukei <= 655 * MAN) return 67 * MAN;
+    return 62 * MAN;
+  }
+  // 2028年分以後（恒久特例は合計所得132万以下のみ）
+  if (goukei <= 132 * MAN) return 99 * MAN;
+  return 62 * MAN;
 }
 
-// 国民健康保険料（自営・退職後の概算）：所得割7%+均等割6万 程度
-export function calcKokuho(taxableY: number): number {
-  return Math.round(Math.max(0, taxableY) * 0.07 + 6 * MAN);
+// 住民税の基礎控除（43万据置き。2,400万超で逓減）
+export function kisoKojoJumin(goukei: number): number {
+  if (goukei > 2500 * MAN) return 0;
+  if (goukei > 2450 * MAN) return 15 * MAN;
+  if (goukei > 2400 * MAN) return 29 * MAN;
+  return 43 * MAN;
 }
 
-// 介護保険料（40歳以上の上乗せ・概算 1.5%）
-function calcKaigoHoken(wageY: number, age: number): number {
-  if (age < 40) return 0;
-  if (age >= 65) return 0; // 65歳以上は別途
-  const base = Math.min(wageY, SHAHO_CAP);
-  return Math.round(base * 0.0091);
+// 配偶者控除・配偶者特別控除（所得税）
+//   納税者の合計所得 900万以下を満額とし、950万以下 2/3、1,000万以下 1/3、超は0
+//   配偶者の合計所得 62万以下（2026〜）: 配偶者控除38万（70歳以上48万）
+//   62万超〜133万以下: 配偶者特別控除（38万→3万に逓減）
+function haigushaKojo(
+  selfGoukei: number,
+  spouseGoukei: number,
+  spouseAge: number,
+  kind: "income" | "jumin",
+): number {
+  if (selfGoukei > 1000 * MAN) return 0;
+  const scale = selfGoukei <= 900 * MAN ? 1 : selfGoukei <= 950 * MAN ? 2 / 3 : 1 / 3;
+  let base: number;
+  if (spouseGoukei <= 62 * MAN) {
+    if (kind === "income") base = spouseAge >= 70 ? 48 * MAN : 38 * MAN;
+    else base = spouseAge >= 70 ? 38 * MAN : 33 * MAN;
+  } else if (spouseGoukei <= 95 * MAN) base = kind === "income" ? 38 * MAN : 33 * MAN;
+  else if (spouseGoukei <= 100 * MAN) base = 36 * MAN;
+  else if (spouseGoukei <= 105 * MAN) base = 31 * MAN;
+  else if (spouseGoukei <= 110 * MAN) base = 26 * MAN;
+  else if (spouseGoukei <= 115 * MAN) base = 21 * MAN;
+  else if (spouseGoukei <= 120 * MAN) base = 16 * MAN;
+  else if (spouseGoukei <= 125 * MAN) base = 11 * MAN;
+  else if (spouseGoukei <= 130 * MAN) base = 6 * MAN;
+  else if (spouseGoukei <= 133 * MAN) base = 3 * MAN;
+  else base = 0;
+  if (kind === "jumin" && base > 33 * MAN) base = 33 * MAN;
+  return Math.round(base * scale);
+}
+
+// 子の扶養控除（16歳未満は児童手当があるため0、23歳以上は独立とみなす）
+function fuyoKojoForKid(kidAge: number, kind: "income" | "jumin"): number {
+  if (kidAge < 16 || kidAge >= 23) return 0;
+  if (kidAge >= 19) return kind === "income" ? 63 * MAN : 45 * MAN;
+  return kind === "income" ? 38 * MAN : 33 * MAN;
 }
 
 // 所得税の累進計算（速算表）
 export function calcShotokuzei(taxableY: number): number {
-  const t = Math.max(0, Math.floor(taxableY));
+  const t = Math.max(0, Math.floor(taxableY / 1000) * 1000);
   if (t <= 195 * MAN) return t * 0.05;
   if (t <= 330 * MAN) return t * 0.1 - 9.75 * MAN;
   if (t <= 695 * MAN) return t * 0.2 - 42.75 * MAN;
@@ -86,180 +217,185 @@ export function calcShotokuzei(taxableY: number): number {
   return t * 0.45 - 479.6 * MAN;
 }
 
-// 住民税（所得割10%・均等割5,000円・配当控除等は無視）
-export function calcJuminzei(taxableY: number): number {
+// 限界税率（所得税×復興＋住民税10%）
+export function marginalRate(taxableY: number): number {
   const t = Math.max(0, taxableY);
-  return Math.round(t * 0.1) + 5000;
+  const r =
+    t <= 195 * MAN ? 0.05 :
+    t <= 330 * MAN ? 0.1 :
+    t <= 695 * MAN ? 0.2 :
+    t <= 900 * MAN ? 0.23 :
+    t <= 1800 * MAN ? 0.33 :
+    t <= 4000 * MAN ? 0.4 : 0.45;
+  return r * 1.021 + 0.1;
 }
+
+// ─────────────────────────────────────────
+// 退職所得（退職金・DC一時金）
+// ─────────────────────────────────────────
 
 // 退職所得控除
-//   勤続20年以下: 40万 × 勤続年数（最低80万）
-//   勤続20年超 : 800万 + 70万 × (勤続年数-20)
-function taishokuShotokuKojo(years: number): number {
-  if (years <= 20) return Math.max(80 * MAN, 40 * MAN * years);
-  return 800 * MAN + 70 * MAN * (years - 20);
+//   勤続20年以下: 40万 × 年数（最低80万）
+//   勤続20年超 : 800万 + 70万 × (年数-20)
+export function taishokuShotokuKojo(years: number): number {
+  const y = Math.max(1, Math.ceil(years));
+  if (y <= 20) return Math.max(80 * MAN, 40 * MAN * y);
+  return 800 * MAN + 70 * MAN * (y - 20);
 }
 
-// 退職金にかかる税（一時金として受給した場合の所得税+復興+住民税）
-//   退職所得 = (退職金 - 退職所得控除) × 1/2
-export function calcTaishokuTax(retirementY: number, workYears: number): number {
-  const kojo = taishokuShotokuKojo(workYears);
-  const taxable = Math.max(0, (retirementY - kojo) / 2);
+// 退職所得にかかる税（所得税＋復興＋住民税）。kojo は重複調整後の控除額
+export function calcTaishokuTaxWithKojo(amountY: number, kojo: number, year: number): number {
+  const taxable = Math.floor(Math.max(0, amountY - kojo) / 2 / 1000) * 1000;
   const it = calcShotokuzei(taxable);
-  const fk = it * 0.021;
+  const fk = year <= 2037 ? it * 0.021 : 0;
   const jm = taxable * 0.1;
   return Math.round(it + fk + jm);
 }
 
+export function calcTaishokuTax(amountY: number, workYears: number, year = 2026): number {
+  return calcTaishokuTaxWithKojo(amountY, taishokuShotokuKojo(workYears), year);
+}
+
+// ─────────────────────────────────────────
+// 世帯の税・社会保険（1年分）
+// ─────────────────────────────────────────
+
+export type WorkStyle = "employee" | "self-employed";
+
+export interface PersonIncome {
+  age: number;
+  wageY: number;          // 給与収入 or 事業収入（workStyle で切替）
+  workStyle: WorkStyle;
+  penY: number;           // 公的年金 + DC年金受取（公的年金等）
+  otherShotokuY: number;  // 不動産所得など（総合課税）
+  dcSelfContribY: number; // iDeCo・マッチング掛金（全額所得控除）
+  // 被扶養（第3号・健保の扶養）として社会保険料がかからないか
+  dependentOfSpouse: boolean;
+}
+
+export interface HouseholdTaxInput {
+  year: number;
+  self: PersonIncome;
+  spouse: PersonIncome | null;
+  kidAges: number[];
+  hlDeductCredit: number; // 住宅ローン控除の控除可能額（0.7%×年末残高 等）
+}
+
 export interface TaxBreakdown {
-  shahoSelf: number;       // 自分の社会保険料
-  shahoSpouse: number;     // 配偶者の社会保険料
-  kokuhoSelf: number;      // 自分の国保料（退職後）
-  kokuhoSpouse: number;    // 配偶者の国保料
-  kaigoSelf: number;       // 介護保険料（40-64歳）
-  kaigoSpouse: number;     // 配偶者の介護保険料
-  shotokuzeiSelf: number;  // 自分の所得税
+  shahoSelf: number;       // 本人の社会保険料（会社員分 or 国保・国民年金）
+  shahoSpouse: number;
+  shotokuzeiSelf: number;  // 所得税＋復興特別所得税
   shotokuzeiSpouse: number;
-  fukkouSelf: number;      // 復興特別所得税
-  fukkouSpouse: number;
-  juminSelf: number;       // 住民税
+  juminSelf: number;
   juminSpouse: number;
-  total: number;           // 合計負担
-  netAfterTax: number;     // 手取り合計
-  taxableSelf: number;     // 自分の課税所得（参考値）
+  hlDeduct: number;        // 実際に減税された住宅ローン控除
+  total: number;           // 税＋社会保険の合計（住宅ローン控除後）
+  taxableSelf: number;     // 本人の課税所得（参考）
+  marginalSelf: number;    // 本人の限界税率（参考）
 }
 
-export interface TaxInput {
-  selfWageY: number;       // 自分の給与収入
-  spouseWageY: number;     // 配偶者の給与収入
-  selfPenY: number;        // 自分の年金収入
-  spousePenY: number;      // 配偶者の年金収入
-  selfAge: number;
-  spouseAge: number;
-  hasSpouse: boolean;
-  numKidsForFuyo: number;  // 16歳以上23歳未満の扶養親族数
-  selfWorking: boolean;    // 給与所得者か（社保に入る）
-  spouseWorking: boolean;
+interface PersonCalc {
+  shaho: number;
+  goukei: number;   // 合計所得
+  shotokuSum: number;
 }
 
-const KISO_KOJO = 48 * MAN;            // 基礎控除（合計所得2400万以下）
-const HAIGUSHA_KOJO_PERSONAL = 38 * MAN; // 配偶者控除（所得税）
-const HAIGUSHA_KOJO_JUMIN = 33 * MAN;    // 配偶者控除（住民税）
-const FUYO_KOJO_PERSONAL = 38 * MAN;     // 扶養控除（一般・所得税）
-const FUYO_KOJO_TOKUTEI = 63 * MAN;      // 特定扶養控除（19-22歳・所得税）
-const FUYO_KOJO_JUMIN_TOKUTEI = 45 * MAN;
-const KISO_KOJO_JUMIN = 43 * MAN;
-
-function fuyoKojoEstimateForKid(kidAge: number, kind: "income" | "jumin"): number {
-  if (kidAge < 16) return 0; // 16歳未満は児童手当の方
-  if (kidAge >= 19 && kidAge < 23) {
-    return kind === "income" ? FUYO_KOJO_TOKUTEI : FUYO_KOJO_JUMIN_TOKUTEI;
+function personShaho(p: PersonIncome, year: number, goukei: number): number {
+  const employed = p.workStyle === "employee" && p.wageY > 0;
+  let shaho = 0;
+  if (employed) {
+    shaho += calcEmployeeShaho(p.wageY, p.age, year).total;
+  } else if (!p.dependentOfSpouse) {
+    // 国民年金（60歳未満）＋国保（75歳未満）／後期高齢者医療（75歳以上）
+    if (p.age < 60) shaho += KOKUMIN_HOKENRYO_M * 12;
+    shaho += p.age >= 75 ? calcKoki(goukei) : calcKokuho(goukei, p.age);
+  } else if (p.age >= 60 && p.age < 75) {
+    // 配偶者が退職するなどで扶養から外れる60歳以降は国保（簡易）
+    shaho += calcKokuho(goukei, p.age);
+  } else if (p.age >= 75) {
+    shaho += calcKoki(goukei);
   }
-  return kind === "income" ? FUYO_KOJO_PERSONAL : 33 * MAN;
+  // 会社員でも65歳以上の介護保険は第1号として別途
+  if (p.age >= 65) shaho += calcKaigo1(goukei);
+  return Math.round(shaho);
 }
 
-// 配偶者の所得が高いと配偶者控除消失（簡略：配偶者年収103万超で消失）
-const HAIGUSHA_LIMIT = 103 * MAN;
+function personIncome(p: PersonIncome, year: number): PersonCalc {
+  const wageShotoku =
+    p.workStyle === "employee"
+      ? Math.max(0, p.wageY - kyuyoShotokuKojo(p.wageY, year))
+      : Math.max(0, p.wageY - 65 * MAN); // 自営業: 青色申告特別控除65万を想定
+  const penShotoku = Math.max(0, p.penY - koutekiNenkinKojo(p.penY, p.age));
+  // 不動産所得の赤字は損益通算できる（土地取得の利子分の制限は省略）
+  const goukei = Math.max(0, wageShotoku + penShotoku + p.otherShotokuY);
+  const shaho = personShaho(p, year, goukei);
+  return { shaho, goukei, shotokuSum: goukei };
+}
 
-// 詳細税計算メイン
-export function calcDetailedTaxV2(
-  inp: TaxInput,
-  kidAges: number[], // 子どもの当年齢
-): TaxBreakdown {
-  // 社会保険料
-  const shahoSelf = inp.selfWorking ? calcShakaiHoken(inp.selfWageY) : 0;
-  const shahoSpouse = inp.spouseWorking ? calcShakaiHoken(inp.spouseWageY) : 0;
-  const kaigoSelf = inp.selfWorking ? calcKaigoHoken(inp.selfWageY, inp.selfAge) : 0;
-  const kaigoSpouse = inp.spouseWorking ? calcKaigoHoken(inp.spouseWageY, inp.spouseAge) : 0;
+export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
+  const { year } = inp;
+  const s = personIncome(inp.self, year);
+  const sp = inp.spouse ? personIncome(inp.spouse, year) : null;
 
-  // 退職後（給与なし、年金あり）の場合、国民健康保険料がかかる
-  // 簡略：給与収入0かつ年金収入あり、かつ年齢65未満なら国保
-  const kokuhoSelf = !inp.selfWorking && inp.selfPenY > 0 && inp.selfAge < 75
-    ? calcKokuho(inp.selfPenY)
-    : 0;
-  const kokuhoSpouse = !inp.spouseWorking && inp.spousePenY > 0 && inp.spouseAge < 75
-    ? calcKokuho(inp.spousePenY)
-    : 0;
-
-  // 各人の合計所得（給与所得 + 年金所得）
-  const selfWageShotoku = Math.max(0, inp.selfWageY - kyuyoShotokuKojo(inp.selfWageY));
-  const selfPenShotoku = Math.max(0, inp.selfPenY - koutekiNenkinKojo(inp.selfPenY, inp.selfAge));
-  const selfTotalShotoku = selfWageShotoku + selfPenShotoku;
-
-  const spouseWageShotoku = Math.max(0, inp.spouseWageY - kyuyoShotokuKojo(inp.spouseWageY));
-  const spousePenShotoku = Math.max(0, inp.spousePenY - koutekiNenkinKojo(inp.spousePenY, inp.spouseAge));
-  const spouseTotalShotoku = spouseWageShotoku + spousePenShotoku;
-
-  // 配偶者控除の適用（自分の所得から控除）
-  const spouseWageRaw = inp.spouseWageY;
-  const useHaigushaKojo = inp.hasSpouse && spouseWageRaw <= HAIGUSHA_LIMIT;
-
-  // 扶養控除（自分の所得から控除）
-  let fuyoKojoIncomeSelf = 0;
-  let fuyoKojoJuminSelf = 0;
-  for (const ka of kidAges) {
-    fuyoKojoIncomeSelf += fuyoKojoEstimateForKid(ka, "income");
-    fuyoKojoJuminSelf += fuyoKojoEstimateForKid(ka, "jumin");
+  // ── 本人 ──
+  let fuyoI = 0;
+  let fuyoJ = 0;
+  for (const ka of inp.kidAges) {
+    fuyoI += fuyoKojoForKid(ka, "income");
+    fuyoJ += fuyoKojoForKid(ka, "jumin");
   }
+  const haiI = sp && inp.spouse ? haigushaKojo(s.goukei, sp.goukei, inp.spouse.age, "income") : 0;
+  const haiJ = sp && inp.spouse ? haigushaKojo(s.goukei, sp.goukei, inp.spouse.age, "jumin") : 0;
 
-  // 自分の課税所得（所得税基準）
-  const selfDeductionsIncome =
-    KISO_KOJO +
-    shahoSelf + kaigoSelf + kokuhoSelf +
-    (useHaigushaKojo ? HAIGUSHA_KOJO_PERSONAL : 0) +
-    fuyoKojoIncomeSelf;
-  const selfTaxable = Math.max(0, selfTotalShotoku - selfDeductionsIncome);
+  const commonDed = s.shaho + inp.self.dcSelfContribY;
+  const selfTaxable = Math.max(0, s.goukei - kisoKojoIncomeTax(s.goukei, year) - commonDed - haiI - fuyoI);
+  const selfTaxableJ = Math.max(0, s.goukei - kisoKojoJumin(s.goukei) - commonDed - haiJ - fuyoJ);
 
-  // 配偶者の課税所得（所得税基準）
-  const spouseDeductionsIncome = KISO_KOJO + shahoSpouse + kaigoSpouse + kokuhoSpouse;
-  const spouseTaxable = Math.max(0, spouseTotalShotoku - spouseDeductionsIncome);
+  const fk = year <= 2037 ? 1.021 : 1;
+  let itSelf = calcShotokuzei(selfTaxable) * fk;
+  let jmShotokuwari = selfTaxableJ * 0.1;
+  const kintoSelf = s.goukei > 45 * MAN ? 5000 : 0;
 
-  // 所得税
-  const itSelf = calcShotokuzei(selfTaxable);
-  const itSpouse = calcShotokuzei(spouseTaxable);
-  const fkSelf = itSelf * 0.021;
-  const fkSpouse = itSpouse * 0.021;
+  // 住宅ローン控除: 所得税から引き、残りは住民税から（課税総所得×5%・上限9.75万）
+  let hl = 0;
+  if (inp.hlDeductCredit > 0) {
+    const fromIt = Math.min(itSelf, inp.hlDeductCredit);
+    itSelf -= fromIt;
+    const rest = inp.hlDeductCredit - fromIt;
+    const fromJm = Math.min(rest, jmShotokuwari, selfTaxable * 0.05, 97_500);
+    jmShotokuwari -= fromJm;
+    hl = fromIt + fromJm;
+  }
+  const jmSelf = jmShotokuwari + kintoSelf;
 
-  // 住民税（控除額が所得税と少し違う）
-  const selfDeductionsJumin =
-    KISO_KOJO_JUMIN +
-    shahoSelf + kaigoSelf + kokuhoSelf +
-    (useHaigushaKojo ? HAIGUSHA_KOJO_JUMIN : 0) +
-    fuyoKojoJuminSelf;
-  const selfTaxableJumin = Math.max(0, selfTotalShotoku - selfDeductionsJumin);
-  const jmSelf = calcJuminzei(selfTaxableJumin);
-
-  const spouseDeductionsJumin = KISO_KOJO_JUMIN + shahoSpouse + kaigoSpouse + kokuhoSpouse;
-  const spouseTaxableJumin = Math.max(0, spouseTotalShotoku - spouseDeductionsJumin);
-  const jmSpouse = inp.hasSpouse ? calcJuminzei(spouseTaxableJumin) : 0;
+  // ── 配偶者 ──
+  let itSp = 0;
+  let jmSp = 0;
+  if (sp && inp.spouse) {
+    const ded = sp.shaho + inp.spouse.dcSelfContribY;
+    const t = Math.max(0, sp.goukei - kisoKojoIncomeTax(sp.goukei, year) - ded);
+    const tj = Math.max(0, sp.goukei - kisoKojoJumin(sp.goukei) - ded);
+    itSp = calcShotokuzei(t) * fk;
+    jmSp = tj * 0.1 + (sp.goukei > 45 * MAN ? 5000 : 0);
+  }
 
   const total = Math.round(
-    shahoSelf + shahoSpouse +
-    kokuhoSelf + kokuhoSpouse +
-    kaigoSelf + kaigoSpouse +
-    itSelf + itSpouse +
-    fkSelf + fkSpouse +
-    jmSelf + jmSpouse,
+    s.shaho + (sp?.shaho ?? 0) + itSelf + itSp + jmSelf + jmSp,
   );
 
-  const grossAll = inp.selfWageY + inp.spouseWageY + inp.selfPenY + inp.spousePenY;
-  const netAfterTax = grossAll - total;
-
   return {
-    shahoSelf: Math.round(shahoSelf),
-    shahoSpouse: Math.round(shahoSpouse),
-    kokuhoSelf: Math.round(kokuhoSelf),
-    kokuhoSpouse: Math.round(kokuhoSpouse),
-    kaigoSelf: Math.round(kaigoSelf),
-    kaigoSpouse: Math.round(kaigoSpouse),
+    shahoSelf: s.shaho,
+    shahoSpouse: sp?.shaho ?? 0,
     shotokuzeiSelf: Math.round(itSelf),
-    shotokuzeiSpouse: Math.round(itSpouse),
-    fukkouSelf: Math.round(fkSelf),
-    fukkouSpouse: Math.round(fkSpouse),
+    shotokuzeiSpouse: Math.round(itSp),
     juminSelf: Math.round(jmSelf),
-    juminSpouse: Math.round(jmSpouse),
+    juminSpouse: Math.round(jmSp),
+    hlDeduct: Math.round(hl),
     total,
-    netAfterTax,
     taxableSelf: Math.round(selfTaxable),
+    marginalSelf: marginalRate(selfTaxable),
   };
 }
+
+// 譲渡益・配当・預金利息の税率（所得税15.315%＋住民税5%）
+export const CAPITAL_GAIN_TAX = 0.20315;

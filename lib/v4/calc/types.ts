@@ -90,14 +90,21 @@ export interface Insurance {
   enabled: boolean;
 }
 
-export type DrawOrderMode =
-  | "auto-tiered"
-  | "custom"
-  | "fund-stock-crypto"
-  | "stock-fund-crypto";
+export type DrawOrderMode = "auto" | "custom";
 
-// f/s = 課税口座（特定口座等）／ fNisa/sNisa = NISA口座（非課税）
-export type DrawAsset = "f" | "s" | "fNisa" | "sNisa" | "k" | "dc" | "g";
+// ver4: 取り崩しは「口座」単位。DC は受取開始年齢に自動で受け取るため取り崩し対象外。
+//   toku = 特定口座（課税）/ nisa = NISA口座（非課税）/ k = 暗号資産 / g = 金
+export type DrawAsset = "toku" | "nisa" | "k" | "g";
+
+// iDeCo・企業型DC の加入区分（掛金上限の判定に使う）
+export type DcType =
+  | "employee-none"   // 会社員（企業年金なし）
+  | "employee-dc"     // 会社員（企業型DCのみ）
+  | "employee-db"     // 会社員（DBあり）・公務員
+  | "self-employed"   // 自営業・フリーランス（第1号）
+  | "dependent";      // 専業主婦（夫）（第3号）
+
+export type DcPayoutMethod = "lump" | "annuity";
 
 export interface JukuMonthly {
   pre: number;
@@ -146,7 +153,8 @@ export interface PlanInput {
   curAge: number;
   endAge: number;
   infl: number;
-  taxRate: number;
+  taxRate: number;       // 簡易モード: 給与・副業・家賃収入にかける税・社保率（%）
+  taxRatePen: number;    // 簡易モード: 年金にかける税・社保率（%）
   taxMode: TaxMode;
   inheritances: InheritanceEvent[];
   lifeExpenses: LifeExpenseEvent[];
@@ -160,35 +168,62 @@ export interface PlanInput {
   jukuM: JukuMonthly;
 
   cashBal: number;
-  cashRate: number;
-  // 投信・株は「課税口座（特定口座等）」と「NISA口座（非課税）」を分離して管理。
-  // 課税口座は譲渡益課税（CGT 20.315%）が運用利回りに掛かる。NISA は完全非課税。
-  fundBal: number;          // 課税口座 投信残高
-  fundR: number;
-  saveFundM: number;        // 課税口座への月積立
-  saveFundEndAge: number;
-  fundNisaBal: number;      // NISA口座 投信残高
-  saveFundNisaM: number;    // NISA口座への月積立
-  saveFundNisaEndAge: number;
-  stockBal: number;         // 課税口座 株残高
-  stockR: number;
-  saveStockM: number;
-  saveStockEndAge: number;
-  stockNisaBal: number;     // NISA口座 株残高
-  saveStockNisaM: number;
-  saveStockNisaEndAge: number;
+  cashRate: number;         // 預金金利（年・小数）。利息には20.315%が源泉徴収される
+
+  // ver4: 投資は「商品（投信/株）」ではなく「口座（NISA/特定口座）」で管理する。
+  // 税金のかかり方は口座で決まり、投信か株かの違いは想定利回りの違いでしかないため。
+  //   *Cost = 取得額（元本・簿価）。0 のときは残高と同額（含み益なし）とみなす。
+
+  // NISA口座（非課税）— つみたて投資枠と成長投資枠を別に入力し、年間枠・生涯枠を自動チェック
+  nisaBal: number;
+  nisaCost: number;
+  nisaR: number;
+  nisaTsumitateM: number;   // つみたて投資枠 月額（上限 年120万＝月10万）
+  nisaGrowthM: number;      // 成長投資枠 月額（上限 年240万＝月20万）
+  nisaEndAge: number;
+
+  // 特定口座（課税）— 売却時に含み益へ20.315%
+  tokuBal: number;
+  tokuCost: number;
+  tokuR: number;
+  saveTokuM: number;
+  saveTokuEndAge: number;
+  // NISA枠を超えた積立は特定口座へ回す（オフなら枠超過分は現金のまま）
+  nisaOverflowToToku: boolean;
+
+  // 暗号資産 — 売却益は雑所得（総合課税）。税率は所得に応じて15〜55%
   cryptoBal: number;
+  cryptoCost: number;
   cryptoR: number;
+  cryptoTaxRate: number;    // 売却益にかかる税率（%・目安）
   saveCryptoM: number;
   saveCryptoEndAge: number;
+
+  // 金・コモディティ — 金ETF等を想定し売却益に20.315%
   goldBal: number;
+  goldCost: number;
   goldR: number;
   saveGoldM: number;
   saveGoldEndAge: number;
+
+  // iDeCo・企業型DC（確定拠出年金）
+  dcType: DcType;
   dcBal: number;
   dcR: number;
-  saveDcM: number;
-  saveDcEndAge: number;
+  saveDcM: number;          // 本人掛金（iDeCo・マッチング拠出）月額。全額が所得控除
+  dcEmployerM: number;      // 会社掛金（企業型DCの事業主掛金）月額。手取りからは出ない
+  saveDcEndAge: number;     // 掛金をやめる年齢
+  dcJoinAge: number;        // 加入した年齢（退職所得控除の年数計算に使う）
+  dcStartAge: number;       // 受取開始年齢（60〜75）
+  dcMethod: DcPayoutMethod; // 一時金 or 年金
+  dcYears: number;          // 年金受取の場合の受取年数（5〜20）
+
+  // 制度系
+  childAllowance: boolean;  // 児童手当を収入に含める
+  penIndex: number;         // 年金額の改定率（%/年）。マクロ経済スライドで物価上昇率より低め
+  hlDeduct: boolean;        // 住宅ローン控除を適用中
+  hlDeductEndAge: number;   // 住宅ローン控除が終わる年齢
+  hlDeductLimit: number;    // 住宅ローン控除の借入限度額（円）
 
   jobs: Job[];
   sideJobs: SideJob[];
@@ -258,13 +293,11 @@ export interface PensionBreakdown {
 
 export interface AssetSnapshot {
   c: number;
-  f: number;       // 投信（課税口座）
-  s: number;       // 株（課税口座）
-  fNisa: number;   // 投信（NISA・非課税）
-  sNisa: number;   // 株（NISA・非課税）
-  k: number;
-  dc: number;
-  g: number;
+  nisa: number;    // NISA口座（時価）
+  toku: number;    // 特定口座（時価）
+  k: number;       // 暗号資産
+  dc: number;      // iDeCo・企業型DC
+  g: number;       // 金
 }
 
 export interface RealEstateRowDetail {
@@ -322,6 +355,22 @@ export interface YearlyResult {
   otherLoanPay: number;  // 当年のその他ローン返済額
   care: number;          // 当年の介護支出
   socialIns: number;     // 社会保険料合計（詳細税モードのみ）
+  // ver4 追加
+  childAllow: number;    // 児童手当
+  sevGross: number;      // 退職金（額面）
+  sevTax: number;        // 退職金にかかった税（退職所得・分離課税）
+  dcPayout: number;      // DC受取額（額面）
+  dcTax: number;         // DC受取にかかった税
+  dcContribSelf: number; // DC本人掛金（所得控除の対象）
+  hlDeduct: number;      // 住宅ローン控除による減税額
+  saleTax: number;       // 取り崩し時の売却益課税（特定口座・金・暗号資産）
+  nisaCost: number;      // NISA 簿価残高（生涯枠1,800万の消化状況）
+  nisaOverflow: number;  // NISA枠を超えて特定口座／現金に回った額
+}
+
+export interface SimulationWarning {
+  level: "info" | "warn";
+  text: string;
 }
 
 export interface SimulationSummary {
@@ -331,4 +380,5 @@ export interface SimulationSummary {
   maxEdu: number;
   totalHome: number;
   shortfallAge: number | null;
+  warnings: SimulationWarning[];
 }

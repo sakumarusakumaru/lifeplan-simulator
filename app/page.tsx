@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const CONSENT_KEY = "lp_consent_v1";
+const GUIDE_KEY = "lp_guide_v4";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -14,6 +15,11 @@ export default function LandingPage() {
   useEffect(() => {
     // SSRハイドレーション整合のため、localStorage参照はマウント後の同期が必須
     try {
+      // はじめての人（ver4 の使い方ガイドを見ていない人）はガイドへ
+      if (!localStorage.getItem(GUIDE_KEY)) {
+        router.replace("/guide");
+        return;
+      }
       const stored = localStorage.getItem(CONSENT_KEY);
       if (stored) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -23,7 +29,7 @@ export default function LandingPage() {
     } catch {
       // localStorage 不可の環境（プライベートブラウジング等）はそのまま
     }
-  }, []);
+  }, [router]);
 
   const handleEnter = () => {
     if (!agreed) return;
@@ -32,7 +38,7 @@ export default function LandingPage() {
     } catch {
       // 失敗しても遷移する
     }
-    router.push("/v3/detail");
+    router.push("/v4/detail");
   };
 
   return (
@@ -44,7 +50,7 @@ export default function LandingPage() {
         {/* タイトル */}
         <div className="mb-8 border-b-2 border-[#0a0a0a] pb-4">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">
-            LIFE PLAN SIMULATOR v3
+            LIFE PLAN SIMULATOR ver4
           </p>
           <h1 className="text-3xl font-bold leading-tight text-[#0a0a0a]">
             人生のお金を、
@@ -177,6 +183,15 @@ export default function LandingPage() {
         >
           同意してシミュレーターを開始 →
         </button>
+
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
+          <Link href="/guide" className="font-bold text-[#0a0a0a] underline hover:text-[#c8383a]">
+            → 使い方ガイドを見る
+          </Link>
+          <Link href="/v3/detail" className="font-bold text-[#0a0a0a]/60 underline hover:text-[#c8383a]">
+            → 以前のver3を使う
+          </Link>
+        </div>
 
         <p className="mt-6 text-[11px] leading-relaxed text-[#0a0a0a]/45">
           運営者：個人（さくまる）／ 連絡先：本サイトはお問い合わせ窓口を設けておりません。

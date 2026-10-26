@@ -59,34 +59,34 @@ const FILLS_HOVER = {
 
 const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
   { key: "cash", label: "現金", desc: "預貯金など即現金化できる資産" },
-  { key: "fund", label: "投信", desc: "NISA・特定口座の投資信託など" },
-  { key: "stock", label: "株", desc: "個別株式・ETF" },
-  { key: "crypto", label: "仮想通貨", desc: "ビットコイン・イーサリアム等のクリプト資産" },
+  { key: "fund", label: "NISA", desc: "NISA口座（非課税）の投信・株" },
+  { key: "stock", label: "特定口座", desc: "特定口座（課税）の投信・株。売却益に20.315%" },
+  { key: "crypto", label: "暗号資産", desc: "ビットコイン等" },
   { key: "gold", label: "金", desc: "金ETF・現物金・コモディティ" },
-  { key: "dc", label: "DC", desc: "確定拠出年金・iDeCo（60歳から受給可、原則として60歳まで取崩不可）" },
+  { key: "dc", label: "DC", desc: "iDeCo・企業型DC（受取開始年齢に一時金または年金で受け取る）" },
 ];
 
 const KEY_TO_FILL: Record<string, keyof typeof FILLS> = {
   現金: "cash",
-  投信: "fund",
-  株: "stock",
-  仮想通貨: "crypto",
+  NISA: "fund",
+  特定口座: "stock",
+  暗号資産: "crypto",
   金: "gold",
   DC: "dc",
 };
 
 export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
   const pathname = usePathname();
-  const isV3 = pathname?.startsWith("/v3") ?? false;
+  const isV3 = pathname?.startsWith("/v4") ?? false;
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
   const data = rows.map((r) => ({
     age: r.age,
     現金: Math.round(r.ass.c),
-    投信: Math.round(r.ass.f + r.ass.fNisa),
-    株: Math.round(r.ass.s + r.ass.sNisa),
-    仮想通貨: Math.round(r.ass.k || 0),
+    NISA: Math.round(r.ass.nisa),
+    特定口座: Math.round(r.ass.toku),
+    暗号資産: Math.round(r.ass.k || 0),
     金: Math.round(r.ass.g || 0),
     DC: Math.round(r.ass.dc),
     純資産: Math.round(r.nw),
@@ -137,7 +137,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
             <Tooltip
               content={({ payload, label }) => {
                 if (!payload?.length) return null;
-                const ORDER = ["現金", "投信", "株", "仮想通貨", "金", "DC", "純資産"];
+                const ORDER = ["現金", "NISA", "特定口座", "暗号資産", "金", "DC", "純資産"];
                 const sorted = ORDER.map((k) =>
                   payload.find((p) => p.dataKey === k),
                 ).filter(Boolean) as typeof payload;
@@ -261,35 +261,35 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
             />
             <Area
               type="linear"
-              dataKey="仮想通貨"
+              dataKey="暗号資産"
               stackId="bb"
-              stroke={getFill("仮想通貨")}
+              stroke={getFill("暗号資産")}
               strokeWidth={0.5}
-              fill={getFill("仮想通貨")}
+              fill={getFill("暗号資産")}
               fillOpacity={1}
-              onMouseEnter={() => setHoveredKey("仮想通貨")}
+              onMouseEnter={() => setHoveredKey("暗号資産")}
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Area
               type="linear"
-              dataKey="株"
+              dataKey="特定口座"
               stackId="bb"
-              stroke={getFill("株")}
+              stroke={getFill("特定口座")}
               strokeWidth={0.5}
-              fill={getFill("株")}
+              fill={getFill("特定口座")}
               fillOpacity={1}
-              onMouseEnter={() => setHoveredKey("株")}
+              onMouseEnter={() => setHoveredKey("特定口座")}
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Area
               type="linear"
-              dataKey="投信"
+              dataKey="NISA"
               stackId="bb"
-              stroke={getFill("投信")}
+              stroke={getFill("NISA")}
               strokeWidth={0.5}
-              fill={getFill("投信")}
+              fill={getFill("NISA")}
               fillOpacity={1}
-              onMouseEnter={() => setHoveredKey("投信")}
+              onMouseEnter={() => setHoveredKey("NISA")}
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Area
@@ -379,9 +379,9 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
               onMouseEnter={() => {
                 const labelMap: Record<string, string> = {
                   cash: "現金",
-                  fund: "投信",
-                  stock: "株",
-                  crypto: "仮想通貨",
+                  fund: "NISA",
+                  stock: "特定口座",
+                  crypto: "暗号資産",
                   gold: "金",
                   dc: "DC",
                 };

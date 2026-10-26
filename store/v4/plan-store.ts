@@ -6,6 +6,47 @@ import { persist } from "zustand/middleware";
 import { DEFAULT_PLAN } from "@/lib/v4/calc/defaults";
 import type { PlanInput } from "@/lib/v4/calc/types";
 
+// ver3（lp_v13）の保存データを ver4 の項目に読み替える。
+// 投信・株を「NISA口座」「特定口座」に合算し、利回りは残高で加重平均する。
+export function migrateV3Plan(old: Record<string, unknown>): Partial<PlanInput> {
+  const n = (k: string) => (typeof old[k] === "number" ? (old[k] as number) : 0);
+  const wavg = (b1: number, r1: number, b2: number, r2: number, fallback: number) =>
+    b1 + b2 > 0 ? (b1 * r1 + b2 * r2) / (b1 + b2) : fallback;
+  const out: Record<string, unknown> = { ...old };
+  for (const k of [
+    "fundBal", "fundR", "saveFundM", "saveFundEndAge",
+    "fundNisaBal", "saveFundNisaM", "saveFundNisaEndAge",
+    "stockBal", "stockR", "saveStockM", "saveStockEndAge",
+    "stockNisaBal", "saveStockNisaM", "saveStockNisaEndAge",
+    "drawOrder", "drawCustomOrder",
+  ]) delete out[k];
+  if ("fundBal" in old || "fundNisaBal" in old) {
+    out.nisaBal = n("fundNisaBal") + n("stockNisaBal");
+    out.nisaR = wavg(n("fundNisaBal"), n("fundR"), n("stockNisaBal"), n("stockR"), n("fundR") || 4);
+    out.nisaTsumitateM = n("saveFundNisaM");
+    out.nisaGrowthM = n("saveStockNisaM");
+    out.nisaEndAge = Math.max(n("saveFundNisaEndAge"), n("saveStockNisaEndAge")) || 60;
+    out.tokuBal = n("fundBal") + n("stockBal");
+    out.tokuR = wavg(n("fundBal"), n("fundR"), n("stockBal"), n("stockR"), n("fundR") || 4);
+    out.saveTokuM = n("saveFundM") + n("saveStockM");
+    out.saveTokuEndAge = Math.max(n("saveFundEndAge"), n("saveStockEndAge")) || 60;
+  }
+  if (typeof old.cashRate === "number" && old.cashRate >= 0.01) out.cashRate = DEFAULT_PLAN.cashRate;
+  return out as Partial<PlanInput>;
+}
+
+function readV3Plan(): Partial<PlanInput> | null {
+  try {
+    const raw = localStorage.getItem("lp_v13");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { state?: { plan?: Record<string, unknown> } };
+    const plan = parsed?.state?.plan;
+    return plan ? migrateV3Plan(plan) : null;
+  } catch {
+    return null;
+  }
+}
+
 interface PlanStore {
   plan: PlanInput;
   hydrated: boolean;
@@ -28,12 +69,14 @@ export const usePlanStore = create<PlanStore>()(
       setHydrated: () => set({ hydrated: true }),
     }),
     {
-      name: "lp_v13",
+      name: "lp_v4",
       partialize: (state) => ({ plan: state.plan }),
       // 新フィールド追加時にpersist済みデータをマージしてundefinedを防ぐ
       merge: (persistedState, currentState) => {
         const persisted = persistedState as { plan?: Partial<PlanInput> } | undefined;
-        const persistedPlan = (persisted?.plan ?? {}) as Partial<PlanInput> & {
+        // ver4 の保存が無ければ、ver3 の入力内容を引き継ぐ（ver3 側のデータは消さない）
+        const source = persisted?.plan ?? (typeof window !== "undefined" ? readV3Plan() : null) ?? {};
+        const persistedPlan = source as Partial<PlanInput> & {
           kids?: Array<{ s?: Record<string, unknown>; opt?: Record<string, unknown> } & Record<string, unknown>>;
           jobs?: Array<Record<string, unknown>>;
           res?: Array<Record<string, unknown>>;
@@ -60,15 +103,17 @@ export const usePlanStore = create<PlanStore>()(
           return obj;
         });
 
-        // drawCustomOrder の自動マイグレーション: 不足している資産を末尾に追加
-        const ALL_DRAW_ASSETS: ("f" | "s" | "k" | "dc" | "g")[] = ["f", "s", "k", "dc", "g"];
-        const persistedOrder = persistedPlan.drawCustomOrder;
-        const migratedDrawOrder = persistedOrder
-          ? [
-              ...persistedOrder.filter((a) => ALL_DRAW_ASSETS.includes(a as typeof ALL_DRAW_ASSETS[number])),
-              ...ALL_DRAW_ASSETS.filter((a) => !persistedOrder.includes(a)),
-            ]
-          : DEFAULT_PLAN.drawCustomOrder;
+        // drawCustomOrder: ver4 の口座単位に揃える
+        const ALL_DRAW_ASSETS = DEFAULT_PLAN.drawCustomOrder;
+        const persistedOrder = (persistedPlan.drawCustomOrder ?? []).filter((a) =>
+          ALL_DRAW_ASSETS.includes(a),
+        );
+        const migratedDrawOrder = [
+          ...persistedOrder,
+          ...ALL_DRAW_ASSETS.filter((a) => !persistedOrder.includes(a)),
+        ];
+        const migratedDrawMode =
+          persistedPlan.drawOrder === "custom" ? "custom" : DEFAULT_PLAN.drawOrder;
 
         // RealEstate フィールドの自動マイグレーション (propTax + 評価額算定用フィールド追加)
         const currentYear = new Date().getFullYear();
@@ -107,6 +152,7 @@ export const usePlanStore = create<PlanStore>()(
             jobs: migratedJobs,
             res: migratedRes,
             drawCustomOrder: migratedDrawOrder,
+            drawOrder: migratedDrawMode,
             selfPension: {
               ...DEFAULT_PLAN.selfPension,
               ...(persistedPlan.selfPension ?? {}),

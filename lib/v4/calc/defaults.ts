@@ -10,48 +10,70 @@ export const DEFAULT_PLAN: PlanInput = {
   spouseIncEnd: 60,
   curAge: 35,
   endAge: 100,
-  infl: 1.0,
+  infl: 1.5,
   taxRate: 20,
-  taxMode: "simple",
+  taxRatePen: 10,
+  taxMode: "detailed",
   inheritances: [],
   lifeExpenses: [],
   otherLoans: [],
   careEvents: [],
   cashFloor: 2_000_000,
   allowNegCash: false,
-  drawOrder: "auto-tiered",
-  drawCustomOrder: ["f", "s", "dc", "k", "g"],
+  drawOrder: "auto",
+  drawCustomOrder: ["toku", "g", "k", "nisa"],
 
   jukuM: { pre: 15000, e13: 35000, e46: 50000, jh: 70000, hs: 80000, ronin: 120000 },
 
   cashBal: 5_000_000,
-  cashRate: 0.01,
-  fundBal: 3_000_000,            // 課税口座（特定口座等）
-  fundR: 4.0,
-  saveFundM: 50000,              // 課税口座への月積立
-  saveFundEndAge: 60,
-  fundNisaBal: 0,                // NISA投信残高（非課税・新規ユーザーのみ手動入力推奨）
-  saveFundNisaM: 0,              // NISAつみたて枠への月積立
-  saveFundNisaEndAge: 60,
-  stockBal: 1_000_000,
-  stockR: 5.0,
-  saveStockM: 0,
-  saveStockEndAge: 60,
-  stockNisaBal: 0,
-  saveStockNisaM: 0,
-  saveStockNisaEndAge: 60,
+  cashRate: 0.002,               // 普通・定期預金の金利（2026年の水準で年0.2%程度）
+
+  // NISA口座（非課税）
+  nisaBal: 0,
+  nisaCost: 0,
+  nisaR: 4.0,
+  nisaTsumitateM: 50_000,        // つみたて投資枠（月10万まで）
+  nisaGrowthM: 0,                // 成長投資枠（月20万まで）
+  nisaEndAge: 60,
+
+  // 特定口座（課税）
+  tokuBal: 3_000_000,
+  tokuCost: 0,
+  tokuR: 4.0,
+  saveTokuM: 0,
+  saveTokuEndAge: 60,
+  nisaOverflowToToku: true,
+
   cryptoBal: 0,
+  cryptoCost: 0,
   cryptoR: 0,
+  cryptoTaxRate: 30,
   saveCryptoM: 0,
   saveCryptoEndAge: 60,
+
   goldBal: 0,
+  goldCost: 0,
   goldR: 3.0,
   saveGoldM: 0,
   saveGoldEndAge: 60,
+
+  // iDeCo・企業型DC
+  dcType: "employee-none",
   dcBal: 0,
   dcR: 4.0,
   saveDcM: 0,
-  saveDcEndAge: 60,
+  dcEmployerM: 0,
+  saveDcEndAge: 65,
+  dcJoinAge: 35,
+  dcStartAge: 65,
+  dcMethod: "lump",
+  dcYears: 10,
+
+  childAllowance: true,
+  penIndex: 1.0,                 // 物価1.5%に対しマクロ経済スライドで年金は低めに改定
+  hlDeduct: false,
+  hlDeductEndAge: 48,
+  hlDeductLimit: 30_000_000,
 
   jobs: [
     { name: "現職", start: 30, end: 60, inc: 6_000_000, raise: 2.0, sev: 10_000_000, sevAge: 60 },
@@ -81,7 +103,7 @@ export const DEFAULT_PLAN: PlanInput = {
 
   livingM: 200000,
   specialY: 500000,
-  rentM: 100000,
+  rentM: 20000,                  // 持ち家なので管理費・修繕積立金相当（賃貸なら家賃）
   homeTaxY: 0,
   useHomeLoan: true,
   hlBal: 30_000_000,

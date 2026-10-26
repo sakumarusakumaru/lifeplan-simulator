@@ -476,6 +476,30 @@ export function ExpenseMegaSection() {
                     unit="年"
                   />
                 </div>
+                <CheckboxField
+                  label="住宅ローン控除を受けている"
+                  value={plan.hlDeduct}
+                  onChange={(v) => setField("hlDeduct", v)}
+                  hint="年末残高×0.7%を所得税（引ききれない分は住民税）から差し引く"
+                />
+                {plan.hlDeduct ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField
+                      label="控除が終わる年齢"
+                      value={plan.hlDeductEndAge}
+                      onChange={(v) => setField("hlDeductEndAge", v)}
+                      unit="歳"
+                      hint="新築は入居から13年、中古は10年（省エネ中古は13年）"
+                    />
+                    <NumberField
+                      label="借入限度額"
+                      value={plan.hlDeductLimit}
+                      onChange={(v) => setField("hlDeductLimit", v)}
+                      unit="円"
+                      hint="新築・2026年入居: 長期優良4,500万／ZEH3,500万／省エネ2,000万"
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : null}
             <div>
@@ -520,6 +544,12 @@ export function ExpenseMegaSection() {
 
         <CollapsibleSubGroup title="教育費" defaultOpen={false}>
           <div className="flex flex-col gap-4">
+            <CheckboxField
+              label="児童手当を収入に含める"
+              value={plan.childAllowance}
+              onChange={(v) => setField("childAllowance", v)}
+              hint="0〜2歳 月1.5万／3歳〜高校生 月1万／第3子以降 月3万（所得制限なし）"
+            />
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
                 — 塾・習い事の月額（モデルケースから選んで自動入力）

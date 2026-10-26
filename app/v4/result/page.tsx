@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
+import { WarningsPanel } from "@/components/v4/WarningsPanel";
 import { ageOn, kidAge } from "@/lib/v4/calc/age";
 import { computeRealEstateValue } from "@/lib/v4/calc/finance";
 import { simulate } from "@/lib/v4/calc/simulate";
@@ -46,13 +47,13 @@ function buildVerdict(
   const curExp = Math.round((cur?.exp ?? 0) / 10000);
   const monthlyDeficit = Math.round((curExp - curIncome) / 12);
   const totalCashAssets = Math.round(
-    (plan.cashBal + plan.fundBal + plan.fundNisaBal + plan.stockBal + plan.stockNisaBal) / 10000,
+    (plan.cashBal + plan.nisaBal + plan.tokuBal) / 10000,
   );
   const monthlyExp = Math.round(curExp / 12);
   const livingDefenseMonths =
     monthlyExp > 0 ? Math.round((totalCashAssets / monthlyExp) * 10) / 10 : 0;
   const totalSaveM =
-    plan.saveFundM + plan.saveStockM + plan.saveDcM + plan.saveCryptoM + plan.saveGoldM;
+    plan.nisaTsumitateM + plan.nisaGrowthM + plan.saveTokuM + plan.saveDcM + plan.saveCryptoM + plan.saveGoldM;
   const annualSave = Math.round((totalSaveM * 12) / 10000);
   const koseiYears = plan.selfPension?.koseiYears ?? 0;
   const penStartA = plan.penStartA;
@@ -81,10 +82,10 @@ function buildVerdict(
       `【課題分析】\n資金ショートの根本原因は、(1) 老後の年金収入が現役期の生活水準をカバーしきれない、(2) 退職時${lastJobEndAge}歳から年金開始${penStartA}歳までのギャップ期間に取り崩しが集中、(3) インフレ進行で実質的な購買力が低下、の3点です。${koseiYears < 30 ? `特に厚生年金加入年数${koseiYears}年は短く、年金受給額が想定より低い可能性があります。` : ""}\n\n` +
       `【考えられる選択肢（${yearsLeft < 10 ? "即効性重視" : yearsLeft < 25 ? "中期構造改革" : "長期計画"}）】\n` +
       `・固定費の削減: 住居費・通信費・保険料の見直しで月1〜3万円の捻出を目指しましょう。\n` +
-      `・積立の増額: NISA成長投資枠（年240万円）・つみたて投資枠（年120万円）・iDeCo（月2.3万円〜）の非課税枠を最大活用。月+2万円の積立で30年後に1,500〜2,000万円の差。\n` +
+      `・積立の増額: NISA成長投資枠（年240万円）・つみたて投資枠（年120万円）・iDeCo（会社員・企業年金なしは2027年から月6.2万円まで）の非課税枠を最大活用。月+2万円の積立で30年後に1,500〜2,000万円の差。\n` +
       `・退職時期の延長: 65歳→68歳の3年延長で就労収入${plan.jobs.length > 0 ? Math.round(plan.jobs[0].inc * 3 / 10000) : 1500}万円相当の上乗せ＋年金繰下げで月額25.2%増。\n` +
       `・年金繰下げ: 75歳まで繰下げ可。1ヶ月あたり0.7%増額（最大84%増）。\n` +
-      `・配偶者就労: 年103万円超のパート収入で世帯収入＋税優遇のバランス点。\n\n` +
+      `・配偶者就労: 2026年分から所得税がかかり始めるのは年収178万円超。社会保険の扶養（年130万円）を超えて勤務先の厚生年金に入ると、将来の年金も増えます。\n\n` +
       `【次のステップ】\n「シナリオ比較」タブで各施策の組み合わせ効果を試算できます。一般的に「支出削減 → 積立強化 → 就労延長」の順で論じられることが多いです。個別の判断は登録のあるFP等の専門家にご相談ください。`;
 
     return { score, level: "bad", headline, body };
@@ -117,7 +118,7 @@ function buildVerdict(
       body:
         `【現状診断】\n${endAge}歳時点での純資産は${fmtMan(nw)}と、想定外の支出への耐性が限定的です。生活防衛資金は現在${livingDefenseMonths}ヶ月分（推奨は12〜24ヶ月）です。\n\n` +
         `【課題分析】\n医療費（70歳以降の高額療養費は月8〜25万円自己負担）、介護費（在宅で月8〜10万円・施設で月13〜25万円が5〜10年）、物価上昇（年1〜2%継続で30年で35〜80%減価）など、想定外リスクへのバッファが薄い状態です。\n\n` +
-        `【考えられる選択肢】\n・生活防衛資金の確保: 手取り年収の1〜2年分（${Math.round(curIncome)}〜${Math.round(curIncome * 2)}万円目安）を流動性高い形で確保。\n・NISA成長投資枠（年240万）の継続活用: 30年で元本7,200万円＋運用益で1億円超の積立も可能。\n・iDeCo の節税効果: 月2.3万円拠出で年間6.9万円の節税（所得税20%・住民税10%想定）。\n・医療保険の見直し: 高額療養費制度を踏まえ、過剰な保障を整理して可処分所得を確保。\n\n` +
+        `【考えられる選択肢】\n・生活防衛資金の確保: 手取り年収の1〜2年分（${Math.round(curIncome)}〜${Math.round(curIncome * 2)}万円目安）を流動性高い形で確保。\n・NISAの生涯枠（1,800万円）を早めに埋める: 年360万円なら最短5年。埋まった後は特定口座で続けるのが一般的です。\n・iDeCo の節税効果: 月2.3万円の掛金なら年27.6万円が所得控除され、税率30%（所得税20%・住民税10%）の人で年約8.3万円の節税。\n・医療保険の見直し: 高額療養費制度を踏まえ、過剰な保障を整理して可処分所得を確保。\n\n` +
         `【次のステップ】\n月+1〜2万円の積立増による老後余裕度への影響は「シナリオ比較」タブで試算できます。`,
     };
   }
@@ -133,7 +134,7 @@ function buildVerdict(
       body:
         `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産が見込まれ、想定通りに推移すれば安心して老後を過ごせる水準です。65歳時点の純資産は${fmtMan(result.rows.find((r) => r.age === 65)?.nw ?? 0)}で、年金開始時のスタート資金として十分です。\n\n` +
         `【課題分析】\n基本設計に大きな問題はありません。今後の主要リスクは、(1) インフレ進行による実質購買力の低下、(2) 90歳超の長寿化による資産寿命、(3) 高齢期の医療・介護費の不確実性、の3点です。\n\n` +
-        `【一般に整理される論点】\n・分散運用の継続: 65歳時点でも株式・投信比率30〜40%を維持し、実質購買力を保つ。\n・取り崩し戦略: 60〜64歳はDC優先、65歳以降は公的年金＋他資産の組み合わせ（4%ルール参考）。\n・医療・介護の補完: 公的制度（高額療養費・介護保険）を踏まえ、不足分のみ民間保険で補完。\n・贈与の検討: 子・孫への暦年贈与（年110万円非課税）を早期から開始すれば、相続税課税対象を計画的に圧縮可能。\n\n` +
+        `【一般に整理される論点】\n・分散運用の継続: 65歳時点でも株式・投信比率30〜40%を維持し、実質購買力を保つ。\n・受取の順番: DC一時金と退職金は受取間隔で税額が変わります（DC一時金→退職金は10年、退職金→DC一時金は20年空けると控除の重複調整なし）。取り崩しは特定口座→NISAの順が基本。\n・医療・介護の補完: 公的制度（高額療養費・介護保険）を踏まえ、不足分のみ民間保険で補完。\n・贈与の検討: 子・孫への暦年贈与（年110万円非課税）。ただし亡くなる前7年以内の贈与は相続財産に加算されるため（2024年以降の贈与から段階的に延長）、早めの開始が前提です。\n\n` +
         `【次のステップ】\n年1回の見直しで十分です。家族構成や税制改正に応じて運用配分・贈与戦略を微調整してください。`,
     };
   }
@@ -208,10 +209,8 @@ export default function ResultPage() {
   const cur = result.rows[0];
   const financialAssets =
     plan.cashBal +
-    plan.fundBal +
-    plan.fundNisaBal +
-    plan.stockBal +
-    plan.stockNisaBal +
+    plan.nisaBal +
+    plan.tokuBal +
     plan.cryptoBal +
     plan.goldBal +
     plan.dcBal;
@@ -423,7 +422,7 @@ export default function ResultPage() {
           <SummaryCard
             label="年間積立"
             value={fmtMan(cur?.inv ?? 0)}
-            sub={`投信(課税) ${fmtMan(plan.saveFundM * 12)} / 投信(NISA) ${fmtMan(plan.saveFundNisaM * 12)} / 株(課税) ${fmtMan(plan.saveStockM * 12)} / 株(NISA) ${fmtMan(plan.saveStockNisaM * 12)} / DC ${fmtMan(plan.saveDcM * 12)}`}
+            sub={`NISA ${fmtMan((plan.nisaTsumitateM + plan.nisaGrowthM) * 12)} / 特定口座 ${fmtMan(plan.saveTokuM * 12)} / iDeCo等(自分) ${fmtMan(plan.saveDcM * 12)}${plan.dcEmployerM > 0 ? ` / DC(会社) ${fmtMan(plan.dcEmployerM * 12)}` : ""}`}
           />
         </div>
 
@@ -431,13 +430,11 @@ export default function ResultPage() {
           assets={(
             [
               { label: "現金・預金", value: plan.cashBal, color: "#64748b", category: "current" },
-              { label: "投信(NISA・非課税)", value: plan.fundNisaBal, color: "#22863a", category: "current" },
-              { label: "投信(課税口座)", value: plan.fundBal, color: "#94a3b8", category: "current" },
-              { label: "株(NISA・非課税)", value: plan.stockNisaBal, color: "#16a34a", category: "current" },
-              { label: "株(課税口座)", value: plan.stockBal, color: "#b8c6d4", category: "current" },
-              { label: "仮想通貨", value: plan.cryptoBal, color: "#a78bfa", category: "current" },
+              { label: "NISA口座", value: plan.nisaBal, color: "#22863a", category: "current" },
+              { label: "特定口座", value: plan.tokuBal, color: "#94a3b8", category: "current" },
+              { label: "暗号資産", value: plan.cryptoBal, color: "#a78bfa", category: "current" },
               { label: "金・コモディティ", value: plan.goldBal, color: "#c9aa7c", category: "current" },
-              { label: "DC", value: plan.dcBal, color: "#dde6ef", category: "fixed" },
+              { label: "iDeCo・DC", value: plan.dcBal, color: "#dde6ef", category: "fixed" },
               { label: "自宅（評価額）", value: homeValue, color: "#a05f3a", category: "fixed" },
               { label: "不動産投資（評価額）", value: realEstateValue, color: "#8b6f4e", category: "fixed" },
             ] as const
@@ -491,7 +488,10 @@ export default function ResultPage() {
 
       {/* 5. 資産推移 */}
       <ReportSection no="05" title="資産推移 ／ ASSET TRAJECTORY">
-        <AssetsChart rows={result.rows} />
+        <div className="flex flex-col gap-3">
+          <WarningsPanel warnings={result.warnings} />
+          <AssetsChart rows={result.rows} />
+        </div>
       </ReportSection>
 
       {/* 6. キャッシュフロー */}
@@ -512,18 +512,22 @@ export default function ResultPage() {
             </li>
             <li>
               <span className="font-bold text-[#0a0a0a]">投資リターン:</span>{" "}
-              投信 {plan.fundR.toFixed(1)}% / 株 {plan.stockR.toFixed(1)}% /
-              DC {plan.dcR.toFixed(1)}% / 金 {plan.goldR.toFixed(1)}% を年複利で適用
+              NISA {plan.nisaR.toFixed(1)}% / 特定口座 {plan.tokuR.toFixed(1)}% /
+              DC {plan.dcR.toFixed(1)}% / 金 {plan.goldR.toFixed(1)}% を年複利で適用。特定口座・金・暗号資産は売却時に利益部分へ課税
             </li>
             <li>
               <span className="font-bold text-[#0a0a0a]">税・社会保険:</span>{" "}
               {plan.taxMode === "detailed"
                 ? "累進課税・各種控除・社会保険料を詳細モードで計算"
-                : `一律 ${plan.taxRate}% で簡易計算`}
+                : `給与 ${plan.taxRate}%・年金 ${plan.taxRatePen ?? 10}% で簡易計算（退職金・DC一時金は退職所得として計算）`}
             </li>
             <li>
-              <span className="font-bold text-[#0a0a0a]">DC取り崩し:</span>{" "}
-              60歳から受給可（原則それまでは取り崩し対象外）。60〜64歳は年金開始までの繋ぎとして優先取崩、65歳以降は公的年金と組み合わせて他資産と並列取崩
+              <span className="font-bold text-[#0a0a0a]">iDeCo・DC:</span>{" "}
+              {plan.dcStartAge}歳で{plan.dcMethod === "lump" ? "一時金（退職所得）" : `年金（${plan.dcYears}年）`}として受取。掛金は所得控除、上限は区分と年で自動チェック
+            </li>
+            <li>
+              <span className="font-bold text-[#0a0a0a]">年金:</span>{" "}
+              令和8年度の水準（基礎年金満額 月70,608円）から毎年 {(plan.penIndex ?? 0).toFixed(1)}% で改定
             </li>
             <li>
               <span className="font-bold text-[#0a0a0a]">想定外:</span>{" "}

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 
+import { dcSelfLimit } from "@/lib/v4/calc/rules";
 import { simulate } from "@/lib/v4/calc/simulate";
 import { usePlanStore } from "@/store/v4/plan-store";
 import type { DrawOrderMode, PlanInput } from "@/lib/v4/calc/types";
@@ -20,9 +21,7 @@ const fmtDelta = (delta: number) => {
 };
 
 const DRAW_ORDER_LABEL: Record<DrawOrderMode, string> = {
-  "auto-tiered": "自動最適化（年齢別）",
-  "fund-stock-crypto": "投信→株→仮想通貨優先",
-  "stock-fund-crypto": "株→投信→仮想通貨優先",
+  auto: "おすすめ（特定口座→金→暗号資産→NISA）",
   custom: "カスタム順序",
 };
 
@@ -137,42 +136,55 @@ export default function SuggestPage() {
     // ─────────────────────────
     // 02 積立・投資を増やす
     // ─────────────────────────
+    const nisaM = plan.nisaTsumitateM + plan.nisaGrowthM;
     list.push({
-      title: "投信の積立を月+2万増やす",
-      detail: `投信積立 ${(plan.saveFundM / 10000).toFixed(1)}万 → ${((plan.saveFundM + 20000) / 10000).toFixed(1)}万円/月。NISAつみたて枠の増額`,
-      result: sim((p) => ({ ...p, saveFundM: p.saveFundM + 20000 })),
+      title: "NISAの積立を月+2万増やす",
+      detail: `NISA積立 ${(nisaM / 10000).toFixed(1)}万 → ${((nisaM + 20000) / 10000).toFixed(1)}万円/月。つみたて投資枠（月10万まで）から埋める`,
+      result: sim((p) => ({ ...p, nisaTsumitateM: p.nisaTsumitateM + 20000 })),
       category: "saving",
     });
     list.push({
-      title: "投信の積立を月+5万増やす（NISA成長枠も活用）",
-      detail: `投信積立 ${(plan.saveFundM / 10000).toFixed(1)}万 → ${((plan.saveFundM + 50000) / 10000).toFixed(1)}万円/月。年60万円の追加で長期複利が働く`,
-      result: sim((p) => ({ ...p, saveFundM: p.saveFundM + 50000 })),
+      title: "NISAの積立を月+5万増やす（成長投資枠も活用）",
+      detail: `NISA積立 ${(nisaM / 10000).toFixed(1)}万 → ${((nisaM + 50000) / 10000).toFixed(1)}万円/月。年60万円の追加で非課税の複利が働く`,
+      result: sim((p) => ({ ...p, nisaGrowthM: p.nisaGrowthM + 50000 })),
       category: "saving",
     });
-
-    if (plan.saveDcM < 23000) {
+    if (plan.saveTokuM > 0 && nisaM < 300_000) {
+      const move = Math.min(plan.saveTokuM, 300_000 - nisaM);
       list.push({
-        title: "iDeCo（DC）拠出を月2.3万円まで増額",
-        detail: `DC積立 ${(plan.saveDcM / 10000).toFixed(1)}万 → 2.3万/月（会社員の上限目安）。所得控除でその年の節税効果あり`,
-        result: sim((p) => ({ ...p, saveDcM: 23000 })),
+        title: "特定口座の積立をNISAに付け替える",
+        detail: `特定口座の積立 月${(move / 10000).toFixed(1)}万をNISAへ。同じ商品・同じ金額でも、売却時の20.315%がかからない`,
+        result: sim((p) => ({
+          ...p,
+          saveTokuM: p.saveTokuM - move,
+          nisaGrowthM: p.nisaGrowthM + Math.max(0, move - Math.max(0, 100_000 - p.nisaTsumitateM)),
+          nisaTsumitateM: Math.min(100_000, p.nisaTsumitateM + move),
+        })),
         category: "saving",
       });
     }
-    if (plan.saveDcM < 68000) {
+    {
+      const lim = dcSelfLimit(plan.dcType, plan.dcEmployerM, 2027).selfMax;
+      if (plan.saveDcM < lim) {
+        list.push({
+          title: `iDeCo等の掛金を上限（月${(lim / 10000).toFixed(1)}万）まで増やす`,
+          detail: `本人掛金 ${(plan.saveDcM / 10000).toFixed(1)}万 → ${(lim / 10000).toFixed(1)}万/月（2027年〜の上限）。全額所得控除で毎年の税金が減る。60歳まで引き出せない点に注意`,
+          result: sim((p) => ({ ...p, saveDcM: lim })),
+          category: "saving",
+        });
+      }
+    }
+    if (plan.dcBal > 0 || plan.saveDcM > 0 || plan.dcEmployerM > 0) {
       list.push({
-        title: "iDeCo（DC）拠出を月6.8万円まで増額（自営業上限）",
-        detail: `自営業者ならDC上限月6.8万まで活用可。${(plan.saveDcM / 10000).toFixed(1)}万 → 6.8万/月`,
-        result: sim((p) => ({ ...p, saveDcM: 68000 })),
+        title: plan.dcMethod === "lump" ? "DCを年金（10年）で受け取る" : "DCを一時金で受け取る",
+        detail:
+          plan.dcMethod === "lump"
+            ? "退職金と受取時期が近く退職所得控除が足りない場合は、年金受取の方が有利になることがある"
+            : "退職所得控除の枠が余っているなら、一時金の方が税・社保の負担が軽くなりやすい",
+        result: sim((p) => ({ ...p, dcMethod: p.dcMethod === "lump" ? "annuity" : "lump", dcYears: 10 })),
         category: "saving",
       });
     }
-
-    list.push({
-      title: "個別株の積立を月+1万円増やす",
-      detail: `株積立 ${(plan.saveStockM / 10000).toFixed(1)}万 → ${((plan.saveStockM + 10000) / 10000).toFixed(1)}万円/月`,
-      result: sim((p) => ({ ...p, saveStockM: p.saveStockM + 10000 })),
-      category: "saving",
-    });
 
     // ─────────────────────────
     // 03 支出を減らす
@@ -222,47 +234,30 @@ export default function SuggestPage() {
     // 04 運用利回りを改善する
     // ─────────────────────────
     list.push({
-      title: "投信の利回りを+1%改善する（低コストインデックスへ）",
-      detail: `投信リターン ${plan.fundR.toFixed(1)}% → ${(plan.fundR + 1).toFixed(1)}%。信託報酬の安いオールカントリー型などへの切替で実現する想定`,
-      result: sim((p) => ({ ...p, fundR: p.fundR + 1 })),
+      title: "NISAの利回りを+1%改善する（低コストインデックスへ）",
+      detail: `NISA ${plan.nisaR.toFixed(1)}% → ${(plan.nisaR + 1).toFixed(1)}%。信託報酬の安い全世界株型などへの切替を想定`,
+      result: sim((p) => ({ ...p, nisaR: p.nisaR + 1 })),
       category: "return",
     });
     list.push({
       title: "全運用資産の利回りを+0.5%改善する",
-      detail: `投信・株・DCすべての年率を+0.5%。リバランス・銘柄精査・コスト見直しの統合効果`,
+      detail: `NISA・特定口座・DCすべての年率を+0.5%。リバランス・コスト見直しの統合効果`,
       result: sim((p) => ({
         ...p,
-        fundR: p.fundR + 0.5,
-        stockR: p.stockR + 0.5,
+        nisaR: p.nisaR + 0.5,
+        tokuR: p.tokuR + 0.5,
         dcR: p.dcR + 0.5,
       })),
       category: "return",
     });
-
     // ─────────────────────────
     // 05 取り崩し戦略を変える
     // ─────────────────────────
-    if (plan.drawOrder !== "auto-tiered") {
+    if (plan.drawOrder !== "auto") {
       list.push({
-        title: "取り崩し順序を自動最適化（年齢別）に変更",
-        detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 〜59歳: 投信→株、60〜64歳: DC優先、65歳〜: 投信→株→DC`,
-        result: sim((p) => ({ ...p, drawOrder: "auto-tiered" as DrawOrderMode })),
-        category: "drawdown",
-      });
-    }
-    if (plan.drawOrder !== "fund-stock-crypto") {
-      list.push({
-        title: "取り崩し順序を「投信→株→DC」優先に変更",
-        detail: `流動性の高い投信から優先取崩。仮想通貨・金は最後まで温存`,
-        result: sim((p) => ({ ...p, drawOrder: "fund-stock-crypto" as DrawOrderMode })),
-        category: "drawdown",
-      });
-    }
-    if (plan.drawOrder !== "stock-fund-crypto") {
-      list.push({
-        title: "取り崩し順序を「株→投信→DC」優先に変更",
-        detail: `値動きの大きい個別株から優先取崩。安定運用の投信を温存`,
-        result: sim((p) => ({ ...p, drawOrder: "stock-fund-crypto" as DrawOrderMode })),
+        title: "取り崩し順序をおすすめに変更",
+        detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 特定口座→金→暗号資産→NISA（非課税のNISAを最後まで残す）`,
+        result: sim((p) => ({ ...p, drawOrder: "auto" as DrawOrderMode })),
         category: "drawdown",
       });
     }

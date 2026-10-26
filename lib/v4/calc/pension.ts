@@ -1,8 +1,9 @@
 import type { PensionBreakdown, PensionInput } from "./types";
 
-// 老齢基礎年金 満額(年額) - 2024年度(67歳以下)
-// https://www.nenkin.go.jp/service/jukyu/roureinenkin/jukyu-yoken/20150401-01.html
-export const FULL_BASIC_ANNUAL = 816_000;
+// 老齢基礎年金 満額(年額) - 令和8年度(2026年度)・1956年4月2日以降生まれ
+//   月70,608円 × 12 = 847,300円（100円単位）
+// https://www.mhlw.go.jp/stf/newpage_71570.html
+export const FULL_BASIC_ANNUAL = 847_300;
 
 // 厚生年金 給付乗率 (平成15年4月以降の加入期間)
 //   年金額(年) = 平均標準報酬額 × 5.481/1000 × 加入月数
@@ -10,10 +11,10 @@ export const FULL_BASIC_ANNUAL = 816_000;
 // 現役世代のシミュレーションでは新算式のみで近似する。
 export const KOSEI_RATE = 5.481 / 1000;
 
-// 加給年金(2024年度・特別加算込み・配偶者分)
+// 加給年金(令和8年度・特別加算込み・配偶者分) 243,800 + 179,900
 // 厚生年金加入20年以上の人が65歳到達時に65歳未満の配偶者がいると加算
 // 配偶者が65歳になると停止して振替加算へ。今回は振替加算は省略。
-export const KAKYUU_NENKIN_ANNUAL = 408_100;
+export const KAKYUU_NENKIN_ANNUAL = 423_700;
 export const KOSEI_KAKYUU_MIN_MONTHS = 20 * 12;
 
 // 国民年金 保険料免除月数の上限 (480ヶ月 = 40年)
@@ -68,7 +69,8 @@ export function calcPension(p: PensionInput, startAge: number): PensionBreakdown
   // 老齢厚生年金 (年額) - 簡略化として全期間を新算式で計算
   let koseiAnnual = 0;
   if (p.category === "kosei" && p.koseiYears > 0 && p.koseiAvgIncome > 0) {
-    const avgMonthlyReward = p.koseiAvgIncome / 12;
+    // 平均標準報酬額には上限がある（月65万＋賞与1回150万）。年収ベースで約1,080万を上限とする
+    const avgMonthlyReward = Math.min(p.koseiAvgIncome, 1080 * 10000) / 12;
     koseiAnnual = avgMonthlyReward * KOSEI_RATE * koseiMonthsOf(p);
   }
 
