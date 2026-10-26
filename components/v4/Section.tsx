@@ -167,7 +167,7 @@ export function Section({
                 className="w-full py-3 text-sm font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
                 style={{ background: isLast ? "#c8383a" : "#0a0a0a", border: "2.5px solid #0a0a0a", borderRadius: 12 }}
               >
-                {isLast ? "入力完了・結果を見る →" : `この内容でOK・次へ（${String(idx + 2).padStart(2, "0")}）→`}
+                {isLast ? "入力完了・結果を表示する →" : `この内容でOK・次へ（${String(idx + 2).padStart(2, "0")}）→`}
               </button>
             </div>
           ) : null}

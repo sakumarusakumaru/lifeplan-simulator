@@ -16,7 +16,13 @@ const LABELS: Record<(typeof SECTION_ORDER)[number], string> = {
 
 // はじめての人の入力ステップの進み具合。
 // mode="input": 詳細入力の上に出す / mode="gate": 入力が終わる前に結果タブを開いたときに出す
-export function InputProgress({ mode = "input" }: { mode?: "input" | "gate" }) {
+export function InputProgress({
+  mode = "input",
+  onShowNow,
+}: {
+  mode?: "input" | "gate";
+  onShowNow?: () => void; // 入力画面で「途中でも結果を見る」を押したとき
+}) {
   const router = useRouter();
   const confirmed = useUiStore((s) => s.confirmed);
   const setOpen = useUiStore((s) => s.setOpen);
@@ -36,8 +42,8 @@ export function InputProgress({ mode = "input" }: { mode?: "input" | "gate" }) {
   };
 
   const showNow = () => {
-    setUnlocked(true);
-    if (mode === "input") router.push("/v4/result");
+    if (onShowNow) onShowNow();
+    else setUnlocked(true);
   };
 
   const trySample = () => {

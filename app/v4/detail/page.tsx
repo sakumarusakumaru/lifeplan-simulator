@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { HealthHeader } from "@/components/v4/HealthHeader";
 import { ResultsPanel } from "@/components/v4/ResultsPanel";
@@ -18,7 +18,6 @@ import { usePlanStore } from "@/store/v4/plan-store";
 import { useSimResult } from "@/store/v4/useSimResult";
 
 export default function DetailPage() {
-  const router = useRouter();
   const hydrated = usePlanStore((s) => s.hydrated);
   const plan = usePlanStore((s) => s.plan);
   const result = useSimResult(plan);
@@ -29,6 +28,17 @@ export default function DetailPage() {
   const confirm = useUiStore((s) => s.confirm);
   const setOpen = useUiStore((s) => s.setOpen);
   const setUnlocked = useUiStore((s) => s.setUnlocked);
+  const closeAll = useUiStore((s) => s.closeAll);
+  // 入力ステップを終えた直後だけ出す案内
+  const [justDone, setJustDone] = useState(false);
+
+  // 入力が終わったら、その場（詳細入力）で結果を見せる。入力を直すと右のグラフがすぐ変わることを体験してもらう
+  const finish = useCallback(() => {
+    setUnlocked(true);
+    closeAll();
+    setJustDone(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [setUnlocked, closeAll]);
 
   const stepping = hydrated && unlocked === false;
 
@@ -52,11 +62,10 @@ export default function DetailPage() {
           document.getElementById(next)?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 60);
       } else {
-        setUnlocked(true);
-        router.push("/v4/result");
+        finish();
       }
     },
-    [confirm, setOpen, confirmed, setUnlocked, router],
+    [confirm, setOpen, confirmed, finish],
   );
 
   const flow = useMemo(
@@ -102,7 +111,7 @@ export default function DetailPage() {
     return (
       <main className="px-4 py-6 sm:px-8">
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
-          <InputProgress />
+          <InputProgress onShowNow={finish} />
           {sections}
         </div>
       </main>
@@ -112,6 +121,42 @@ export default function DetailPage() {
   return (
     <main className="px-4 py-6 pb-6 sm:px-8">
       <div className="mx-auto max-w-7xl">
+        {justDone ? (
+          <div
+            className="mb-4 flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center"
+            style={{ background: "#f0fff4", border: "2.5px solid #22863a" }}
+            role="status"
+          >
+            <div className="flex-1">
+              <p className="text-sm font-bold text-[#22863a]">あなたの結果が出ました</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-[#0a0a0a]/75">
+                <span className="hidden sm:inline">右側</span>
+                <span className="sm:hidden">下</span>
+                のグラフと診断が、いま入力した内容の結果です。
+                <span className="hidden sm:inline">左</span>
+                <span className="sm:hidden">上</span>
+                の入力を直すと、すぐに結果も変わります。
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Link
+                href="/v4/result"
+                className="rounded-lg px-3 py-2 text-[12px] font-bold text-white"
+                style={{ background: "#0a0a0a" }}
+              >
+                詳しいレポートを見る →
+              </Link>
+              <button
+                type="button"
+                onClick={() => setJustDone(false)}
+                className="rounded-lg px-2 py-2 text-[12px] font-bold text-[#0a0a0a]/60 hover:text-[#0a0a0a]"
+                aria-label="案内を閉じる"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ) : null}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
           {sections}
 
