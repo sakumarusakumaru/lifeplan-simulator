@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { ConsentDialog } from "@/components/v4/ConsentDialog";
 import { Footer } from "@/components/v4/Footer";
 import { GuideFlow } from "@/components/v4/GuideFlow";
 import { HeaderMenu } from "@/components/v4/HeaderMenu";
+import { InputProgress } from "@/components/v4/InputProgress";
 import type { PlanInput } from "@/lib/v4/calc/types";
 import { migrateV3Plan, usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
@@ -26,6 +27,25 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   const plan = usePlanStore((s) => s.plan);
   const patch = usePlanStore((s) => s.patch);
   const reset = usePlanStore((s) => s.reset);
+  const loadSample = usePlanStore((s) => s.loadSample);
+  const planHydrated = usePlanStore((s) => s.hydrated);
+  const uiHydrated = useUiStore((s) => s.hydrated);
+  const unlocked = useUiStore((s) => s.unlocked);
+  const setUnlocked = useUiStore((s) => s.setUnlocked);
+  const resetProgress = useUiStore((s) => s.resetProgress);
+  const closeAll = useUiStore((s) => s.closeAll);
+  const router = useRouter();
+
+  // 結果を出してよいかの初回判定: 生年月日まで入っている保存データがある人（既存ユーザー）はそのまま表示
+  useEffect(() => {
+    if (planHydrated && uiHydrated && unlocked === null)
+      setUnlocked(!!plan.selfBirth);
+  }, [planHydrated, uiHydrated, unlocked, plan.selfBirth, setUnlocked]);
+  const gated =
+    planHydrated &&
+    uiHydrated &&
+    unlocked === false &&
+    !(pathname?.startsWith("/v4/detail") ?? false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
@@ -217,16 +237,34 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
               使い方
             </button>
             <HeaderMenu
+              realValue={realValue}
+              setRealValue={setRealValue}
+              mcOn={mcOn}
+              setMcOn={setMcOn}
+              onSample={() => {
+                if (
+                  !plan.selfBirth ||
+                  confirm(
+                    "サンプル（35歳・会社員・持ち家）を読み込みます。\n今の入力内容は上書きされます。よろしいですか？",
+                  )
+                ) {
+                  loadSample();
+                  setUnlocked(true);
+                }
+              }}
               onExport={exportPlan}
               onImport={() => fileInputRef.current?.click()}
               onPdf={() => window.print()}
               onReset={() => {
                 if (
                   confirm(
-                    "入力内容をすべて初期値に戻しますか？\nこの操作は取り消せません。\n（念のため、先に「入力データを保存」でバックアップできます）",
+                    "入力内容をすべて消して、はじめの状態に戻しますか？\nこの操作は取り消せません。\n（念のため、先に「入力データを保存」でバックアップできます）",
                   )
                 ) {
                   reset();
+                  resetProgress();
+                  closeAll();
+                  router.push("/v4/detail");
                 }
               }}
             />
@@ -248,84 +286,6 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
         <div className="no-print px-4 pb-1.5 sm:hidden">
           {renderTabs("flex items-center gap-0.5 overflow-x-auto")}
         </div>
-
-        {/* 2段目: 計算・表示の切替 */}
-        <div
-          className="no-print flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 pt-1.5 pb-2 sm:px-8"
-          style={{ borderTop: "1px solid #0a0a0a15" }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-[#0a0a0a]/55">
-              運用利回り
-            </span>
-            <div
-              className="flex shrink-0 overflow-hidden text-[10px] font-bold"
-              style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
-              role="group"
-              aria-label="運用利回りの計算方法"
-              title="運用利回りを毎年一定（固定）で見るか、毎年の値動き（振れ幅）を1,000通り試すか"
-            >
-              {[
-                { v: false, label: "固定" },
-                { v: true, label: "振れ幅" },
-              ].map((o) => (
-                <button
-                  key={o.label}
-                  type="button"
-                  onClick={() => setMcOn(o.v)}
-                  aria-pressed={mcOn === o.v}
-                  className="px-2 py-1 transition-colors"
-                  style={{
-                    background: mcOn === o.v ? "#1a6fa8" : "#ffffff",
-                    color: mcOn === o.v ? "#ffffff" : "#0a0a0a",
-                  }}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-[#0a0a0a]/55">
-              金額の表示
-            </span>
-            <div
-              className="flex shrink-0 overflow-hidden text-[10px] font-bold"
-              style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
-              role="group"
-              aria-label="金額の表示方法"
-              title="将来の金額を、そのときの金額（名目）で見るか、物価上昇を割り戻した今の価値で見るか"
-            >
-              {[
-                { v: false, label: "名目" },
-                { v: true, label: "今の価値" },
-              ].map((o) => (
-                <button
-                  key={o.label}
-                  type="button"
-                  onClick={() => setRealValue(o.v)}
-                  aria-pressed={realValue === o.v}
-                  className="px-2 py-1 transition-colors"
-                  style={{
-                    background: realValue === o.v ? "#0a0a0a" : "#ffffff",
-                    color: realValue === o.v ? "#ffffff" : "#0a0a0a",
-                  }}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <span className="hidden text-[10px] text-[#0a0a0a]/45 md:inline">
-            {mcOn
-              ? "値動きを1,000通り試算中（結果出力に「運用の振れ幅」の章）"
-              : "毎年一定の利回りで計算"}
-            {" ／ "}
-            {realValue
-              ? "将来の金額を今の価値に割り戻して表示"
-              : "将来の金額はその年の金額で表示"}
-          </span>
-        </div>
       </header>
 
       {realValue ? (
@@ -345,7 +305,15 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
           {example30.toLocaleString()}万円。入力欄の金額はそのままです。
         </div>
       ) : null}
-      {children}
+      {gated ? (
+        <main className="px-4 py-8 sm:px-8">
+          <div className="mx-auto max-w-3xl">
+            <InputProgress mode="gate" />
+          </div>
+        </main>
+      ) : (
+        children
+      )}
       <Footer />
       <ConsentDialog />
       {guideOpen ? (

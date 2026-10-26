@@ -294,7 +294,7 @@ function StepInput() {
         <Kicker>INPUT</Kicker>
         <h2 className="text-xl font-bold text-[#0a0a0a]">入力は上から4つのブロック</h2>
         <p className="mt-1 text-sm leading-relaxed text-[#0a0a0a]/70">
-          入力画面には4つのブロックが並び、結果は入力のたびにリアルタイムで更新されます（PCでは右側に表示）。番号を押して、それぞれ何を入れるか見てみましょう。
+          はじめは入力だけの画面です。4つのブロックを上から順に入れて「OK・次へ」を押していくと、最後にあなたの結果（グラフ・診断）が出ます。そのあとは入力を直すたびに結果がすぐ変わります。番号を押して、それぞれ何を入れるか見てみましょう。
         </p>
       </div>
       <div className="grid grid-cols-4 gap-1.5">

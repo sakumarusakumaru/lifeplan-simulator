@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { DEFAULT_PLAN } from "@/lib/v4/calc/defaults";
+import { DEFAULT_PLAN, EMPTY_PLAN } from "@/lib/v4/calc/defaults";
 import type { PlanInput } from "@/lib/v4/calc/types";
 
 // ver3（lp_v13）の保存データを ver4 の項目に読み替える。
@@ -52,20 +52,22 @@ interface PlanStore {
   hydrated: boolean;
   setField: <K extends keyof PlanInput>(key: K, value: PlanInput[K]) => void;
   patch: (partial: Partial<PlanInput>) => void;
-  reset: () => void;
+  reset: () => void;          // 空の状態に戻す（はじめての人と同じ）
+  loadSample: () => void;     // サンプル（35歳・会社員）を読み込む
   setHydrated: () => void;
 }
 
 export const usePlanStore = create<PlanStore>()(
   persist(
     (set) => ({
-      plan: DEFAULT_PLAN,
+      plan: EMPTY_PLAN,
       hydrated: false,
       setField: (key, value) =>
         set((s) => ({ plan: { ...s.plan, [key]: value } })),
       patch: (partial) =>
         set((s) => ({ plan: { ...s.plan, ...partial } })),
-      reset: () => set({ plan: DEFAULT_PLAN }),
+      reset: () => set({ plan: EMPTY_PLAN }),
+      loadSample: () => set({ plan: DEFAULT_PLAN }),
       setHydrated: () => set({ hydrated: true }),
     }),
     {
@@ -75,7 +77,10 @@ export const usePlanStore = create<PlanStore>()(
       merge: (persistedState, currentState) => {
         const persisted = persistedState as { plan?: Partial<PlanInput> } | undefined;
         // ver4 の保存が無ければ、ver3 の入力内容を引き継ぐ（ver3 側のデータは消さない）
-        const source = persisted?.plan ?? (typeof window !== "undefined" ? readV3Plan() : null) ?? {};
+        const loaded = persisted?.plan ?? (typeof window !== "undefined" ? readV3Plan() : null);
+        const source = loaded ?? {};
+        // 保存データがない（はじめての人）は空の状態から。保存データがある人は不足項目をサンプル値で補う
+        const BASE = loaded ? DEFAULT_PLAN : EMPTY_PLAN;
         const persistedPlan = source as Partial<PlanInput> & {
           kids?: Array<{ s?: Record<string, unknown>; opt?: Record<string, unknown> } & Record<string, unknown>>;
           jobs?: Array<Record<string, unknown>>;
@@ -84,7 +89,7 @@ export const usePlanStore = create<PlanStore>()(
 
         // Kid フィールドの自動マイグレーション
         // 旧: opt.grad / opt.dormU / opt.dormG → 新: s.g / opt.dorm
-        const migratedKids = (persistedPlan.kids ?? DEFAULT_PLAN.kids).map((kid) => {
+        const migratedKids = (persistedPlan.kids ?? BASE.kids).map((kid) => {
           const s = { ...(kid.s ?? {}) } as Record<string, unknown>;
           const opt = { ...(kid.opt ?? {}) } as Record<string, unknown>;
           if (s.g === undefined) {
@@ -97,14 +102,14 @@ export const usePlanStore = create<PlanStore>()(
         });
 
         // Job フィールドの自動マイグレーション (raise追加)
-        const migratedJobs = (persistedPlan.jobs ?? DEFAULT_PLAN.jobs).map((j) => {
+        const migratedJobs = (persistedPlan.jobs ?? BASE.jobs).map((j) => {
           const obj = { ...j } as Record<string, unknown>;
           if (obj.raise === undefined) obj.raise = 0;
           return obj;
         });
 
         // drawCustomOrder: ver4 の口座単位に揃える
-        const ALL_DRAW_ASSETS = DEFAULT_PLAN.drawCustomOrder;
+        const ALL_DRAW_ASSETS = BASE.drawCustomOrder;
         const persistedOrder = (persistedPlan.drawCustomOrder ?? []).filter((a) =>
           ALL_DRAW_ASSETS.includes(a),
         );
@@ -113,11 +118,11 @@ export const usePlanStore = create<PlanStore>()(
           ...ALL_DRAW_ASSETS.filter((a) => !persistedOrder.includes(a)),
         ];
         const migratedDrawMode =
-          persistedPlan.drawOrder === "custom" ? "custom" : DEFAULT_PLAN.drawOrder;
+          persistedPlan.drawOrder === "custom" ? "custom" : BASE.drawOrder;
 
         // RealEstate フィールドの自動マイグレーション (propTax + 評価額算定用フィールド追加)
         const currentYear = new Date().getFullYear();
-        const migratedRes = (persistedPlan.res ?? DEFAULT_PLAN.res).map((r) => {
+        const migratedRes = (persistedPlan.res ?? BASE.res).map((r) => {
           const obj = { ...r } as Record<string, unknown>;
           if (obj.propTax === undefined) obj.propTax = 0;
           if (obj.propType === undefined) obj.propType = "mansion";
@@ -145,7 +150,7 @@ export const usePlanStore = create<PlanStore>()(
         return {
           ...currentState,
           plan: {
-            ...DEFAULT_PLAN,
+            ...BASE,
             ...currentState.plan,
             ...persistedPlan,
             kids: migratedKids,
@@ -154,15 +159,15 @@ export const usePlanStore = create<PlanStore>()(
             drawCustomOrder: migratedDrawOrder,
             drawOrder: migratedDrawMode,
             selfPension: {
-              ...DEFAULT_PLAN.selfPension,
+              ...BASE.selfPension,
               ...(persistedPlan.selfPension ?? {}),
             },
             spousePension: {
-              ...DEFAULT_PLAN.spousePension,
+              ...BASE.spousePension,
               ...(persistedPlan.spousePension ?? {}),
             },
             risk: {
-              ...DEFAULT_PLAN.risk,
+              ...BASE.risk,
               ...(persistedPlan.risk ?? {}),
             },
           } as unknown as PlanInput,

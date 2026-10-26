@@ -154,3 +154,30 @@ export const DEFAULT_PLAN: PlanInput = {
   ],
   ins: [],
 };
+
+// はじめての人の出発点。サンプルの数字（誰かの年収・ローン・物件）は入れず、
+// 本人が入力した分だけで計算する。サンプルはメニューの「サンプルを読み込む」で DEFAULT_PLAN を使う。
+export const EMPTY_PLAN: PlanInput = {
+  ...DEFAULT_PLAN,
+  spouseWork: "none",
+  spouseIncY: 0,
+  jobs: [{ name: "勤務先", start: 22, end: 60, inc: 0, raise: 1.5, sev: 0, sevAge: 60 }],
+  sideJobs: [],
+  res: [],
+  kids: [],
+  ins: [],
+  inheritances: [],
+  lifeExpenses: [],
+  otherLoans: [],
+  careEvents: [],
+  cashBal: 0,
+  nisaTsumitateM: 0,
+  tokuBal: 0,
+  livingM: 0,
+  specialY: 0,
+  rentM: 0,
+  homeOwned: false,
+  useHomeLoan: false,
+  hlBal: 0,
+  selfPension: { ...DEFAULT_PLAN.selfPension, koseiYears: 0, koseiAvgIncome: 0 },
+};

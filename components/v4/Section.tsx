@@ -13,6 +13,16 @@ export const StickyHeaderContext = createContext<{ enabled: boolean; topPx: numb
   topPx: 56,
 });
 
+// 入力ステップ（はじめての人向け）。各ブロックの最後に「OK・次へ」を出し、順番に進めてもらう
+export const SECTION_ORDER = ["ch-settings", "ch-income", "ch-assets", "ch-expense"] as const;
+
+export const StepFlowContext = createContext<{
+  enabled: boolean;
+  onDone: (id: string) => void;     // 「OK・次へ」を押したとき
+  canProceed: (id: string) => string | null; // 進めない理由（null なら進める）
+  note: (id: string) => string | null;       // 進めるが、念のため確認してほしいこと
+}>({ enabled: false, onDone: () => {}, canProceed: () => null, note: () => null });
+
 interface SectionProps {
   id: string;
   no: string;
@@ -33,6 +43,15 @@ export function Section({
   const open = useUiStore((s) => s.open[id] ?? false);
   const toggle = useUiStore((s) => s.toggle);
   const { enabled: stickyEnabled, topPx } = useContext(StickyHeaderContext);
+  const flow = useContext(StepFlowContext);
+  const confirmed = useUiStore((s) => !!s.confirmed[id]);
+  const unlocked = useUiStore((s) => s.unlocked);
+  // ステップ入力中は「OK」したかどうかで DONE/TODO を出す
+  const pill: SectionStatus = confirmed ? "entered" : unlocked ? status : "default";
+  const idx = SECTION_ORDER.indexOf(id as (typeof SECTION_ORDER)[number]);
+  const isLast = idx === SECTION_ORDER.length - 1;
+  const blocked = flow.enabled ? flow.canProceed(id) : null;
+  const note = flow.enabled ? flow.note(id) : null;
 
   return (
     <section
@@ -97,7 +116,7 @@ export function Section({
               <span className="text-sm font-bold text-[#0a0a0a]">
                 {title}
               </span>
-              <StatusPill status={status} />
+              <StatusPill status={pill} />
             </span>
             {description ? (
               <span className="truncate text-[10px] font-medium text-[#0a0a0a]/65">
@@ -130,6 +149,28 @@ export function Section({
           }
         >
           <div className="pt-4">{children}</div>
+          {flow.enabled && idx >= 0 ? (
+            <div className="mt-4 flex flex-col items-stretch gap-1.5 border-t pt-4" style={{ borderColor: "#0a0a0a20" }}>
+              {blocked ? (
+                <p className="text-[11px] font-bold text-[#c8383a]">{blocked}</p>
+              ) : note ? (
+                <p className="text-[11px] font-bold text-[#a07900]">{note}</p>
+              ) : (
+                <p className="text-[10px] text-[#0a0a0a]/55">
+                  わからない項目は空欄・初期値のままで大丈夫です。あとからいつでも直せます。
+                </p>
+              )}
+              <button
+                type="button"
+                disabled={!!blocked}
+                onClick={() => flow.onDone(id)}
+                className="w-full py-3 text-sm font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
+                style={{ background: isLast ? "#c8383a" : "#0a0a0a", border: "2.5px solid #0a0a0a", borderRadius: 12 }}
+              >
+                {isLast ? "入力完了・結果を見る →" : `この内容でOK・次へ（${String(idx + 2).padStart(2, "0")}）→`}
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>
