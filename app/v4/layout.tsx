@@ -33,6 +33,8 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const realValue = useUiStore((s) => s.realValue);
   const setRealValue = useUiStore((s) => s.setRealValue);
+  const mcOn = useUiStore((s) => s.mcOn);
+  const setMcOn = useUiStore((s) => s.setMcOn);
   // 30年後の1,000万円が今の価値でいくらか（バナーの例示用）
   const example30 = Math.round(1000 / Math.pow(1 + plan.infl / 100, 30));
 
@@ -174,6 +176,32 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
 
         {/* ページ別アクション（VER 3 バッジは廃止） */}
         <div className="no-print ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto">
+          <div
+            className="flex shrink-0 overflow-hidden text-[10px] font-bold"
+            style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
+            role="group"
+            aria-label="運用利回りの計算方法"
+            title="運用利回りを毎年一定（固定）で見るか、毎年の値動き（振れ幅）を1,000通り試すか"
+          >
+            {[
+              { v: false, label: "固定" },
+              { v: true, label: "振れ幅" },
+            ].map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => setMcOn(o.v)}
+                aria-pressed={mcOn === o.v}
+                className="px-2 py-1 transition-colors"
+                style={{
+                  background: mcOn === o.v ? "#1a6fa8" : "#ffffff",
+                  color: mcOn === o.v ? "#ffffff" : "#0a0a0a",
+                }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
           <div
             className="flex shrink-0 overflow-hidden text-[10px] font-bold"
             style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}

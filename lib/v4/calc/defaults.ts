@@ -75,6 +75,8 @@ export const DEFAULT_PLAN: PlanInput = {
   hlDeductEndAge: 48,
   hlDeductLimit: 30_000_000,
 
+  mcRisk: "balanced",
+
   risk: {
     who: "self",
     deathAge: 35,

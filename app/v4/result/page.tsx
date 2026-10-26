@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
+import { MonteCarloPanel } from "@/components/v4/MonteCarloPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
 import { ageOn, kidAge } from "@/lib/v4/calc/age";
 import { computeRealEstateValue } from "@/lib/v4/calc/finance";
@@ -197,6 +198,7 @@ export default function ResultPage() {
   const result = useSimResult(plan);
 
   const realValue = useUiStore((s) => s.realValue);
+  const mcOn = useUiStore((s) => s.mcOn);
   const v = buildVerdict(plan, result, realValue);
 
   // プロフィール
@@ -502,6 +504,12 @@ export default function ResultPage() {
       </ReportSection>
 
       {/* 6. キャッシュフロー */}
+      {mcOn ? (
+        <ReportSection no="05+" title="運用の振れ幅 ／ MONTE CARLO">
+          <MonteCarloPanel />
+        </ReportSection>
+      ) : null}
+
       <ReportSection no="06" title="年間キャッシュフロー ／ ANNUAL CASHFLOW">
         <CashflowChart rows={result.rows} />
       </ReportSection>

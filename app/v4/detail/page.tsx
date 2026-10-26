@@ -2,7 +2,9 @@
 
 import { HealthHeader } from "@/components/v4/HealthHeader";
 import { ResultsPanel } from "@/components/v4/ResultsPanel";
+import { MonteCarloBadge } from "@/components/v4/MonteCarloPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
+import { useUiStore } from "@/store/v4/ui-store";
 import { StickyHeaderContext } from "@/components/v4/Section";
 import { AssetsMegaSection } from "@/components/v4/sections/mega/AssetsMegaSection";
 import { ExpenseMegaSection } from "@/components/v4/sections/mega/ExpenseMegaSection";
@@ -15,6 +17,7 @@ export default function DetailPage() {
   const hydrated = usePlanStore((s) => s.hydrated);
   const plan = usePlanStore((s) => s.plan);
   const result = useSimResult(plan);
+  const mcOn = useUiStore((s) => s.mcOn);
 
   if (!hydrated) {
     return (
@@ -39,6 +42,7 @@ export default function DetailPage() {
 
           <aside className="flex flex-col gap-4 sm:sticky sm:top-[64px] sm:max-h-[calc(100vh-72px)] sm:self-start sm:overflow-y-auto sm:pr-1">
             <HealthHeader result={result} plan={plan} />
+            {mcOn ? <MonteCarloBadge /> : null}
             <WarningsPanel warnings={result.warnings} />
             <ResultsPanel />
           </aside>

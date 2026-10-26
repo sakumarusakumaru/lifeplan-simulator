@@ -239,6 +239,9 @@ export interface PlanInput {
   // もしもの備え（死亡時のシミュレーション）
   risk: RiskInput;
 
+  // 運用の振れ幅（モンテカルロ）のリスク水準
+  mcRisk: "stable" | "balanced" | "aggressive";
+
   jobs: Job[];
   sideJobs: SideJob[];
   penStartA: number;

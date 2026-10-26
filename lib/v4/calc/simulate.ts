@@ -60,6 +60,8 @@ export interface SimulateOptions {
   death?: boolean;
   // 必要保障額の逆算用: 死亡時に上乗せする保険金
   extraInsurance?: number;
+  // モンテカルロ用: 年ごとの実現利回り（小数。t=0 が今年）。指定がなければ入力の固定利回り
+  returns?: { sec: number[]; gold: number[]; crypto: number[] };
 }
 
 export function simulate(input: PlanInput, opts: SimulateOptions = {}): SimulationSummary {
@@ -583,16 +585,20 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     if (ass.c > 0) ass.c *= 1 + input.cashRate * (1 - CAPITAL_GAIN_TAX);
 
     // ── 運用（積立は年初に入れて1年分運用）──
-    ass.nisa = (ass.nisa + nisaIn) * (1 + input.nisaR / 100);
+    // 利回り: 通常は入力どおり固定。モンテカルロ時は「入力利回り＋その年の振れ」
+    const shock = opts.returns;
+    const g = (base: number, path?: number[]) =>
+      path ? (1 + base / 100) * (1 + path[t]) - 1 : base / 100;
+    ass.nisa = (ass.nisa + nisaIn) * (1 + g(input.nisaR, shock?.sec));
     cost.nisa += nisaIn;
     nisaGrowthCost += nisaG;
-    ass.toku = (ass.toku + tToku) * (1 + input.tokuR / 100);
+    ass.toku = (ass.toku + tToku) * (1 + g(input.tokuR, shock?.sec));
     cost.toku += tToku;
-    ass.k = (ass.k + tK) * (1 + input.cryptoR / 100);
+    ass.k = (ass.k + tK) * (1 + g(input.cryptoR, shock?.crypto));
     cost.k += tK;
-    ass.g = (ass.g + tG) * (1 + input.goldR / 100);
+    ass.g = (ass.g + tG) * (1 + g(input.goldR, shock?.gold));
     cost.g += tG;
-    ass.dc = (ass.dc + dcSelf + dcEmp) * (1 + input.dcR / 100);
+    ass.dc = (ass.dc + dcSelf + dcEmp) * (1 + g(input.dcR, shock?.sec));
 
     // ── 取り崩し（売却益に課税。必要な手取りから逆算して売る）──
     let draw = 0;
