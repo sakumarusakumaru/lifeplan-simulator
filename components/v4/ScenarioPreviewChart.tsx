@@ -24,24 +24,49 @@ const fmtDelta = (yen: number) => {
   return abs >= 10000 ? `${sign}${(abs / 10000).toFixed(1)}億` : `${sign}${abs.toLocaleString()}万`;
 };
 
+// 縦軸の範囲を、表示しうる全ての線（通常・環境・全打ち手）から先に決めて固定する。
+// 長押しで線を切り替えても目盛りが変わらず、線だけが滑らかに動く。
+function niceDomain(series: SimulationSummary[]): [number, number] {
+  let lo = 0;
+  let hi = 0;
+  for (const s of series) for (const r of s.rows) {
+    if (r.nw < lo) lo = r.nw;
+    if (r.nw > hi) hi = r.nw;
+  }
+  const span = Math.max(hi - lo, 10_000_000);
+  const step = Math.pow(10, Math.floor(Math.log10(span / 4)));
+  const unit = [1, 2, 2.5, 5, 10].map((m) => m * step).find((u) => span / u <= 5) ?? step * 10;
+  return [Math.floor(lo / unit) * unit, Math.ceil(hi / unit) * unit];
+}
+
 // シナリオ比較の上に固定するグラフ。
 // 打ち手のカードを押している間（PCはマウスを乗せている間）だけ、線がその打ち手の結果に変わる。
 // 線は常に1本を描き、データだけ差し替えるので「元の線から変化する」アニメーションになる。
 export function ScenarioPreviewChart({
+  normal,
   base,
   preview,
   previewTitle,
+  envOn = false,
+  crashAges = [],
+  domainSeries,
 }: {
+  normal?: SimulationSummary;
   base: SimulationSummary;
   preview: SimulationSummary | null;
   previewTitle: string | null;
+  envOn?: boolean;
+  crashAges?: number[];
+  domainSeries?: SimulationSummary[];
 }) {
+  const ref = normal ?? base;
   const shown = preview ?? base;
   const delta = preview ? preview.finalNetWorth - base.finalNetWorth : 0;
-  const color = !preview ? INK : delta >= 0 ? GREEN : RED;
+  const color = !preview ? (envOn ? RED : INK) : delta >= 0 ? GREEN : RED;
+  const domain = niceDomain(domainSeries ?? [ref, base, ...(preview ? [preview] : [])]);
   const data = base.rows.map((r, i) => ({
     age: r.age,
-    いま: Math.round(r.nw),
+    いま: Math.round(ref.rows[i]?.nw ?? r.nw),
     試算: Math.round(shown.rows[i]?.nw ?? r.nw),
   }));
 
@@ -53,7 +78,7 @@ export function ScenarioPreviewChart({
       <div className="mb-1 flex min-h-[34px] items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/50">
-            {preview ? "この打ち手を試すと" : "いまのプランの純資産"}
+            {preview ? "この打ち手を試すと" : envOn ? "選んだ外的環境での純資産" : "いまのプランの純資産"}
           </p>
           <p className="truncate text-[12px] font-bold" style={{ color: preview ? color : INK }}>
             {preview ? previewTitle : "下のカードを長押しすると、グラフがその打ち手に変わります"}
@@ -70,8 +95,18 @@ export function ScenarioPreviewChart({
           <LineChart data={data} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="rgba(10,10,10,0.08)" strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="age" tick={{ fill: INK, fontSize: 10 }} tickLine={false} minTickGap={16} />
-            <YAxis tickFormatter={axisFmt} tick={{ fill: INK, fontSize: 10 }} width={52} tickLine={false} />
+            <YAxis
+              tickFormatter={axisFmt}
+              tick={{ fill: INK, fontSize: 10 }}
+              width={52}
+              tickLine={false}
+              domain={domain}
+              allowDataOverflow
+            />
             <ReferenceLine y={0} stroke={INK} />
+            {crashAges.map((a) => (
+              <ReferenceLine key={a} x={a} stroke={RED} strokeOpacity={0.35} strokeDasharray="2 3" />
+            ))}
             <Line type="monotone" dataKey="いま" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
             <Line
               type="monotone"
@@ -80,21 +115,27 @@ export function ScenarioPreviewChart({
               strokeWidth={3}
               dot={false}
               isAnimationActive
-              animationDuration={350}
-              animationEasing="ease-out"
+              animationDuration={450}
+              animationEasing="ease-in-out"
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-1 flex gap-3 text-[10px] text-[#0a0a0a]/60">
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-[#0a0a0a]/60">
         <span className="flex items-center gap-1">
           <span className="inline-block h-0 w-4 border-t-2 border-dashed" style={{ borderColor: "#94a3b8" }} />
-          いまのプラン
+          {envOn ? "通常の環境" : "いまのプラン"}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-0.5 w-4" style={{ background: preview ? color : INK }} />
-          {preview ? "打ち手を試した場合" : "（押すとここが変わる）"}
+          <span className="inline-block h-0.5 w-4" style={{ background: color }} />
+          {preview ? "打ち手を試した場合" : envOn ? "選んだ外的環境" : "（押すとここが変わる）"}
         </span>
+        {crashAges.length ? (
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-3 w-0 border-l-2 border-dashed" style={{ borderColor: `${RED}80` }} />
+            暴落の年
+          </span>
+        ) : null}
       </div>
     </div>
   );

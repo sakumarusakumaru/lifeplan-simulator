@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 
 import { AllocationGuide } from "@/components/v4/AllocationGuide";
+import { EnvironmentPanel } from "@/components/v4/EnvironmentPanel";
+import { ENV_NONE, applyEnvPlan, crashAges, envActive, envReturns, type EnvInput } from "@/lib/v4/calc/environment";
 import { ScenarioPreviewChart } from "@/components/v4/ScenarioPreviewChart";
 import { dcSelfLimit } from "@/lib/v4/calc/rules";
 import { simulate } from "@/lib/v4/calc/simulate";
@@ -49,12 +51,22 @@ export default function SuggestPage() {
   const plan = usePlanStore((s) => s.plan);
   const { convert } = useDisplayConverter();
   const [preview, setPreview] = useState<Scenario | null>(null);
-  const base = useMemo(() => convert(simulate(plan), plan), [plan, convert]);
+  // 外的環境（大暴落・金利・物価など）。ページ全体（いまのプランと全ての打ち手）に重ねて試算する
+  const [env, setEnv] = useState<EnvInput>(ENV_NONE);
+  const normalBase = useMemo(() => convert(simulate(plan), plan), [plan, convert]);
+  const base = useMemo(
+    () =>
+      envActive(env)
+        ? convert(simulate(applyEnvPlan(plan, env), { returns: envReturns(plan, env) }), plan)
+        : normalBase,
+    [plan, env, convert, normalBase],
+  );
 
   // すべてのシナリオをひとつの useMemo で計算（プラン変化時のみ再評価）
   const candidates: Scenario[] = useMemo(() => {
+    const returns = envReturns(plan, env);
     const sim = (mod: (p: PlanInput) => PlanInput) =>
-      convert(simulate(mod(plan)), plan);
+      convert(simulate(applyEnvPlan(mod(plan), env), { returns }), plan);
     const last =
       plan.jobs.length > 0
         ? Math.max(...plan.jobs.map((j) => j.end))
@@ -292,7 +304,7 @@ export default function SuggestPage() {
     }
 
     return list.filter(Boolean) as Scenario[];
-  }, [plan, convert]);
+  }, [plan, convert, env]);
 
   // 表示対象：
   //  - プラスになるシナリオ（最終純資産が増える、or 資金ショートが改善する）
@@ -369,19 +381,23 @@ export default function SuggestPage() {
       {/* グラフの固定表示は打ち手カードの範囲だけ（下の配分の解説ではスクロールで外れる） */}
       <div>
         <ScenarioPreviewChart
+          normal={normalBase}
           base={base}
           preview={preview?.result ?? null}
           previewTitle={preview?.title ?? null}
+          envOn={envActive(env)}
+          crashAges={crashAges(plan, env)}
+          domainSeries={[normalBase, base, ...visible.map((v) => v.result)]}
         />
 
         {/* Base result */}
         <div
-          className="mb-6 flex items-center justify-between rounded-xl p-4"
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl p-4"
           style={{ background: "#0a0a0a", borderRadius: 12 }}
         >
           <div>
             <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/50">
-              現在のプラン（ベースライン）
+              {envActive(env) ? "現在のプラン（選んだ外的環境）" : "現在のプラン（ベースライン）"}
             </p>
             <p className="mt-0.5 text-sm font-bold text-white">最終純資産</p>
             {base.shortfallAge && (
@@ -394,12 +410,14 @@ export default function SuggestPage() {
             </p>
           </div>
           <p
-            className="text-2xl font-bold tabular-nums"
+            className="shrink-0 whitespace-nowrap text-xl font-bold tabular-nums sm:text-2xl"
             style={{ color: base.finalNetWorth < 0 ? "#f87171" : "#86efac" }}
           >
             {fmt(base.finalNetWorth)}
           </p>
         </div>
+
+        <EnvironmentPanel env={env} setEnv={setEnv} normal={normalBase} current={base} />
 
         {/* TOP 3 まとめ表示 */}
         {visible.length >= 3 && (

@@ -50,19 +50,48 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   const [guideOpen, setGuideOpen] = useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
 
+  // スマホ: 下にスクロールするとタブの行を閉じ、上に戻すと開く
+  const [tabsHidden, setTabsHidden] = useState(false);
+  const tabsHiddenRef = useRef(false);
+  // ヘッダーは fixed。開いているときの高さを下の余白にして、タブを閉じても本文が動かないようにする
+  const [headerFullH, setHeaderFullH] = useState(88);
+
   // ヘッダーの実際の高さを CSS 変数に入れ、詳細入力のスティッキー見出し・右カラムの位置を合わせる
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
-    const apply = () =>
-      document.documentElement.style.setProperty(
-        "--lp-header-h",
-        `${Math.round(el.getBoundingClientRect().height)}px`,
-      );
+    const apply = () => {
+      const h = Math.round(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty("--lp-header-h", `${h}px`);
+      if (!tabsHiddenRef.current) setHeaderFullH(h);
+    };
     apply();
     const ro = new ResizeObserver(apply);
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (window.innerWidth >= 640) {
+        if (tabsHiddenRef.current) {
+          tabsHiddenRef.current = false;
+          setTabsHidden(false);
+        }
+        lastY = y;
+        return;
+      }
+      const hide = y > 120 && y > lastY + 6 ? true : y < lastY - 6 || y <= 120 ? false : null;
+      if (hide !== null && hide !== tabsHiddenRef.current) {
+        tabsHiddenRef.current = hide;
+        setTabsHidden(hide);
+      }
+      if (Math.abs(y - lastY) > 6) lastY = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
   const realValue = useUiStore((s) => s.realValue);
   const setRealValue = useUiStore((s) => s.setRealValue);
@@ -119,6 +148,30 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   };
 
   // ステップのタブ。PCではヘッダー1段目に、スマホでは独立した行に出す
+  // スマホ用のタブ: 4等分のセグメント。短い名前でスクロールせずに全部見える
+  const SHORT = ["入力", "結果", "シナリオ", "もしも"];
+  const renderMobileTabs = () => (
+    <nav className="grid grid-cols-4 gap-1 rounded-xl bg-white p-1" style={{ border: "2px solid #0a0a0a" }}>
+      {TABS.map((tab, i) => {
+        const active = i === activeIdx;
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            aria-current={active ? "page" : undefined}
+            className="flex flex-col items-center justify-center rounded-lg py-1 transition-colors"
+            style={{ background: active ? "#0a0a0a" : "transparent", color: active ? "#ffffff" : "#0a0a0a" }}
+          >
+            <span className="text-[9px] font-bold tabular-nums leading-none" style={{ opacity: active ? 0.6 : 0.45 }}>
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="mt-0.5 text-[12px] font-bold leading-none">{SHORT[i]}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
   const renderTabs = (className: string) => (
     <nav className={className}>
       {TABS.map((tab, i) => {
@@ -191,7 +244,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen" style={{ background: "#f0f0ee" }}>
       <header
         ref={headerRef}
-        className="sticky top-0 z-50"
+        className="fixed inset-x-0 top-0 z-50 print:static"
         style={{ background: "#f0f0ee", borderBottom: "2.5px solid #0a0a0a" }}
       >
         <div className="flex items-center gap-3 px-4 py-2 sm:px-8">
@@ -282,11 +335,17 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* スマホ: タブを独立した行に */}
-        <div className="no-print px-4 pb-1.5 sm:hidden">
-          {renderTabs("flex items-center gap-0.5 overflow-x-auto")}
+        {/* スマホ: 4つのタブを1行に（スクロールで閉じる） */}
+        <div
+          className="no-print grid transition-[grid-template-rows] duration-200 ease-out sm:hidden"
+          style={{ gridTemplateRows: tabsHidden ? "0fr" : "1fr" }}
+        >
+          <div className="overflow-hidden">
+            <div className="px-3 pb-2">{renderMobileTabs()}</div>
+          </div>
         </div>
       </header>
+      <div aria-hidden className="print:hidden" style={{ height: headerFullH }} />
 
       {realValue ? (
         <div
