@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
+import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
@@ -123,6 +124,7 @@ export default function RiskPage() {
   );
 
   const real = useUiStore((s) => s.realValue);
+  const compact = useIsNarrow();
   const base = useSimResult(effPlan);
   const death = useSimResult(effPlan, { death: true });
   const needNominal = useMemo(() => requiredCoverage(effPlan), [effPlan]);
@@ -362,7 +364,13 @@ export default function RiskPage() {
                       <CartesianGrid stroke="rgba(10,10,10,0.08)" strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="age" tick={{ fill: INK, fontSize: 11 }} tickLine={false} />
                       <YAxis tickFormatter={axisFmt} tick={{ fill: INK, fontSize: 11 }} width={56} tickLine={false} />
-                      <Tooltip formatter={(v) => man(Number(v))} labelFormatter={(l) => `本人${l}歳`} />
+                      <Tooltip
+                        formatter={(v) => man(Number(v))}
+                        labelFormatter={(l) => `本人${l}歳`}
+                        position={compact ? { y: 0 } : undefined}
+                        wrapperStyle={{ pointerEvents: "none", zIndex: 5 }}
+                        contentStyle={compact ? { fontSize: 10, padding: "4px 8px" } : undefined}
+                      />
                       <ReferenceLine y={0} stroke={INK} />
                       <ReferenceLine x={deathAge} stroke={RED} strokeDasharray="4 3" label={{ value: "死亡", fill: RED, fontSize: 10, position: "top" }} />
                       <Line type="monotone" dataKey="いまのプラン" stroke="#94a3b8" strokeWidth={2} dot={false} />

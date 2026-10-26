@@ -37,7 +37,7 @@ function AgeDisplay({ birth }: { birth: string }) {
     <div className="flex flex-col gap-1.5">
       <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]">現在年齢</span>
       <div
-        className="flex items-center justify-end px-2 py-1.5 text-xs font-bold tabular-nums text-[#0a0a0a]/50"
+        className="flex h-[34px] items-center justify-end px-2 text-xs font-bold tabular-nums text-[#0a0a0a]/50"
         style={{ border: "2px solid #0a0a0a25", borderRadius: 8, background: "#f0f0ee" }}
       >
         {age !== null ? `${age} 歳` : "—"}

@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+
+import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import {
   Area,
   CartesianGrid,
@@ -80,6 +82,8 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
   const isV3 = pathname?.startsWith("/v4") ?? false;
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）
+  const compact = useIsNarrow();
 
   const data = rows.map((r) => ({
     age: r.age,
@@ -132,7 +136,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
               tick={{ fill: "#0a0a0a", fontSize: 11, fontWeight: 700 }}
               tickLine={false}
               axisLine={{ stroke: "#0a0a0a", strokeWidth: 2 }}
-              width={48}
+              width={58}
             />
             <Tooltip
               content={({ payload, label }) => {
@@ -140,7 +144,9 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                 const ORDER = ["現金", "NISA", "特定口座", "暗号資産", "金", "DC", "純資産"];
                 const sorted = ORDER.map((k) =>
                   payload.find((p) => p.dataKey === k),
-                ).filter(Boolean) as typeof payload;
+                )
+                  .filter(Boolean)
+                  .filter((e) => !compact || e!.dataKey === "純資産" || Math.round(Number(e!.value)) !== 0) as typeof payload;
                 const nwEntry = sorted.find((e) => e.dataKey === "純資産");
                 const nw = Number(nwEntry?.value ?? 0);
                 return (
@@ -149,11 +155,11 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                       background: "#ffffff",
                       border: "2.5px solid #0a0a0a",
                       borderRadius: 12,
-                      padding: "14px 18px",
-                      minWidth: 230,
+                      padding: compact ? "6px 9px" : "14px 18px",
+                      minWidth: compact ? 0 : 230,
                     }}
                   >
-                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: "0 0 12px", fontSize: 17 }}>
+                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: compact ? "0 0 3px" : "0 0 12px", fontSize: compact ? 12 : 17 }}>
                       {label}歳
                     </p>
                     {sorted.map((entry) => {
@@ -172,7 +178,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                             display: "flex",
                             alignItems: "center",
                             gap: 8,
-                            marginBottom: 6,
+                            marginBottom: compact ? 1 : 6,
                             transform: isHovered ? "scale(1.08)" : "scale(1)",
                             transformOrigin: "left center",
                             transition: "transform 0.12s",
@@ -181,8 +187,8 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                           <span
                             style={{
                               display: "inline-block",
-                              width: 13,
-                              height: 13,
+                              width: compact ? 8 : 13,
+                              height: compact ? 8 : 13,
                               flexShrink: 0,
                               background: isNW ? "transparent" : (entry.color as string),
                               border: isNW
@@ -195,7 +201,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                             style={{
                               color: "#0a0a0a",
                               flex: 1,
-                              fontSize: isHovered ? 15 : 13,
+                              fontSize: compact ? 11 : isHovered ? 15 : 13,
                               fontWeight: isHovered ? 800 : 700,
                               transition: "all 0.12s",
                             }}
@@ -206,7 +212,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                             style={{
                               color: valueColor,
                               fontWeight: 800,
-                              fontSize: isHovered ? 18 : 16,
+                              fontSize: compact ? 11 : isHovered ? 18 : 16,
                               transition: "all 0.12s",
                             }}
                           >
@@ -217,6 +223,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                     })}
                     <p
                       style={{
+                        display: compact ? "none" : undefined,
                         marginTop: 8,
                         paddingTop: 8,
                         borderTop: "1.5px dashed #0a0a0a20",
@@ -233,8 +240,9 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                 );
               }}
               cursor={{ stroke: "#0a0a0a", strokeWidth: 1, strokeDasharray: "2 2" }}
-              offset={28}
-              wrapperStyle={{ pointerEvents: "none" }}
+              offset={compact ? 6 : 28}
+              wrapperStyle={{ pointerEvents: "none", zIndex: 5 }}
+              position={compact ? { y: 0 } : undefined}
             />
 
             <Area

@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+
+import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import {
   Bar,
   CartesianGrid,
@@ -64,6 +66,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   const isV3 = pathname?.startsWith("/v4") ?? false;
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）
+  const compact = useIsNarrow();
 
   const data = rows.map((r) => ({
     age: r.age,
@@ -115,7 +119,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               tick={{ fill: "#0a0a0a", fontSize: 11, fontWeight: 700 }}
               tickLine={false}
               axisLine={{ stroke: "#0a0a0a", strokeWidth: 2 }}
-              width={48}
+              width={58}
             />
 
             {/* 0円ライン */}
@@ -137,11 +141,11 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                       background: "#ffffff",
                       border: "2.5px solid #0a0a0a",
                       borderRadius: 12,
-                      padding: "14px 18px",
-                      minWidth: 240,
+                      padding: compact ? "6px 9px" : "14px 18px",
+                      minWidth: compact ? 0 : 240,
                     }}
                   >
-                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: "0 0 12px", fontSize: 17 }}>
+                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: compact ? "0 0 3px" : "0 0 12px", fontSize: compact ? 12 : 17 }}>
                       {label}歳
                     </p>
                     {sorted.map((entry) => {
@@ -164,7 +168,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                             display: "flex",
                             alignItems: "center",
                             gap: 8,
-                            marginBottom: 7,
+                            marginBottom: compact ? 1 : 7,
                             transform: isHovered ? "scale(1.08)" : "scale(1)",
                             transformOrigin: "left center",
                             transition: "transform 0.12s",
@@ -173,8 +177,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                           <span
                             style={{
                               display: "inline-block",
-                              width: 13,
-                              height: 13,
+                              width: compact ? 8 : 13,
+                              height: compact ? 8 : 13,
                               flexShrink: 0,
                               background: isCF ? "transparent" : (entry.color as string),
                               border: isCF
@@ -187,7 +191,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                             style={{
                               color: "#0a0a0a",
                               flex: 1,
-                              fontSize: isHovered ? 15 : 13,
+                              fontSize: compact ? 11 : isHovered ? 15 : 13,
                               fontWeight: isHovered ? 800 : 700,
                               transition: "all 0.12s",
                             }}
@@ -198,7 +202,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                             style={{
                               color: valueColor,
                               fontWeight: 800,
-                              fontSize: isHovered ? 18 : 16,
+                              fontSize: compact ? 11 : isHovered ? 18 : 16,
                               transition: "all 0.12s",
                             }}
                           >
@@ -209,6 +213,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                     })}
                     <div
                       style={{
+                        display: compact ? "none" : undefined,
                         marginTop: 10,
                         paddingTop: 10,
                         borderTop: "1.5px dashed #0a0a0a20",
@@ -225,8 +230,9 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                 );
               }}
               cursor={{ fill: "rgba(10,10,10,0.05)" }}
-              offset={28}
-              wrapperStyle={{ pointerEvents: "none" }}
+              offset={compact ? 6 : 28}
+              wrapperStyle={{ pointerEvents: "none", zIndex: 5 }}
+              position={compact ? { y: 0 } : undefined}
             />
 
             {KEYS.map((key) => (

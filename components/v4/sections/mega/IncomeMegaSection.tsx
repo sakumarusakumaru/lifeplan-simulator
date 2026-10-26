@@ -97,7 +97,7 @@ function PensionEditor({
             />
 
             {pension.category === "kosei" ? (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+              <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-1 md:grid-cols-2">
                 <NumberField
                   label="厚生年金 加入年数"
                   value={pension.koseiYears}
@@ -177,7 +177,7 @@ function PensionPreview({
   const fmt = (n: number) => `${Math.round(n).toLocaleString("ja-JP")}円`;
   return (
     <div
-      className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-1 md:grid-cols-2"
+      className="grid grid-cols-1 gap-2 p-2 md:grid-cols-2"
       style={{ background: "#f0f0ee", border: "1.5px dashed #0a0a0a40", borderRadius: 8 }}
     >
       <div className="flex flex-col gap-0.5">
@@ -192,8 +192,8 @@ function PensionPreview({
         </span>
       </div>
       <div className="flex flex-col gap-0.5 text-[10px] tabular-nums text-[#0a0a0a]">
-        <span>老齢基礎年金: {fmt(basicMonthly)}/月</span>
-        <span>老齢厚生年金: {fmt(koseiMonthly)}/月</span>
+        <span className="whitespace-nowrap">老齢基礎年金: {fmt(basicMonthly)}/月</span>
+        <span className="whitespace-nowrap">老齢厚生年金: {fmt(koseiMonthly)}/月</span>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { AssetsChart } from "@/components/v4/charts/AssetsChart";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
 import { MonteCarloPanel } from "@/components/v4/MonteCarloPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
+import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import { ageOn, kidAge } from "@/lib/v4/calc/age";
 import { computeRealEstateValue } from "@/lib/v4/calc/finance";
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
@@ -44,6 +45,8 @@ function buildVerdict(
   // 判定は表示モードに関係なく「今の価値」で行う
   const lastRow = result.rows[result.rows.length - 1];
   const nwJudge = real || !lastRow ? nw : nw / deflator(plan, lastRow.age);
+  // 見出しの金額: 判定は「今の価値」で行うので、名目表示のときは今の価値も添える
+  const nwLabel = (v: number) => (real || !lastRow ? fmtMan(v) : `${fmtMan(v)}・今の価値で約${fmtMan(nwJudge)}`);
   const sa = result.shortfallAge;
   const endAge = plan.endAge;
   const curAge = plan.curAge;
@@ -105,7 +108,7 @@ function buildVerdict(
     return {
       score: 35,
       level: "bad",
-      headline: `${endAge}歳時点で純資産マイナス（${fmtMan(nw)}）`,
+      headline: `${endAge}歳時点で純資産マイナス（${nwLabel(nw)}）`,
       body:
         `【現状診断】\n${endAge}歳時点で資産より負債が${fmtMan(Math.abs(nw))}多い状態となる見込みです。住宅ローンや不動産ローンの残債が老後の資産を圧迫しています。\n\n` +
         `【課題分析】\nローン残高が長期化し、低金利で借りた負債を相続・売却で清算する必要が生じる可能性があります。流動性資産（現金・投信）が不足しているため、不動産売却以外の選択肢が狭まります。\n\n` +
@@ -121,11 +124,11 @@ function buildVerdict(
     return {
       score: 55,
       level: "warn",
-      headline: `${endAge}歳まで完走するも余裕わずか（${fmtMan(nw)}）`,
+      headline: `${endAge}歳まで完走するも余裕わずか（${nwLabel(nw)}）`,
       body:
-        `【現状診断】\n${endAge}歳時点での純資産は${fmtMan(nw)}と、想定外の支出への耐性が限定的です。生活防衛資金は現在${livingDefenseMonths}ヶ月分（推奨は12〜24ヶ月）です。\n\n` +
+        `【現状診断】\n${endAge}歳時点での純資産は${fmtMan(nw)}と、想定外の支出への耐性が限定的です。生活防衛資金は現在${livingDefenseMonths}ヶ月分（目安は12〜24ヶ月）${livingDefenseMonths >= 12 ? "で、当面の備えはできています" : "で、やや心もとない水準です"}。\n\n` +
         `【課題分析】\n医療費（70歳以降の高額療養費は月8〜25万円自己負担）、介護費（在宅で月8〜10万円・施設で月13〜25万円が5〜10年）、物価上昇（年1〜2%継続で30年で35〜80%減価）など、想定外リスクへのバッファが薄い状態です。\n\n` +
-        `【考えられる選択肢】\n・生活防衛資金の確保: 手取り年収の1〜2年分（${Math.round(curIncome)}〜${Math.round(curIncome * 2)}万円目安）を流動性高い形で確保。\n・NISAの生涯枠（1,800万円）を早めに埋める: 年360万円なら最短5年。埋まった後は特定口座で続けるのが一般的です。\n・iDeCo の節税効果: 月2.3万円の掛金なら年27.6万円が所得控除され、税率30%（所得税20%・住民税10%）の人で年約8.3万円の節税。\n・医療保険の見直し: 高額療養費制度を踏まえ、過剰な保障を整理して可処分所得を確保。\n\n` +
+        `【考えられる選択肢】\n${livingDefenseMonths < 12 ? `・生活防衛資金の確保: 生活費の12〜24ヶ月分（現在${livingDefenseMonths}ヶ月分）を預金など引き出しやすい形で確保。\n` : ""}・NISAの生涯枠（1,800万円）を早めに埋める: 年360万円なら最短5年。埋まった後は特定口座で続けるのが一般的です。\n・iDeCo の節税効果: 月2.3万円の掛金なら年27.6万円が所得控除され、税率30%（所得税20%・住民税10%）の人で年約8.3万円の節税。\n・医療保険の見直し: 高額療養費制度を踏まえ、過剰な保障を整理して可処分所得を確保。\n\n` +
         `【次のステップ】\n月+1〜2万円の積立増による老後余裕度への影響は「シナリオ比較」タブで試算できます。`,
     };
   }
@@ -137,7 +140,7 @@ function buildVerdict(
     return {
       score: 75,
       level: "good",
-      headline: `老後資金は概ね安定（最終純資産 ${fmtMan(nw)}）`,
+      headline: `老後資金は概ね安定（最終純資産 ${nwLabel(nw)}）`,
       body:
         `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産が見込まれ、想定通りに推移すれば安心して老後を過ごせる水準です。65歳時点の純資産は${fmtMan(result.rows.find((r) => r.age === 65)?.nw ?? 0)}で、年金開始時のスタート資金として十分です。\n\n` +
         `【課題分析】\n基本設計に大きな問題はありません。今後の主要リスクは、(1) インフレ進行による実質購買力の低下、(2) 90歳超の長寿化による資産寿命、(3) 高齢期の医療・介護費の不確実性、の3点です。\n\n` +
@@ -153,7 +156,7 @@ function buildVerdict(
     return {
       score: 85,
       level: "good",
-      headline: `余裕ある資産形成（最終純資産 ${fmtMan(nw)}）`,
+      headline: `余裕ある資産形成（最終純資産 ${nwLabel(nw)}）`,
       body:
         `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれ、現役期の収支構造は健全です。想定外支出にも十分対応可能なバッファがあります。\n\n` +
         `【課題分析】\n相続税の課税ライン（基礎控除3,000万円＋600万円×法定相続人数）に近づきつつあります。例えば配偶者＋子2人なら基礎控除は4,800万円。${nw > 48_000_000 ? "現状ですでに課税対象の可能性があり、" : ""}対策の検討時期に入っています。\n\n` +
@@ -169,7 +172,7 @@ function buildVerdict(
     return {
       score: 92,
       level: "good",
-      headline: `資産計画は非常に良好（最終純資産 ${fmtMan(nw)}）`,
+      headline: `資産計画は非常に良好（最終純資産 ${nwLabel(nw)}）`,
       body:
         `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれます。一般家庭の上位5%以内に入る水準で、相続税の課税対象（10〜30%税率帯）となる規模です。\n\n` +
         `【課題分析】\n無対策のままでは相続時に数千万円規模の納税が発生する可能性があります。法定相続人別の基礎控除を超える分が累進課税の対象になります（1億円超50%、2億円超55%）。\n\n` +
@@ -184,7 +187,7 @@ function buildVerdict(
   return {
     score: 98,
     level: "good",
-    headline: `富裕層レベルの資産計画（最終純資産 ${fmtMan(nw)}）`,
+    headline: `富裕層レベルの資産計画（最終純資産 ${nwLabel(nw)}）`,
     body:
       `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれ、富裕層の上位1%水準です。相続税の最高税率55%（6億円超部分）の対象となり、無対策では資産の半分以上が納税により失われる可能性があります。\n\n` +
       `【課題分析】\n単純な暦年贈与・生命保険活用では対応しきれない規模のため、法人活用・信託・国際分散などを組み合わせた高度な相続戦略が必要です。\n\n` +
@@ -888,6 +891,7 @@ function BalanceSheetVis({
   const isAlert = netWorth < 0;
 
   const [hovered, setHovered] = useState<string | null>(null);
+  const compact = useIsNarrow();
 
   // 各側のextra（純資産マイナス or 純資産NET）
   const assetsExtraDef: BSItem | null = isAlert
@@ -974,13 +978,13 @@ function BalanceSheetVis({
         {/* 左: 資産（凡例 → バー） */}
         <div>
           <div
-            className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1"
+            className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-2 border-b-2 px-1 pb-1"
             style={{ borderColor: "#22863a" }}
           >
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
               {isAlert ? "資産 ＋ 債務超過" : "資産 ASSETS"}
             </span>
-            <span className="text-sm font-bold tabular-nums text-[#22863a]">
+            <span className="whitespace-nowrap text-sm font-bold tabular-nums text-[#22863a]">
               {fmtMan(isAlert ? totalAssets + Math.abs(netWorth) : totalAssets)}
             </span>
           </div>
@@ -993,19 +997,20 @@ function BalanceSheetVis({
             extraSegment={aExtraSeg}
             hovered={hovered}
             setHovered={setHovered}
+            compact={compact}
           />
         </div>
 
         {/* 右: 負債+純資産（バー → 凡例） */}
         <div>
           <div
-            className="mb-1.5 flex items-baseline justify-between border-b-2 px-1 pb-1"
+            className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-2 border-b-2 px-1 pb-1"
             style={{ borderColor: "#c8383a" }}
           >
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
               {isAlert ? "負債" : "負債 + 純資産"}
             </span>
-            <span className="text-sm font-bold tabular-nums text-[#c8383a]">
+            <span className="whitespace-nowrap text-sm font-bold tabular-nums text-[#c8383a]">
               {fmtMan(isAlert ? totalLiabilities : totalLiabilities + Math.max(0, netWorth))}
             </span>
           </div>
@@ -1018,13 +1023,14 @@ function BalanceSheetVis({
             extraSegment={lExtraSeg}
             hovered={hovered}
             setHovered={setHovered}
+            compact={compact}
           />
         </div>
       </div>
 
       {/* 純資産サマリー */}
       <div
-        className="mt-4 flex items-center justify-between rounded-lg px-4 py-2.5"
+        className="mt-4 flex flex-col gap-1 rounded-lg px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         style={{
           background: isAlert ? "#fff0f0" : "#f0fff4",
           border: `2px solid ${isAlert ? "#c8383a" : "#22863a"}`,
@@ -1064,7 +1070,9 @@ function BSColumnGrouped({
   extraSegment,
   hovered,
   setHovered,
+  compact = false,
 }: {
+  compact?: boolean; // スマホ: バーを上に全幅、凡例はその下に1行ずつ
   barSide: "left" | "right";
   groups: { label: string; segments: BSSegment[] }[];
   extraSegment: BSSegment | null;
@@ -1102,7 +1110,7 @@ function BSColumnGrouped({
     <div
       className="flex flex-col overflow-hidden"
       style={{
-        width: BS_BAR_WIDTH,
+        width: compact ? "100%" : BS_BAR_WIDTH,
         border: "1.5px solid #0a0a0a30",
         borderRadius: 4,
         flexShrink: 0,
@@ -1147,7 +1155,7 @@ function BSColumnGrouped({
   const Legend = (
     <ul
       className={`flex flex-1 flex-col text-[10px] ${
-        barSide === "right" ? "items-end text-right" : "items-start text-left"
+        compact ? "gap-1" : barSide === "right" ? "items-end text-right" : "items-start text-left"
       }`}
     >
       {ordered.map((item, idx) => {
@@ -1171,6 +1179,7 @@ function BSColumnGrouped({
             <BSLegendItem
               segment={item.segment}
               barSide={barSide}
+              compact={compact}
               hovered={hovered}
               setHovered={setHovered}
             />
@@ -1179,6 +1188,15 @@ function BSColumnGrouped({
       })}
     </ul>
   );
+
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-2">
+        {Bar}
+        {Legend}
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-2">
@@ -1202,7 +1220,9 @@ function BSLegendItem({
   barSide,
   hovered,
   setHovered,
+  compact = false,
 }: {
+  compact?: boolean;
   segment: BSSegment;
   barSide: "left" | "right";
   hovered: string | null;
@@ -1221,6 +1241,21 @@ function BSLegendItem({
       }}
     />
   );
+
+  if (compact) {
+    return (
+      <li
+        onClick={() => setHovered(isHovered ? null : segment.label)}
+        className="flex items-start gap-1.5"
+      >
+        <span className="mt-0.5">{swatch}</span>
+        <span className="flex min-w-0 flex-1 flex-col leading-tight">
+          <span className="text-[10px] text-[#0a0a0a]/70">{segment.label}</span>
+          <span className="text-[11px] font-bold tabular-nums text-[#0a0a0a]">{fmtMan(segment.value)}</span>
+        </span>
+      </li>
+    );
+  }
 
   return (
     <li

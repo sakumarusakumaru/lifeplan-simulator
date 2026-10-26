@@ -67,3 +67,10 @@ button {
     page-break-inside: avoid;
   }
 }
+
+/* グラフをタップしたときのフォーカス枠（Recharts のアクセシビリティ層）を出さない */
+.recharts-wrapper svg:focus,
+.recharts-surface:focus,
+.recharts-wrapper:focus {
+  outline: none;
+}

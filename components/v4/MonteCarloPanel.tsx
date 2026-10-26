@@ -17,6 +17,7 @@ import {
 import { MC_RISK, MC_RUNS, runMonteCarlo, type McRisk, type MonteCarloResult } from "@/lib/v4/calc/montecarlo";
 import { deflator } from "@/lib/v4/calc/realValue";
 import type { PlanInput } from "@/lib/v4/calc/types";
+import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
@@ -83,6 +84,7 @@ export function MonteCarloPanel() {
   const setField = usePlanStore((s) => s.setField);
   const real = useUiStore((s) => s.realValue);
   const mc = useMonteCarlo(plan);
+  const compact = useIsNarrow();
   const riskKey: McRisk = plan.mcRisk ?? "balanced";
 
   const data = mc.bands.map((b) => {
@@ -184,11 +186,13 @@ export function MonteCarloPanel() {
               <XAxis dataKey="age" tick={{ fill: INK, fontSize: 11 }} tickLine={false} />
               <YAxis tickFormatter={axisFmt} tick={{ fill: INK, fontSize: 11 }} width={56} tickLine={false} />
               <Tooltip
+                position={compact ? { y: 0 } : undefined}
+                wrapperStyle={{ pointerEvents: "none", zIndex: 5 }}
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0].payload as (typeof data)[number];
                   return (
-                    <div className="rounded-lg bg-white px-3 py-2 text-[11px] shadow" style={{ border: `1.5px solid ${INK}30` }}>
+                    <div className="rounded-lg bg-white px-2 py-1 text-[10px] shadow sm:px-3 sm:py-2 sm:text-[11px]" style={{ border: `1.5px solid ${INK}30` }}>
                       <p className="mb-1 font-bold">{label}歳</p>
                       <p>良いケース: {man(d.良いケース)}</p>
                       <p style={{ color: BLUE }}>中央値: {man(d.中央値)}</p>
