@@ -173,6 +173,7 @@ export const usePlanStore = create<PlanStore>()(
             tokuSplit: persistedPlan.tokuSplit?.on
               ? { ...BASE.tokuSplit, ...persistedPlan.tokuSplit }
               : { ...BASE.tokuSplit, on: true, fundBal: persistedPlan.tokuBal ?? BASE.tokuBal, fundR: persistedPlan.tokuR ?? BASE.tokuR },
+            handover: { ...BASE.handover, ...(persistedPlan.handover ?? {}) },
             risk: {
               ...BASE.risk,
               ...(persistedPlan.risk ?? {}),

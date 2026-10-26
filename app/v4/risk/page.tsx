@@ -23,6 +23,7 @@ import { SelectField } from "@/components/v4/inputs/SelectField";
 import { ageOn } from "@/lib/v4/calc/age";
 import { deflator } from "@/lib/v4/calc/realValue";
 import { requiredCoverage } from "@/lib/v4/calc/simulate";
+import { buildSurvivorPhases as buildPhases } from "@/lib/v4/calc/survivor";
 import type { RiskInput, YearlyResult } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { useSimResult } from "@/store/v4/useSimResult";
@@ -79,34 +80,6 @@ function Kpi({ label, value, sub, color }: { label: string; value: string; sub?:
       {sub ? <span className="text-[10px] leading-relaxed text-[#0a0a0a]/55">{sub}</span> : null}
     </div>
   );
-}
-
-// 遺族年金の内訳が変わる区切りごとにまとめる
-interface Phase {
-  from: number;
-  to: number;
-  kiso: number;
-  kosei: number;
-  chukorei: number;
-  prot: number;
-}
-
-function buildPhases(rows: YearlyResult[]): Phase[] {
-  const phases: Phase[] = [];
-  for (const r of rows) {
-    if (!r.dead) continue;
-    const key = `${r.survKiso > 0}-${r.survKosei > 0}-${r.survChukorei > 0}-${r.incomeProt > 0}`;
-    const last = phases[phases.length - 1];
-    const lastKey = last
-      ? `${last.kiso > 0}-${last.kosei > 0}-${last.chukorei > 0}-${last.prot > 0}`
-      : "";
-    if (last && lastKey === key) {
-      last.to = r.age;
-    } else {
-      phases.push({ from: r.age, to: r.age, kiso: r.survKiso, kosei: r.survKosei, chukorei: r.survChukorei, prot: r.incomeProt });
-    }
-  }
-  return phases.filter((p) => p.kiso + p.kosei + p.chukorei + p.prot > 0);
 }
 
 export default function RiskPage() {
@@ -392,6 +365,21 @@ export default function RiskPage() {
             )}
 
             <InheritanceGuide plan={plan} base={base} real={real} />
+
+            <Link
+              href="/v4/handover"
+              className="mb-8 flex items-center gap-3 rounded-xl px-4 py-4 transition-colors hover:bg-[#f6fff8]"
+              style={{ background: "#ffffff", border: "2.5px solid #22863a" }}
+            >
+              <span className="text-2xl" aria-hidden>✉</span>
+              <span className="flex flex-1 flex-col">
+                <span className="text-sm font-bold text-[#0a0a0a]">家族に渡す「お金の引き継ぎ書」をつくる</span>
+                <span className="text-[11px] leading-relaxed text-[#0a0a0a]/65">
+                  お金のありか・保険・遺族年金の見通し・亡くなった後の手続きを、A4のPDFにまとめて保存・印刷できます
+                </span>
+              </span>
+              <span className="text-sm font-bold" aria-hidden>→</span>
+            </Link>
 
             <Section no="05" title="計算の前提 ／ ASSUMPTIONS">
               <ul className="flex flex-col gap-1.5 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={{ border: `2px solid ${INK}18` }}>

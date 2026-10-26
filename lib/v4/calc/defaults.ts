@@ -79,6 +79,18 @@ export const DEFAULT_PLAN: PlanInput = {
 
   mcRisk: "balanced",
 
+  handover: {
+    author: "",
+    where: {},
+    extraAssets: [],
+    policies: [],
+    contacts: [],
+    will: "none",
+    willPlace: "",
+    wishes: "",
+    message: "",
+  },
+
   risk: {
     who: "self",
     deathAge: 35,

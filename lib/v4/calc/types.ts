@@ -119,6 +119,32 @@ export interface SplitInput {
   oldR?: number;
 }
 
+// 家族に渡す「お金の引き継ぎ書」用の入力（口座番号・暗証番号は入れない）
+export interface HandoverPolicy {
+  company: string;
+  kind: string;
+  insured: string;
+  beneficiary: string;
+  benefit: number;
+  contact: string;
+}
+export interface HandoverContact {
+  role: string;
+  name: string;
+  phone: string;
+}
+export interface HandoverInput {
+  author: string;
+  where: Record<string, string>;   // 財産ごとの金融機関名・保管場所（キーは財産の種類）
+  extraAssets: { label: string; where: string; amount: number }[];
+  policies: HandoverPolicy[];
+  contacts: HandoverContact[];
+  will: "none" | "self" | "hokan" | "notary";
+  willPlace: string;
+  wishes: string;                   // 葬儀・お墓・形見などの希望
+  message: string;                  // 家族へのひとこと
+}
+
 export interface RiskInput {
   who: "self" | "spouse";       // 亡くなる人
   deathAge: number;             // 亡くなる時の本人の年齢（本人基準）
@@ -253,6 +279,9 @@ export interface PlanInput {
 
   // もしもの備え（死亡時のシミュレーション）
   risk: RiskInput;
+
+  // 家族に渡す「お金の引き継ぎ書」
+  handover: HandoverInput;
 
   // 運用の振れ幅（モンテカルロ）のリスク水準
   mcRisk: "stable" | "balanced" | "aggressive";

@@ -217,6 +217,13 @@ export function HeaderMenu({
           <p className="px-3 pt-1 pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/45">
             その他
           </p>
+          <Link href="/v4/handover" role="menuitem" className={item} onClick={() => setOpen(false)}>
+            <span aria-hidden>✉</span>
+            <span className="flex flex-col">
+              <span className="font-bold">家族に渡す引き継ぎ書</span>
+              <span className="text-[10px] text-[#0a0a0a]/55">お金のありか・遺族年金・手続きをPDFに</span>
+            </span>
+          </Link>
           <button
             type="button"
             role="menuitem"

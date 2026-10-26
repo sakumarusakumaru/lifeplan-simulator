@@ -16,6 +16,7 @@
 //   経過的寡婦加算（1956年4月1日以前生まれ）、障害のある子の20歳までの延長、
 //   2028年4月からの見直し（子のない60歳未満の配偶者は原則5年の有期給付 等）
 import { KOSEI_RATE } from "./pension";
+import type { YearlyResult } from "./types";
 
 export const SURVIVOR_2026 = {
   kiso: 847_300,
@@ -144,3 +145,32 @@ export function survivorBenefitForYear(
   r.total = r.kiso + r.kosei + r.chukorei;
   return r;
 }
+
+// 遺族年金の内訳が変わる区切りごとにまとめる
+export interface SurvivorPhase {
+  from: number;
+  to: number;
+  kiso: number;
+  kosei: number;
+  chukorei: number;
+  prot: number;
+}
+
+export function buildSurvivorPhases(rows: YearlyResult[]): SurvivorPhase[] {
+  const phases: SurvivorPhase[] = [];
+  for (const r of rows) {
+    if (!r.dead) continue;
+    const key = `${r.survKiso > 0}-${r.survKosei > 0}-${r.survChukorei > 0}-${r.incomeProt > 0}`;
+    const last = phases[phases.length - 1];
+    const lastKey = last
+      ? `${last.kiso > 0}-${last.kosei > 0}-${last.chukorei > 0}-${last.prot > 0}`
+      : "";
+    if (last && lastKey === key) {
+      last.to = r.age;
+    } else {
+      phases.push({ from: r.age, to: r.age, kiso: r.survKiso, kosei: r.survKosei, chukorei: r.survChukorei, prot: r.incomeProt });
+    }
+  }
+  return phases.filter((p) => p.kiso + p.kosei + p.chukorei + p.prot > 0);
+}
+

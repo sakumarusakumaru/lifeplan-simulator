@@ -241,7 +241,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen" style={{ background: "#f0f0ee" }}>
+    <div className="lp-root min-h-screen" style={{ background: "#f0f0ee" }}>
       <header
         ref={headerRef}
         className="fixed inset-x-0 top-0 z-50 print:static"
@@ -349,7 +349,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
 
       {realValue ? (
         <div
-          className="px-4 py-1.5 text-[11px] leading-relaxed sm:px-8"
+          className="lp-banner px-4 py-1.5 text-[11px] leading-relaxed sm:px-8"
           style={{
             background: "#eef6fc",
             borderBottom: "1.5px solid #1a6fa840",
