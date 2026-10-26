@@ -161,6 +161,10 @@ export const usePlanStore = create<PlanStore>()(
               ...DEFAULT_PLAN.spousePension,
               ...(persistedPlan.spousePension ?? {}),
             },
+            risk: {
+              ...DEFAULT_PLAN.risk,
+              ...(persistedPlan.risk ?? {}),
+            },
           } as unknown as PlanInput,
         };
       },

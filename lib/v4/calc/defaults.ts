@@ -75,6 +75,17 @@ export const DEFAULT_PLAN: PlanInput = {
   hlDeductEndAge: 48,
   hlDeductLimit: 30_000_000,
 
+  risk: {
+    who: "self",
+    deathAge: 35,
+    spouseSex: "female",
+    livingRate: 70,              // FPの目安: 子ありで現在の7割、夫婦のみで6割
+    danshin: true,
+    deathInsurance: 0,
+    incomeProtM: 0,
+    incomeProtEndAge: 60,
+  },
+
   jobs: [
     { name: "現職", start: 30, end: 60, inc: 6_000_000, raise: 2.0, sev: 10_000_000, sevAge: 60 },
   ],

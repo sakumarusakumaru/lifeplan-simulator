@@ -106,6 +106,17 @@ export type DcType =
 
 export type DcPayoutMethod = "lump" | "annuity";
 
+export interface RiskInput {
+  who: "self" | "spouse";       // 亡くなる人
+  deathAge: number;             // 亡くなる時の本人の年齢（本人基準）
+  spouseSex: "female" | "male"; // 配偶者の性別（遺族年金の条件が男女で違う）
+  livingRate: number;           // 死亡後の生活費（基本生活費・特別費）の割合（%）
+  danshin: boolean;             // 住宅ローンの団体信用生命保険（本人が亡くなると残債0）
+  deathInsurance: number;       // 加入中の死亡保険金（一時金・亡くなる人にかかっている分）
+  incomeProtM: number;          // 収入保障保険（月額）
+  incomeProtEndAge: number;     // 収入保障保険の受取終了（本人の年齢基準）
+}
+
 export interface JukuMonthly {
   pre: number;
   e13: number;
@@ -224,6 +235,9 @@ export interface PlanInput {
   hlDeduct: boolean;        // 住宅ローン控除を適用中
   hlDeductEndAge: number;   // 住宅ローン控除が終わる年齢
   hlDeductLimit: number;    // 住宅ローン控除の借入限度額（円）
+
+  // もしもの備え（死亡時のシミュレーション）
+  risk: RiskInput;
 
   jobs: Job[];
   sideJobs: SideJob[];
@@ -366,6 +380,13 @@ export interface YearlyResult {
   saleTax: number;       // 取り崩し時の売却益課税（特定口座・金・暗号資産）
   nisaCost: number;      // NISA 簿価残高（生涯枠1,800万の消化状況）
   nisaOverflow: number;  // NISA枠を超えて特定口座／現金に回った額
+  // もしもの備え（死亡シナリオのときだけ値が入る）
+  dead: boolean;         // 死亡後の年か
+  survKiso: number;      // 遺族基礎年金
+  survKosei: number;     // 遺族厚生年金
+  survChukorei: number;  // 中高齢寡婦加算
+  deathLump: number;     // 死亡時の一時金（保険金・死亡退職金・DC死亡一時金）
+  incomeProt: number;    // 収入保障保険
 }
 
 export interface SimulationWarning {

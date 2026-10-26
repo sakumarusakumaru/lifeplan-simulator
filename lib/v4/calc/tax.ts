@@ -279,6 +279,17 @@ export interface HouseholdTaxInput {
   spouse: PersonIncome | null;
   kidAges: number[];
   hlDeductCredit: number; // 住宅ローン控除の控除可能額（0.7%×年末残高 等）
+  // 本人に追加する所得控除（ひとり親控除・寡婦控除など）
+  extraDeduction?: { income: number; jumin: number };
+}
+
+// 配偶者と死別したときの控除
+//   ひとり親控除: 生計を一にする子がいる（所得1,000万以下）所得税35万・住民税30万
+//   寡婦控除: 子のいない妻（所得500万以下）所得税27万・住民税26万
+export function widowDeduction(hasDependentChild: boolean, sex: "female" | "male") {
+  if (hasDependentChild) return { income: 35 * MAN, jumin: 30 * MAN };
+  if (sex === "female") return { income: 27 * MAN, jumin: 26 * MAN };
+  return { income: 0, jumin: 0 };
 }
 
 export interface TaxBreakdown {
@@ -347,9 +358,10 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
   const haiI = sp && inp.spouse ? haigushaKojo(s.goukei, sp.goukei, inp.spouse.age, "income") : 0;
   const haiJ = sp && inp.spouse ? haigushaKojo(s.goukei, sp.goukei, inp.spouse.age, "jumin") : 0;
 
+  const extra = inp.extraDeduction ?? { income: 0, jumin: 0 };
   const commonDed = s.shaho + inp.self.dcSelfContribY;
-  const selfTaxable = Math.max(0, s.goukei - kisoKojoIncomeTax(s.goukei, year) - commonDed - haiI - fuyoI);
-  const selfTaxableJ = Math.max(0, s.goukei - kisoKojoJumin(s.goukei) - commonDed - haiJ - fuyoJ);
+  const selfTaxable = Math.max(0, s.goukei - kisoKojoIncomeTax(s.goukei, year) - commonDed - haiI - fuyoI - extra.income);
+  const selfTaxableJ = Math.max(0, s.goukei - kisoKojoJumin(s.goukei) - commonDed - haiJ - fuyoJ - extra.jumin);
 
   const fk = year <= 2037 ? 1.021 : 1;
   let itSelf = calcShotokuzei(selfTaxable) * fk;

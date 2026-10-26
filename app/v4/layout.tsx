@@ -13,6 +13,7 @@ const TABS = [
   { href: "/v4/detail", label: "詳細入力" },
   { href: "/v4/result", label: "結果出力" },
   { href: "/v4/suggest", label: "シナリオ比較" },
+  { href: "/v4/risk", label: "もしもの備え" },
 ];
 
 export default function V4Layout({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,8 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   const onDetail = pathname?.startsWith("/v4/detail") ?? false;
   const onResult = pathname?.startsWith("/v4/result") ?? false;
   const onSuggest = pathname?.startsWith("/v4/suggest") ?? false;
-  const showPdf = onDetail || onResult || onSuggest;
+  const onRisk = pathname?.startsWith("/v4/risk") ?? false;
+  const showPdf = onDetail || onResult || onSuggest || onRisk;
 
   const plan = usePlanStore((s) => s.plan);
   const patch = usePlanStore((s) => s.patch);
