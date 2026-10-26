@@ -891,7 +891,7 @@ function BalanceSheetVis({
 
   // 各側のextra（純資産マイナス or 純資産NET）
   const assetsExtraDef: BSItem | null = isAlert
-    ? { label: "純資産マイナス", value: Math.abs(netWorth), color: "#c8383a", category: "current" }
+    ? { label: "債務超過（純資産マイナス）", value: Math.abs(netWorth), color: "#c8383a", category: "current" }
     : null;
   const liabilitiesExtraDef: BSItem | null = !isAlert && netWorth > 0
     ? { label: "純資産（NET）", value: netWorth, color: "#22863a", category: "current" }
@@ -978,10 +978,10 @@ function BalanceSheetVis({
             style={{ borderColor: "#22863a" }}
           >
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
-              資産 ASSETS
+              {isAlert ? "資産 ＋ 債務超過" : "資産 ASSETS"}
             </span>
             <span className="text-sm font-bold tabular-nums text-[#22863a]">
-              {fmtMan(totalAssets)}
+              {fmtMan(isAlert ? totalAssets + Math.abs(netWorth) : totalAssets)}
             </span>
           </div>
           <BSColumnGrouped
@@ -1048,6 +1048,11 @@ function BalanceSheetVis({
           {fmtMan(netWorth)}
         </span>
       </div>
+      <p className="mt-2 px-1 text-[10px] leading-relaxed text-[#0a0a0a]/55">
+        {isAlert
+          ? `左＝資産、右＝負債。負債が資産を上回る「債務超過」のため、足りない ${fmtMan(Math.abs(netWorth))} を左の斜線部分で示しています（資産＋債務超過＝負債で、左右の高さは常に一致）。`
+          : "左＝資産、右＝負債＋純資産。資産から負債を引いた残りが純資産で、左右の合計は常に一致します。"}
+      </p>
     </div>
   );
 }

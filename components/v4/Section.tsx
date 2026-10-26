@@ -64,7 +64,8 @@ export function Section({
           stickyEnabled
             ? {
                 position: "sticky",
-                top: topPx,
+                // ヘッダーの高さ（layout が --lp-header-h に入れる）に追従。未設定なら topPx
+                top: `var(--lp-header-h, ${topPx}px)`,
                 zIndex: 10,
                 background: "#f0f0ee",
                 borderTop: "2.5px solid #0a0a0a",

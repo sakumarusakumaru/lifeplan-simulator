@@ -31,7 +31,7 @@ export default function DetailPage() {
     <main className="px-4 py-6 pb-6 sm:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
-          <StickyHeaderContext.Provider value={{ enabled: true, topPx: 44 }}>
+          <StickyHeaderContext.Provider value={{ enabled: true, topPx: 88 }}>
             <div className="flex flex-col gap-2">
               <SettingsMegaSection />
               <IncomeMegaSection />
@@ -40,7 +40,7 @@ export default function DetailPage() {
             </div>
           </StickyHeaderContext.Provider>
 
-          <aside className="flex flex-col gap-4 sm:sticky sm:top-[64px] sm:max-h-[calc(100vh-72px)] sm:self-start sm:overflow-y-auto sm:pr-1">
+          <aside className="flex flex-col gap-4 sm:sticky sm:top-[calc(var(--lp-header-h,88px)+12px)] sm:max-h-[calc(100vh-var(--lp-header-h,88px)-20px)] sm:self-start sm:overflow-y-auto sm:pr-1">
             <HealthHeader result={result} plan={plan} />
             {mcOn ? <MonteCarloBadge /> : null}
             <WarningsPanel warnings={result.warnings} />
