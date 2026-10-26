@@ -97,7 +97,7 @@ function Slider({
 const PREP_ITEMS = [
   { key: "gensen", label: "源泉徴収票（年収・社会保険料）", hint: "なければ「額面年収」がわかればOK" },
   { key: "nenkin", label: "ねんきん定期便（加入年数・見込み額）", hint: "ねんきんネットでも確認できます" },
-  { key: "shoken", label: "証券口座の残高（NISA／特定口座）", hint: "NISAは「これまでの投資額」も見ておくと正確" },
+  { key: "shoken", label: "証券口座の評価額（NISA／特定口座）", hint: "口座ごとの「評価額」と「買った金額の合計（元本）」" },
   { key: "dc", label: "iDeCo・企業型DCの残高と掛金", hint: "会社のDCは会社が出している掛金も" },
   { key: "loan", label: "住宅ローンの残高・金利", hint: "返済予定表に載っています" },
 ];

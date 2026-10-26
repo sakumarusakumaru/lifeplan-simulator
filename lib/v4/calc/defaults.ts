@@ -35,6 +35,7 @@ export const DEFAULT_PLAN: PlanInput = {
   nisaTsumitateM: 50_000,        // つみたて投資枠（月10万まで）
   nisaGrowthM: 0,                // 成長投資枠（月20万まで）
   nisaEndAge: 60,
+  nisaSplit: { on: false, fundBal: 0, fundR: 4.0, stockBal: 0, stockR: 6.0 },
 
   // 特定口座（課税）
   tokuBal: 3_000_000,
@@ -42,6 +43,7 @@ export const DEFAULT_PLAN: PlanInput = {
   tokuR: 4.0,
   saveTokuM: 0,
   saveTokuEndAge: 60,
+  tokuSplit: { on: false, fundBal: 0, fundR: 4.0, stockBal: 0, stockR: 6.0 },
   nisaOverflowToToku: true,
 
   cryptoBal: 0,

@@ -166,6 +166,8 @@ export const usePlanStore = create<PlanStore>()(
               ...BASE.spousePension,
               ...(persistedPlan.spousePension ?? {}),
             },
+            nisaSplit: { ...BASE.nisaSplit, ...(persistedPlan.nisaSplit ?? {}) },
+            tokuSplit: { ...BASE.tokuSplit, ...(persistedPlan.tokuSplit ?? {}) },
             risk: {
               ...BASE.risk,
               ...(persistedPlan.risk ?? {}),

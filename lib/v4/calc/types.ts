@@ -106,6 +106,16 @@ export type DcType =
 
 export type DcPayoutMethod = "lump" | "annuity";
 
+// 口座の中身を「投信」と「株」に分けて入れるとき用（利回りが違うため）。
+// 合計と、評価額で加重平均した利回りを nisaBal/nisaR・tokuBal/tokuR に反映する
+export interface SplitInput {
+  on: boolean;
+  fundBal: number;
+  fundR: number;
+  stockBal: number;
+  stockR: number;
+}
+
 export interface RiskInput {
   who: "self" | "spouse";       // 亡くなる人
   deathAge: number;             // 亡くなる時の本人の年齢（本人基準）
@@ -192,6 +202,7 @@ export interface PlanInput {
   nisaTsumitateM: number;   // つみたて投資枠 月額（上限 年120万＝月10万）
   nisaGrowthM: number;      // 成長投資枠 月額（上限 年240万＝月20万）
   nisaEndAge: number;
+  nisaSplit: SplitInput;
 
   // 特定口座（課税）— 売却時に含み益へ20.315%
   tokuBal: number;
@@ -199,6 +210,7 @@ export interface PlanInput {
   tokuR: number;
   saveTokuM: number;
   saveTokuEndAge: number;
+  tokuSplit: SplitInput;
   // NISA枠を超えた積立は特定口座へ回す（オフなら枠超過分は現金のまま）
   nisaOverflowToToku: boolean;
 
