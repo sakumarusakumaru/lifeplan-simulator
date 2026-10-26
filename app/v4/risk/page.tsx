@@ -139,7 +139,7 @@ export default function RiskPage() {
     <main className="px-4 py-6 sm:px-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 border-b-2 border-[#0a0a0a] pb-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">RISK ／ もしもの備え</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">RISK ／ もしも・相続</p>
           <h1 className="text-2xl font-bold text-[#0a0a0a]">
             {who === "self" ? "本人" : "配偶者"}が{deathAge}歳（本人の年齢）で亡くなったら
           </h1>
@@ -227,7 +227,7 @@ export default function RiskPage() {
             {noSurvivor ? (
               <div className="mb-6 rounded-xl bg-white p-4 text-[12px] leading-relaxed" style={{ border: `2px solid ${INK}20` }}>
                 配偶者・子どもが入力されていないため、遺族年金や死亡保障を考える対象の家族がいません。
-                「詳細入力」の基本設定で配偶者の生年月日、支出の教育費で子どもを登録すると試算できます。
+                「入力」の基本設定で配偶者の生年月日、支出の教育費で子どもを登録すると試算できます。
               </div>
             ) : (
               <>
@@ -250,7 +250,7 @@ export default function RiskPage() {
                 </p>
                 {base.shortfallAge !== null ? (
                   <p className="mt-2 text-[11px] font-bold leading-relaxed text-[#a07900]">
-                    ※ 亡くならなくても{base.shortfallAge}歳で資金ショートするプランです。必要保障額にはその不足分も含まれるため大きめに出ます。先に「結果出力」でプランを見直すのがおすすめです。
+                    ※ 亡くならなくても{base.shortfallAge}歳で資金ショートするプランです。必要保障額にはその不足分も含まれるため大きめに出ます。先に「レポート」でプランを見直すのがおすすめです。
                   </p>
                 ) : null}
               </div>
@@ -393,8 +393,8 @@ export default function RiskPage() {
             </Section>
 
             <div className="flex flex-wrap justify-between gap-2 text-[12px] font-bold">
-              <Link href="/v4/suggest" className="underline hover:text-[#c8383a]">← シナリオ比較</Link>
-              <Link href="/v4/detail" className="underline hover:text-[#c8383a]">詳細入力を修正する →</Link>
+              <Link href="/v4/suggest" className="underline hover:text-[#c8383a]">← 比較</Link>
+              <Link href="/v4/detail" className="underline hover:text-[#c8383a]">入力を修正する →</Link>
             </div>
           </div>
         </div>

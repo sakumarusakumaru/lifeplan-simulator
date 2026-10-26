@@ -1,5 +1,7 @@
 // シナリオ比較の「外的環境」。自分では選べない世の中の変化を重ねて試算する。
-//   大暴落: N年に1度、その年の株式・投信・DCが約4割下落（リーマン・ショック級）。暗号資産は約6割
+//   大暴落: N年に1度、その年の株式・投信・DCが約4割下落（リーマン・ショック級）。暗号資産は約6割。
+//           その後4年かけて、暴落がなかった場合の水準まで回復する（リーマン後の世界株と同程度）。
+//           長く持ち続ければ取り戻せるが、下がっている間に取り崩す・退職を迎えると傷が残る、という現実に近い動き
 //   金利上昇: 住宅ローン・不動産ローン金利が上がる（変動金利を想定し、今から上乗せ）。預金金利も半分だけ上がる
 //   物価: 物価上昇率を置き換え。年金は物価の7割しか追いつかない、給与は据え置きとみなす（厳しめ）
 //   運用の低迷: NISA・特定口座・DCの想定利回りを下げる
@@ -25,7 +27,7 @@ export const ENV_OPTIONS: {
   {
     key: "crashEvery",
     label: "大暴落（リーマン・ショック級）",
-    note: "その年、株式・投信・DCが約4割下がる",
+    note: "その年に株式・投信・DCが約4割下がり、その後4年かけて元の水準まで戻る",
     choices: [
       { value: 0, label: "なし" },
       { value: 20, label: "20年に1度" },
@@ -104,19 +106,31 @@ export function applyEnvPlan(plan: PlanInput, env: EnvInput): PlanInput {
   return p;
 }
 
-// 大暴落の年だけ下落させる利回りの列（それ以外の年は入力どおり）。最初の暴落は周期の半分の年
+// 暴落の下落率と、元の水準に戻るまでの年数
+export const CRASH_DROP = 0.42;
+export const CRASH_DROP_CRYPTO = 0.6;
+export const CRASH_RECOVERY_YEARS = 4;
+
+// 大暴落の年は下落、その後の回復期間は上乗せ、それ以外の年は入力どおり（いずれも入力利回りへの掛け算）。
+// 回復期間の上乗せは、暴落の下落ぶんを回復年数で割り戻した値なので、回復しきると暴落がなかった場合の水準に戻る。
+// 最初の暴落は周期の半分の年。
 export function envReturns(plan: PlanInput, env: EnvInput) {
   if (!env.crashEvery) return undefined;
   const years = Math.max(1, plan.endAge - plan.curAge + 1);
+  const n = Math.min(CRASH_RECOVERY_YEARS, Math.max(1, env.crashEvery - 1));
+  const upSec = Math.pow(1 / (1 - CRASH_DROP), 1 / n) - 1;
+  const upCrypto = Math.pow(1 / (1 - CRASH_DROP_CRYPTO), 1 / n) - 1;
   const sec: number[] = [];
   const gold: number[] = [];
   const crypto: number[] = [];
   const first = Math.round(env.crashEvery / 2);
   for (let t = 0; t < years; t++) {
-    const crash = t >= first && (t - first) % env.crashEvery === 0;
-    sec.push(crash ? -0.42 : 0);
+    const since = t >= first ? (t - first) % env.crashEvery : -1;
+    const crash = since === 0;
+    const recovering = since >= 1 && since <= n;
+    sec.push(crash ? -CRASH_DROP : recovering ? upSec : 0);
     gold.push(0);
-    crypto.push(crash ? -0.6 : 0);
+    crypto.push(crash ? -CRASH_DROP_CRYPTO : recovering ? upCrypto : 0);
   }
   return { sec, gold, crypto };
 }

@@ -138,7 +138,7 @@ export default function HandoverPage() {
   const estate = totalAssets - totalDebts + Math.max(0, insuranceTotal - 5_000_000 * heirs.count);
   const tax = estimateInheritanceTax(estate, hasSpouse, heirKids);
 
-  // 「今、私に万一のことがあったら」の試算（もしもの備えと同じ計算）
+  // 「今、私に万一のことがあったら」の試算（もしも・相続と同じ計算）
   const effPlan = useMemo(() => ({ ...plan, risk: { ...plan.risk, who: "self" as const, deathAge: plan.curAge } }), [plan]);
   const death = useMemo(() => simulate(effPlan, { death: true }), [effPlan]);
   const need = useMemo(() => requiredCoverage(effPlan), [effPlan]);
@@ -219,7 +219,7 @@ export default function HandoverPage() {
             {showForm ? "入力欄を閉じてプレビューだけ見る" : "入力欄を開く"}
           </button>
           <Link href="/v4/risk" className="self-center text-[12px] font-bold underline">
-            ← もしもの備えに戻る
+            ← もしも・相続に戻る
           </Link>
         </div>
         <p className="mt-2 text-[10px] text-[#0a0a0a]/50">
@@ -245,7 +245,7 @@ export default function HandoverPage() {
               />
             ))}
             {inventory.every((r) => r.amount <= 0) ? (
-              <p className="text-[11px] text-[#0a0a0a]/55">詳細入力で資産を入れると、ここに一覧が出ます。</p>
+              <p className="text-[11px] text-[#0a0a0a]/55">入力で資産を入れると、ここに一覧が出ます。</p>
             ) : null}
             <p className="mt-1 text-[11px] font-bold">そのほかの財産（貴金属・車・貸しているお金など）</p>
             {h.extraAssets.map((x, i) => (
@@ -277,7 +277,7 @@ export default function HandoverPage() {
             ))}
             <div className="flex flex-col gap-2 sm:flex-row">
               <AddBtn label="保険を追加" onClick={() => upd({ policies: [...h.policies, { company: "", kind: "", insured: "", beneficiary: "", benefit: 0, contact: "" }] })} />
-              {plan.ins.length ? <AddBtn label={`詳細入力の保険（${plan.ins.length}件）を取り込む`} onClick={importPolicies} /> : null}
+              {plan.ins.length ? <AddBtn label={`入力画面の保険（${plan.ins.length}件）を取り込む`} onClick={importPolicies} /> : null}
             </div>
           </FormCard>
 

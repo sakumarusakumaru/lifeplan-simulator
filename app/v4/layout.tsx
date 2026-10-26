@@ -14,10 +14,10 @@ import { migrateV3Plan, usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
 const TABS = [
-  { href: "/v4/detail", label: "詳細入力" },
-  { href: "/v4/result", label: "結果出力" },
-  { href: "/v4/suggest", label: "シナリオ比較" },
-  { href: "/v4/risk", label: "もしもの備え" },
+  { href: "/v4/detail", label: "入力" },
+  { href: "/v4/result", label: "レポート" },
+  { href: "/v4/suggest", label: "比較" },
+  { href: "/v4/risk", label: "もしも・相続" },
 ];
 
 export default function V4Layout({ children }: { children: React.ReactNode }) {
@@ -56,7 +56,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   // ヘッダーは fixed。開いているときの高さを下の余白にして、タブを閉じても本文が動かないようにする
   const [headerFullH, setHeaderFullH] = useState(88);
 
-  // ヘッダーの実際の高さを CSS 変数に入れ、詳細入力のスティッキー見出し・右カラムの位置を合わせる
+  // ヘッダーの実際の高さを CSS 変数に入れ、入力画面のスティッキー見出し・右カラムの位置を合わせる
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
@@ -149,7 +149,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
 
   // ステップのタブ。PCではヘッダー1段目に、スマホでは独立した行に出す
   // スマホ用のタブ: 4等分のセグメント。短い名前でスクロールせずに全部見える
-  const SHORT = ["入力", "結果", "シナリオ", "もしも"];
+  const SHORT = ["入力", "レポート", "比較", "もしも・相続"];
   const renderMobileTabs = () => (
     <nav className="grid grid-cols-4 gap-1 rounded-xl bg-white p-1" style={{ border: "2px solid #0a0a0a" }}>
       {TABS.map((tab, i) => {
@@ -165,7 +165,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
             <span className="text-[9px] font-bold tabular-nums leading-none" style={{ opacity: active ? 0.6 : 0.45 }}>
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="mt-0.5 text-[12px] font-bold leading-none">{SHORT[i]}</span>
+            <span className="mt-0.5 whitespace-nowrap text-[11px] font-bold leading-none">{SHORT[i]}</span>
           </Link>
         );
       })}

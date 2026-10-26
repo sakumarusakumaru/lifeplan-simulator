@@ -39,7 +39,7 @@ function niceDomain(series: SimulationSummary[]): [number, number] {
   return [Math.floor(lo / unit) * unit, Math.ceil(hi / unit) * unit];
 }
 
-// シナリオ比較の上に固定するグラフ。
+// 比較の上に固定するグラフ。
 // 打ち手のカードを押している間（PCはマウスを乗せている間）だけ、線がその打ち手の結果に変わる。
 // 線は常に1本を描き、データだけ差し替えるので「元の線から変化する」アニメーションになる。
 export function ScenarioPreviewChart({

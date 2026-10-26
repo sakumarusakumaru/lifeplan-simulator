@@ -15,7 +15,7 @@ const LABELS: Record<(typeof SECTION_ORDER)[number], string> = {
 };
 
 // はじめての人の入力ステップの進み具合。
-// mode="input": 詳細入力の上に出す / mode="gate": 入力が終わる前に結果タブを開いたときに出す
+// mode="input": 入力画面の上に出す / mode="gate": 入力が終わる前に結果タブを開いたときに出す
 export function InputProgress({
   mode = "input",
   onShowNow,

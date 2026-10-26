@@ -52,7 +52,7 @@ function rateColor(rate: number) {
   return RED;
 }
 
-// 詳細入力の右側に出す小さな要約
+// 入力画面の右側に出す小さな要約
 export function MonteCarloBadge() {
   const plan = usePlanStore((s) => s.plan);
   const mc = useMonteCarlo(plan);
@@ -136,7 +136,7 @@ export function MonteCarloPanel() {
         {mismatch ? (
           <p className="mt-2 text-[10px] font-bold leading-relaxed" style={{ color: "#a07900" }}>
             ※ NISAの想定利回り {plan.nisaR.toFixed(1)}% は「{MC_RISK[riskKey].label}」の目安（{lo}〜{hi}%）から外れています。
-            値動きの小さい運用ほど期待できる利回りも低いので、両方をそろえると現実に近くなります（{plan.nisaR > hi ? "想定利回りを下げる" : "想定利回りを上げる"}のが目安。詳細入力の「資産・運用」で変更）。
+            値動きの小さい運用ほど期待できる利回りも低いので、両方をそろえると現実に近くなります（{plan.nisaR > hi ? "想定利回りを下げる" : "想定利回りを上げる"}のが目安。入力画面の「資産・運用」で変更）。
           </p>
         ) : null}
       </div>

@@ -142,7 +142,7 @@ export function HealthHeader({
   const nwAt65 = result.rows.find((r) => r.age === 65)?.nw ?? null;
   const shortfallText = result.shortfallAge ? `${result.shortfallAge}歳` : "なし";
 
-  // 詳細入力ページ: コンパクト1行表示
+  // 入力ページ: コンパクト1行表示
   if (isV3Detail) {
     const kpis = [
       {

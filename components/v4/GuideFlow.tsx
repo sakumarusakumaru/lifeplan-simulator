@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 // 初回訪問者向けのインタラクティブな使い方ガイド。
-// 最後のステップで免責に同意すると ver4 の詳細入力へ進む。
+// 最後のステップで免責に同意すると ver4 の入力へ進む。
 
 const GUIDE_KEY = "lp_guide_v4";
 const CONSENT_KEY = "lp_consent_v1";
@@ -452,7 +452,7 @@ const SPOTS = [
   { no: 1, title: "スコアと主要な数字", body: "100点満点の総合評価と、お金が尽きる年齢・最終的な純資産。まずここだけ見れば全体がつかめます。" },
   { no: 2, title: "資産推移グラフ", body: "現金・NISA・特定口座・DCなどの内訳が年ごとに積み上がります。赤い線は借入を差し引いた純資産。" },
   { no: 3, title: "制度チェック", body: "NISAの枠を超えた、iDeCoの上限を超えた、退職金とDC一時金の控除が重なった、などを自動で知らせます。" },
-  { no: 4, title: "シナリオ比較・もしもの備え", body: "「NISAを月+2万」「年金を70歳に繰下げ」などを効果の大きい順に並べます。「もしもの備え」タブでは、亡くなった場合の遺族年金と必要な死亡保障額がわかります。" },
+  { no: 4, title: "比較・もしも・相続", body: "「NISAを月+2万」「年金を70歳に繰下げ」などを効果の大きい順に並べます。「もしも・相続」タブでは、亡くなった場合の遺族年金と必要な死亡保障額がわかります。" },
 ];
 
 function Spot({ no, active, onClick }: { no: number; active: boolean; onClick: () => void }) {
@@ -511,7 +511,7 @@ function StepResult() {
             <p className="text-[#0a0a0a]/60">● NISA生涯枠に56歳で到達…</p>
           </div>
           <div className="rounded-lg bg-white px-2.5 py-2 text-[10px]" style={{ border: `1.5px solid ${INK}20` }}>
-            <b>シナリオ比較</b>
+            <b>比較</b>
             <p className="text-[#0a0a0a]/60">NISA月+2万 → +820万</p>
           </div>
         </div>

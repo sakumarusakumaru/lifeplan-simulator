@@ -32,7 +32,7 @@ export default function DetailPage() {
   // 入力ステップを終えた直後だけ出す案内
   const [justDone, setJustDone] = useState(false);
 
-  // 入力が終わったら、その場（詳細入力）で結果を見せる。入力を直すと右のグラフがすぐ変わることを体験してもらう
+  // 入力が終わったら、その場（入力）で結果を見せる。入力を直すと右のグラフがすぐ変わることを体験してもらう
   const finish = useCallback(() => {
     setUnlocked(true);
     closeAll();
