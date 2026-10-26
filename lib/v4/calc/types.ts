@@ -114,6 +114,9 @@ export interface SplitInput {
   fundR: number;
   stockBal: number;
   stockR: number;
+  // NISAのみ: 旧NISA（2023年までに買った分）。非課税だが新NISAの生涯枠には数えない
+  oldBal?: number;
+  oldR?: number;
 }
 
 export interface RiskInput {

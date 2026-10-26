@@ -13,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { InheritanceGuide } from "@/components/v4/InheritanceGuide";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
@@ -170,7 +171,7 @@ export default function RiskPage() {
             {who === "self" ? "本人" : "配偶者"}が{deathAge}歳（本人の年齢）で亡くなったら
           </h1>
           <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/65">
-            遺族年金・死亡退職金・団信・保険を織り込んで、残された家族が最後まで暮らせるかを試算します。足りない分が「必要保障額」です。
+            遺族年金・死亡退職金・団信・保険を織り込んで、残された家族が最後まで暮らせるかを試算します。足りない分が「必要保障額」です。下には、年代ごとの「相続の備え」もまとめています。
           </p>
         </div>
 
@@ -390,7 +391,9 @@ export default function RiskPage() {
               </>
             )}
 
-            <Section no="04" title="計算の前提 ／ ASSUMPTIONS">
+            <InheritanceGuide plan={plan} base={base} real={real} />
+
+            <Section no="05" title="計算の前提 ／ ASSUMPTIONS">
               <ul className="flex flex-col gap-1.5 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={{ border: `2px solid ${INK}18` }}>
                 <li>遺族年金は令和8年度の額（遺族基礎847,300円、子の加算243,800円・3人目以降81,300円、中高齢寡婦加算635,500円）。毎年「年金額の改定率」で改定。</li>
                 <li>遺族厚生年金は報酬比例部分の3/4。在職中の死亡は加入300月とみなす。夫は妻の死亡時55歳以上が条件で、支給は60歳から（子がいる間は例外）。</li>

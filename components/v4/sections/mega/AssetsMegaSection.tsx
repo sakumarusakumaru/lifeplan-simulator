@@ -143,21 +143,6 @@ function Meter({ label, used, max }: { label: string; used: number; max: number 
   );
 }
 
-// 自動計算された値の表示（入力不可）
-function Readout({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]">{label}</span>
-      <div
-        className="flex h-[34px] items-center justify-end px-2 text-xs font-bold tabular-nums text-[#0a0a0a]/70"
-        style={{ border: "2px solid #0a0a0a25", borderRadius: 8, background: "#f0f0ee" }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function Note({ children, warn }: { children: React.ReactNode; warn?: boolean }) {
   return (
     <p
@@ -169,45 +154,58 @@ function Note({ children, warn }: { children: React.ReactNode; warn?: boolean })
   );
 }
 
-// 口座の中身を「投資信託」「株・ETF」に分けて入れる（利回りが違うとき用）
-function weightedSplit(sp: SplitInput, fallbackWeights: [number, number] = [1, 1]) {
-  const total = sp.fundBal + sp.stockBal;
-  const [wf, ws] = total > 0 ? [sp.fundBal, sp.stockBal] : fallbackWeights;
-  const r = wf + ws > 0 ? (wf * sp.fundR + ws * sp.stockR) / (wf + ws) : sp.fundR;
+// 口座の中身（投資信託・株・旧NISA）の合計と、評価額で加重平均した想定利回り
+function holdingsSummary(sp: SplitInput, fallbackWeights: [number, number] = [1, 1]) {
+  const old = sp.oldBal ?? 0;
+  const total = sp.fundBal + sp.stockBal + old;
+  const parts: [number, number][] =
+    total > 0
+      ? [[sp.fundBal, sp.fundR], [sp.stockBal, sp.stockR], [old, sp.oldR ?? sp.fundR]]
+      : [[fallbackWeights[0], sp.fundR], [fallbackWeights[1], sp.stockR]];
+  const w = parts.reduce((a, [x]) => a + x, 0);
+  const r = w > 0 ? parts.reduce((a, [x, rr]) => a + x * rr, 0) / w : sp.fundR;
   return { total, r: Math.round(r * 10) / 10 };
 }
 
-function SplitEditor({
-  split,
-  onChange,
-  fallbackWeights,
+// 持っている商品の種類ごとのカード（持っていなければ0のまま）
+function HoldingCard({
+  title,
+  examples,
+  bal,
+  setBal,
+  r,
+  setR,
+  rHint,
 }: {
-  split: SplitInput;
-  onChange: (next: SplitInput) => void;
-  fallbackWeights?: [number, number];
+  title: string;
+  examples: string;
+  bal: number;
+  setBal: (v: number) => void;
+  r: number;
+  setR: (v: number) => void;
+  rHint: string;
 }) {
-  const upd = (p: Partial<SplitInput>) => onChange({ ...split, ...p });
-  const { total, r } = weightedSplit(split, fallbackWeights);
   return (
-    <div className="flex flex-col gap-2 rounded-lg p-2.5" style={{ background: "#ffffff", border: "1.5px solid #0a0a0a20" }}>
-      {(
-        [
-          { title: "投資信託", bal: split.fundBal, r: split.fundR, setBal: (v: number) => upd({ fundBal: v }), setR: (v: number) => upd({ fundR: v }) },
-          { title: "株・ETF", bal: split.stockBal, r: split.stockR, setBal: (v: number) => upd({ stockBal: v }), setR: (v: number) => upd({ stockR: v }) },
-        ] as const
-      ).map((row) => (
-        <div key={row.title} className="flex flex-col gap-1">
-          <span className="text-[11px] font-bold">{row.title}</span>
-          <div className="grid grid-cols-[3fr_2fr] gap-2">
-            <NumberField label="今の評価額" value={row.bal} onChange={row.setBal} unit="円" />
-            <PercentField label="想定利回り(年)" value={row.r} onChange={row.setR} />
-          </div>
-        </div>
-      ))}
-      <p className="text-[11px] text-[#0a0a0a]/70">
-        合計 <b>{fmtMan(total)}</b>・平均の想定利回り <b>{r.toFixed(1)}%</b>
-        <span className="text-[10px] text-[#0a0a0a]/50">（評価額の比率で平均して計算）</span>
-      </p>
+    <div className="flex flex-col gap-1.5 rounded-lg bg-white p-2.5" style={{ border: "1.5px solid #0a0a0a20" }}>
+      <div>
+        <p className="text-[12px] font-bold text-[#0a0a0a]">{title}</p>
+        <p className="text-[10px] leading-snug text-[#0a0a0a]/55">{examples}</p>
+      </div>
+      <div className="grid grid-cols-[3fr_2fr] items-start gap-2">
+        <NumberField label="今の評価額" value={bal} onChange={setBal} unit="円" />
+        <PercentField label="想定利回り(年)" value={r} onChange={setR} hint={rHint} />
+      </div>
+    </div>
+  );
+}
+
+function HoldingsTotal({ total, r }: { total: number; r: number }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 rounded-lg px-3 py-2" style={{ background: "#ffffff", border: "2px solid #0a0a0a" }}>
+      <span className="text-[11px] font-bold">この口座の合計</span>
+      <span className="text-[13px] font-bold tabular-nums">
+        {fmtMan(total)} <span className="text-[11px] font-normal text-[#0a0a0a]/60">／ 平均の想定利回り {r.toFixed(1)}%</span>
+      </span>
     </div>
   );
 }
@@ -217,17 +215,20 @@ export function AssetsMegaSection() {
   const setField = usePlanStore((s) => s.setField);
   const patch = usePlanStore((s) => s.patch);
 
-  // 投信と株を分けて入れたら、口座の合計・平均利回りへ反映する
-  const setNisaSplit = (sp: SplitInput) => {
-    const { total, r } = weightedSplit(sp, [plan.nisaTsumitateM || 1, plan.nisaGrowthM]);
-    patch(sp.on ? { nisaSplit: sp, nisaBal: total, nisaR: r } : { nisaSplit: sp });
+  // 種類ごとの入力から、口座の合計・平均利回りを計算して反映する
+  const nisaSplit: SplitInput = { ...{ on: true, fundBal: 0, fundR: 4, stockBal: 0, stockR: 6, oldBal: 0, oldR: 4 }, ...(plan.nisaSplit ?? {}) };
+  const tokuSplit: SplitInput = { ...{ on: true, fundBal: 0, fundR: 4, stockBal: 0, stockR: 6 }, ...(plan.tokuSplit ?? {}) };
+  const nisaFallback: [number, number] = [plan.nisaTsumitateM || 1, plan.nisaGrowthM];
+  const updNisa = (p: Partial<SplitInput>) => {
+    const sp = { ...nisaSplit, ...p, on: true };
+    const { total, r } = holdingsSummary(sp, nisaFallback);
+    patch({ nisaSplit: sp, nisaBal: total, nisaR: r });
   };
-  const setTokuSplit = (sp: SplitInput) => {
-    const { total, r } = weightedSplit(sp);
-    patch(sp.on ? { tokuSplit: sp, tokuBal: total, tokuR: r } : { tokuSplit: sp });
+  const updToku = (p: Partial<SplitInput>) => {
+    const sp = { ...tokuSplit, ...p, on: true };
+    const { total, r } = holdingsSummary(sp);
+    patch({ tokuSplit: sp, tokuBal: total, tokuR: r });
   };
-  const nisaSplit = plan.nisaSplit ?? { on: false, fundBal: 0, fundR: 4, stockBal: 0, stockR: 6 };
-  const tokuSplit = plan.tokuSplit ?? { on: false, fundBal: 0, fundR: 4, stockBal: 0, stockR: 6 };
   // 新NISAは2024年開始。年360万が上限なので、今年までに買える元本の最大
   const nisaMaxCostNow = 3_600_000 * Math.max(1, new Date().getFullYear() - 2023);
 
@@ -240,7 +241,7 @@ export function AssetsMegaSection() {
     plan.cashBal + plan.nisaBal + plan.tokuBal + plan.cryptoBal + plan.goldBal + plan.dcBal;
 
   // NISA: 生涯枠の消化状況と、枠を使い切る年齢
-  const nisaCostNow = plan.nisaCost > 0 ? plan.nisaCost : plan.nisaBal;
+  const nisaCostNow = plan.nisaCost > 0 ? plan.nisaCost : Math.max(0, plan.nisaBal - (plan.nisaSplit?.oldBal ?? 0));
   const nisaYearOver = plan.nisaTsumitateM > 100_000 || plan.nisaGrowthM > 200_000;
   const nisaFullAge = (() => {
     const perYear =
@@ -284,39 +285,47 @@ export function AssetsMegaSection() {
         </CollapsibleSubGroup>
 
         <CollapsibleSubGroup title="NISA口座（非課税）">
-          <AccountBox tone="green" title="NISA" note="運用益・売却益が非課税。投信も株も、NISA口座で持っている分をまとめて入力">
-            <CheckboxField
-              label="投信と株を分けて入れる（利回りが違うとき）"
-              value={nisaSplit.on}
-              onChange={(v) =>
-                setNisaSplit({
-                  ...nisaSplit,
-                  on: v,
-                  fundBal: v && nisaSplit.fundBal + nisaSplit.stockBal === 0 ? plan.nisaBal : nisaSplit.fundBal,
-                })
-              }
+          <AccountBox tone="green" title="NISA口座" note="運用益も、売ったときの利益も非課税">
+            <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
+              NISA口座で持っているものを、種類ごとに入れてください。<b>持っていない種類は0のままでOK</b>です。
+              証券アプリの「NISA」の画面で、商品ごとの評価額がわかります。
+            </p>
+            <HoldingCard
+              title="投資信託"
+              examples="例：全世界株式（オール・カントリー）、S&P500、バランス型などの投信"
+              bal={nisaSplit.fundBal}
+              setBal={(v) => updNisa({ fundBal: v })}
+              r={nisaSplit.fundR}
+              setR={(v) => updNisa({ fundR: v })}
+              rHint="株式の投信なら4〜5%が目安"
             />
-            {nisaSplit.on ? <SplitEditor split={nisaSplit} onChange={setNisaSplit} fallbackWeights={[plan.nisaTsumitateM || 1, plan.nisaGrowthM]} /> : null}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-start">
-              {nisaSplit.on ? (
-                <Readout label="今の評価額（合計）" value={fmtMan(plan.nisaBal)} />
-              ) : (
-                <NumberField
-                  label="今の評価額"
-                  value={plan.nisaBal}
-                  onChange={(v) => setField("nisaBal", v)}
-                  unit="円"
-                  hint="証券アプリの「評価額」。今売ったらいくらか"
-                />
-              )}
-              <NumberField
-                label="買った金額の合計（元本）"
-                value={plan.nisaCost}
-                onChange={(v) => setField("nisaCost", v)}
-                unit="円"
-                hint={`2024年以降に新NISAで買った金額。今年までの最大は${fmtMan(nisaMaxCostNow)}。空欄＝評価額と同じ`}
-              />
-            </div>
+            <HoldingCard
+              title="株・ETF"
+              examples="例：トヨタなどの日本の個別株、米国株、ETF（上場投資信託）"
+              bal={nisaSplit.stockBal}
+              setBal={(v) => updNisa({ stockBal: v })}
+              r={nisaSplit.stockR}
+              setR={(v) => updNisa({ stockR: v })}
+              rHint="値動きが大きい分、5〜6%で見る人が多い"
+            />
+            <HoldingCard
+              title="旧NISA（2023年までに買った分）"
+              examples="一般NISA・つみたてNISAで買って、まだ持っている分。非課税のまま持てます（新NISAの枠とは別）"
+              bal={nisaSplit.oldBal ?? 0}
+              setBal={(v) => updNisa({ oldBal: v })}
+              r={nisaSplit.oldR ?? 4}
+              setR={(v) => updNisa({ oldR: v })}
+              rHint="中身に合わせて"
+            />
+            <HoldingsTotal total={plan.nisaBal} r={plan.nisaR} />
+            <NumberField
+              label="新NISAで買った金額の合計（元本）"
+              value={plan.nisaCost}
+              onChange={(v) => setField("nisaCost", v)}
+              unit="円"
+              hint={`2024年以降に新NISAで買った金額（旧NISAの分は入れない）。年360万円までなので今年までの最大は${fmtMan(nisaMaxCostNow)}。空欄＝新NISA分の評価額と同じ`}
+            />
+            <p className="mt-1 text-[11px] font-bold text-[#0a0a0a]">これからの積立</p>
             <div className="grid grid-cols-2 items-start gap-2">
               <NumberField
                 label="つみたて投資枠(月)"
@@ -332,16 +341,6 @@ export function AssetsMegaSection() {
                 unit="円"
                 hint="上限 月20万（年240万）。投信も株もOK"
               />
-              {nisaSplit.on ? (
-                <Readout label="想定利回り（平均）" value={`${plan.nisaR.toFixed(1)}%`} />
-              ) : (
-                <PercentField
-                  label="想定利回り(年)"
-                  value={plan.nisaR}
-                  onChange={(v) => setField("nisaR", v)}
-                  hint="全世界株の投信中心なら4〜5%が目安"
-                />
-              )}
               <NumberField
                 label="積立終了"
                 value={plan.nisaEndAge}
@@ -352,13 +351,9 @@ export function AssetsMegaSection() {
             {plan.nisaCost > nisaMaxCostNow ? (
               <Note warn>
                 新NISAは2024年に始まり、買えるのは年360万円までなので、今年までの元本は最大{fmtMan(nisaMaxCostNow)}です。
-                2023年までの旧NISA（一般・つみたて）で買った分は新NISAの枠とは別なので、元本には含めないでください。
+                旧NISA（2023年まで）で買った分は、元本ではなく上の「旧NISA」の欄に入れてください。
               </Note>
-            ) : (
-              <Note>
-                2023年までの旧NISAで持っている分は、評価額には含めてOK・元本には含めない（新NISAの生涯枠1,800万円とは別枠のため）。
-              </Note>
-            )}
+            ) : null}
             <Meter label="生涯枠1,800万円の使用状況（元本ベース）" used={nisaCostNow} max={18_000_000} />
             {nisaYearOver ? (
               <Note warn>
@@ -380,46 +375,45 @@ export function AssetsMegaSection() {
           </AccountBox>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="特定口座（課税）" defaultOpen={false}>
-          <AccountBox tone="gray" title="特定口座・一般口座" note="NISA以外の証券口座。投信も株も入る。売ったときに利益へ20.315%">
-            <CheckboxField
-              label="投信と株を分けて入れる（利回りが違うとき）"
-              value={tokuSplit.on}
-              onChange={(v) =>
-                setTokuSplit({
-                  ...tokuSplit,
-                  on: v,
-                  fundBal: v && tokuSplit.fundBal + tokuSplit.stockBal === 0 ? plan.tokuBal : tokuSplit.fundBal,
-                })
-              }
+        <CollapsibleSubGroup title="特定口座（NISA以外の証券口座）" defaultOpen={false}>
+          <AccountBox tone="gray" title="特定口座・一般口座" note="NISA以外の証券口座。売ったときに利益へ20.315%">
+            <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
+              NISA以外の証券口座で持っているものを、種類ごとに入れてください。<b>持っていない種類は0のままでOK</b>です。
+            </p>
+            <HoldingCard
+              title="投資信託"
+              examples="例：全世界株式、S&P500、バランス型などの投信"
+              bal={tokuSplit.fundBal}
+              setBal={(v) => updToku({ fundBal: v })}
+              r={tokuSplit.fundR}
+              setR={(v) => updToku({ fundR: v })}
+              rHint="株式の投信なら4〜5%が目安"
             />
-            {tokuSplit.on ? <SplitEditor split={tokuSplit} onChange={setTokuSplit} /> : null}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-start">
-              {tokuSplit.on ? (
-                <Readout label="今の評価額（合計）" value={fmtMan(plan.tokuBal)} />
-              ) : (
-                <NumberField
-                  label="今の評価額"
-                  value={plan.tokuBal}
-                  onChange={(v) => setField("tokuBal", v)}
-                  unit="円"
-                  hint="証券アプリの「評価額」。投信と株の合計"
-                />
-              )}
-              <NumberField
-                label="買った金額の合計（元本）"
-                value={plan.tokuCost}
-                onChange={(v) => setField("tokuCost", v)}
-                unit="円"
-                hint="売ったときの税金（利益分）の計算に使用。空欄＝評価額と同じ"
-              />
-            </div>
+            <HoldingCard
+              title="株・ETF"
+              examples="例：日本の個別株、米国株、ETF、会社の持株会の株"
+              bal={tokuSplit.stockBal}
+              setBal={(v) => updToku({ stockBal: v })}
+              r={tokuSplit.stockR}
+              setR={(v) => updToku({ stockR: v })}
+              rHint="5〜6%で見る人が多い"
+            />
+            <HoldingsTotal total={plan.tokuBal} r={plan.tokuR} />
+            <NumberField
+              label="買った金額の合計（元本）"
+              value={plan.tokuCost}
+              onChange={(v) => setField("tokuCost", v)}
+              unit="円"
+              hint="売ったときの税金（利益の部分にかかる）の計算に使用。空欄＝評価額と同じ"
+            />
+            <p className="mt-1 text-[11px] font-bold text-[#0a0a0a]">これからの積立</p>
             <div className="grid grid-cols-2 items-start gap-2">
               <NumberField
                 label="積立(月)"
                 value={plan.saveTokuM}
                 onChange={(v) => setField("saveTokuM", v)}
                 unit="円"
+                hint="上の平均の利回りで計算"
               />
               <NumberField
                 label="積立終了"
@@ -427,16 +421,6 @@ export function AssetsMegaSection() {
                 onChange={(v) => setField("saveTokuEndAge", v)}
                 unit="歳"
               />
-              {tokuSplit.on ? (
-                <Readout label="想定利回り（平均）" value={`${plan.tokuR.toFixed(1)}%`} />
-              ) : (
-                <PercentField
-                  label="想定利回り(年)"
-                  value={plan.tokuR}
-                  onChange={(v) => setField("tokuR", v)}
-                  hint="投信4%・株6%のように違うなら、上の「分けて入れる」が便利"
-                />
-              )}
             </div>
             <Note>
               税金は「売ったとき」に利益部分だけにかかります（毎年の運用益には課税しない計算）。NISAに空きがあるなら、新しい積立はNISAが先です。

@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
+import { AllocationGuide } from "@/components/v4/AllocationGuide";
+import { ScenarioPreviewChart } from "@/components/v4/ScenarioPreviewChart";
 import { dcSelfLimit } from "@/lib/v4/calc/rules";
 import { simulate } from "@/lib/v4/calc/simulate";
 import { usePlanStore } from "@/store/v4/plan-store";
@@ -46,12 +48,17 @@ const CAT_LABEL: Record<Cat, string> = {
 export default function SuggestPage() {
   const plan = usePlanStore((s) => s.plan);
   const { convert } = useDisplayConverter();
+  const [preview, setPreview] = useState<Scenario | null>(null);
   const base = useMemo(() => convert(simulate(plan), plan), [plan, convert]);
 
   // すべてのシナリオをひとつの useMemo で計算（プラン変化時のみ再評価）
   const candidates: Scenario[] = useMemo(() => {
-    const sim = (mod: (p: PlanInput) => PlanInput) => convert(simulate(mod(plan)), plan);
-    const last = plan.jobs.length > 0 ? Math.max(...plan.jobs.map((j) => j.end)) : plan.penStartA;
+    const sim = (mod: (p: PlanInput) => PlanInput) =>
+      convert(simulate(mod(plan)), plan);
+    const last =
+      plan.jobs.length > 0
+        ? Math.max(...plan.jobs.map((j) => j.end))
+        : plan.penStartA;
 
     const list: (Scenario | null)[] = [];
 
@@ -113,7 +120,12 @@ export default function SuggestPage() {
         ...p,
         sideJobs: [
           ...p.sideJobs,
-          { name: "副業（What-if）", start: p.curAge, end: Math.min(last, 70), inc: 360000 },
+          {
+            name: "副業（What-if）",
+            start: p.curAge,
+            end: Math.min(last, 70),
+            inc: 360000,
+          },
         ],
       })),
       category: "income",
@@ -159,7 +171,9 @@ export default function SuggestPage() {
         result: sim((p) => ({
           ...p,
           saveTokuM: p.saveTokuM - move,
-          nisaGrowthM: p.nisaGrowthM + Math.max(0, move - Math.max(0, 100_000 - p.nisaTsumitateM)),
+          nisaGrowthM:
+            p.nisaGrowthM +
+            Math.max(0, move - Math.max(0, 100_000 - p.nisaTsumitateM)),
           nisaTsumitateM: Math.min(100_000, p.nisaTsumitateM + move),
         })),
         category: "saving",
@@ -178,12 +192,19 @@ export default function SuggestPage() {
     }
     if (plan.dcBal > 0 || plan.saveDcM > 0 || plan.dcEmployerM > 0) {
       list.push({
-        title: plan.dcMethod === "lump" ? "DCを年金（10年）で受け取る" : "DCを一時金で受け取る",
+        title:
+          plan.dcMethod === "lump"
+            ? "DCを年金（10年）で受け取る"
+            : "DCを一時金で受け取る",
         detail:
           plan.dcMethod === "lump"
             ? "退職金と受取時期が近く退職所得控除が足りない場合は、年金受取の方が有利になることがある"
             : "退職所得控除の枠が余っているなら、一時金の方が税・社保の負担が軽くなりやすい",
-        result: sim((p) => ({ ...p, dcMethod: p.dcMethod === "lump" ? "annuity" : "lump", dcYears: 10 })),
+        result: sim((p) => ({
+          ...p,
+          dcMethod: p.dcMethod === "lump" ? "annuity" : "lump",
+          dcYears: 10,
+        })),
         category: "saving",
       });
     }
@@ -211,7 +232,10 @@ export default function SuggestPage() {
       list.push({
         title: "年間特別費を50万円削減",
         detail: `特別費 ${(plan.specialY / 10000).toFixed(0)}万 → ${(Math.max(0, plan.specialY - 500000) / 10000).toFixed(0)}万円/年`,
-        result: sim((p) => ({ ...p, specialY: Math.max(0, p.specialY - 500000) })),
+        result: sim((p) => ({
+          ...p,
+          specialY: Math.max(0, p.specialY - 500000),
+        })),
         category: "spending",
       });
     }
@@ -219,7 +243,10 @@ export default function SuggestPage() {
       list.push({
         title: "年間特別費を100万円削減",
         detail: `特別費 ${(plan.specialY / 10000).toFixed(0)}万 → ${(Math.max(0, plan.specialY - 1_000_000) / 10000).toFixed(0)}万円/年`,
-        result: sim((p) => ({ ...p, specialY: Math.max(0, p.specialY - 1_000_000) })),
+        result: sim((p) => ({
+          ...p,
+          specialY: Math.max(0, p.specialY - 1_000_000),
+        })),
         category: "spending",
       });
     }
@@ -281,15 +308,18 @@ export default function SuggestPage() {
         base.shortfallAge !== null &&
         s.result.shortfallAge > base.shortfallAge;
       // プラス方向のみ：NWが増える or ショートが解消・後ろ倒し
-      const isPositive = delta > MIN_DELTA || shortfallImproved || shortfallLater;
+      const isPositive =
+        delta > MIN_DELTA || shortfallImproved || shortfallLater;
       if (!isPositive) return false;
       // drawdown系で差が小さければ隠す
-      if (s.category === "drawdown" && Math.abs(delta) < MIN_DELTA) return false;
+      if (s.category === "drawdown" && Math.abs(delta) < MIN_DELTA)
+        return false;
       return true;
     })
     .sort(
       (a, b) =>
-        b.result.finalNetWorth - a.result.finalNetWorth -
+        b.result.finalNetWorth -
+        a.result.finalNetWorth -
         (a.result.finalNetWorth - 0) +
         (a.result.finalNetWorth - 0),
     );
@@ -297,183 +327,242 @@ export default function SuggestPage() {
   // 効果の大きい順に並べ替え（最終純資産の上昇幅で降順）
   visible.sort(
     (a, b) =>
-      b.result.finalNetWorth - base.finalNetWorth -
+      b.result.finalNetWorth -
+      base.finalNetWorth -
       (a.result.finalNetWorth - base.finalNetWorth),
   );
 
+  // 押している間（タッチ）／マウスを乗せている間（PC）だけ、その打ち手をグラフに映す
+  const pressHandlers = (sc: Scenario) => ({
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType !== "mouse") setPreview(sc);
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      if (e.pointerType !== "mouse") setPreview(null);
+    },
+    onPointerCancel: () => setPreview(null),
+    onPointerEnter: (e: React.PointerEvent) => {
+      if (e.pointerType === "mouse") setPreview(sc);
+    },
+    onPointerLeave: () => setPreview(null),
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+  });
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-8">
       {/* Header */}
       <div className="mb-6 border-b-2 border-[#0a0a0a] pb-3">
         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">
           Scenario Analysis
         </p>
-        <h1 className="text-2xl font-bold text-[#0a0a0a]">シナリオ比較 ／ What-if 分析</h1>
+        <h1 className="text-2xl font-bold text-[#0a0a0a]">
+          シナリオ比較 ／ What-if 分析
+        </h1>
         <p className="mt-2 text-xs leading-relaxed text-[#0a0a0a]/60">
           現状のプランを起点に、各種「打ち手」を適用したときの効果を試算します。プラスになる方向の選択肢のみを大きい順に表示しています。
+          <b className="text-[#0a0a0a]">
+            カードを長押し（PCはマウスを乗せる）すると、上のグラフがその打ち手に変わり、離すと元に戻ります。
+          </b>
         </p>
       </div>
 
-      {/* Base result */}
-      <div
-        className="mb-6 flex items-center justify-between rounded-xl p-4"
-        style={{ background: "#0a0a0a", borderRadius: 12 }}
-      >
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/50">
-            現在のプラン（ベースライン）
-          </p>
-          <p className="mt-0.5 text-sm font-bold text-white">最終純資産</p>
-          {base.shortfallAge && (
-            <p className="mt-0.5 text-[10px] text-[#f87171]">
-              ⚠ {base.shortfallAge}歳で資金ショート
-            </p>
-          )}
-          <p className="mt-1 text-[10px] text-white/50">
-            取崩順: {DRAW_ORDER_LABEL[plan.drawOrder]}
-          </p>
-        </div>
-        <p
-          className="text-2xl font-bold tabular-nums"
-          style={{ color: base.finalNetWorth < 0 ? "#f87171" : "#86efac" }}
-        >
-          {fmt(base.finalNetWorth)}
-        </p>
-      </div>
+      {/* グラフの固定表示は打ち手カードの範囲だけ（下の配分の解説ではスクロールで外れる） */}
+      <div>
+        <ScenarioPreviewChart
+          base={base}
+          preview={preview?.result ?? null}
+          previewTitle={preview?.title ?? null}
+        />
 
-      {/* TOP 3 まとめ表示 */}
-      {visible.length >= 3 && (
+        {/* Base result */}
         <div
-          className="mb-6 rounded-xl p-4"
-          style={{ background: "#f0fff4", border: "2px solid #22863a" }}
+          className="mb-6 flex items-center justify-between rounded-xl p-4"
+          style={{ background: "#0a0a0a", borderRadius: 12 }}
         >
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
-            TOP 3 ／ 効果の大きい打ち手
-          </p>
-          <ol className="flex flex-col gap-1.5">
-            {visible.slice(0, 3).map((sc, i) => {
-              const delta = sc.result.finalNetWorth - base.finalNetWorth;
-              return (
-                <li key={sc.title} className="flex items-start gap-2 text-[11px]">
-                  <span
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[10px] font-bold text-white"
-                    style={{ background: "#22863a", borderRadius: 4 }}
-                  >
-                    {i + 1}
-                  </span>
-                  <span className="flex-1 font-bold text-[#0a0a0a]">{sc.title}</span>
-                  <span className="shrink-0 font-bold tabular-nums text-[#22863a]">
-                    {fmtDelta(delta)}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-      )}
-
-      {/* Category groups */}
-      {(["income", "saving", "spending", "return", "drawdown"] as Cat[]).map((cat) => {
-        const items = visible.filter((s) => s.category === cat);
-        if (items.length === 0) return null;
-        return (
-          <div key={cat} className="mb-6">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
-              {CAT_LABEL[cat]}
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/50">
+              現在のプラン（ベースライン）
             </p>
-            <div className="flex flex-col gap-3">
-              {items.map((sc) => {
+            <p className="mt-0.5 text-sm font-bold text-white">最終純資産</p>
+            {base.shortfallAge && (
+              <p className="mt-0.5 text-[10px] text-[#f87171]">
+                ⚠ {base.shortfallAge}歳で資金ショート
+              </p>
+            )}
+            <p className="mt-1 text-[10px] text-white/50">
+              取崩順: {DRAW_ORDER_LABEL[plan.drawOrder]}
+            </p>
+          </div>
+          <p
+            className="text-2xl font-bold tabular-nums"
+            style={{ color: base.finalNetWorth < 0 ? "#f87171" : "#86efac" }}
+          >
+            {fmt(base.finalNetWorth)}
+          </p>
+        </div>
+
+        {/* TOP 3 まとめ表示 */}
+        {visible.length >= 3 && (
+          <div
+            className="mb-6 rounded-xl p-4"
+            style={{ background: "#f0fff4", border: "2px solid #22863a" }}
+          >
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
+              TOP 3 ／ 効果の大きい打ち手
+            </p>
+            <ol className="flex flex-col gap-1.5">
+              {visible.slice(0, 3).map((sc, i) => {
                 const delta = sc.result.finalNetWorth - base.finalNetWorth;
-                const positive = delta >= 0;
-                const shortfallChanged =
-                  sc.result.shortfallAge !== base.shortfallAge;
-                const shortfallFixed =
-                  sc.result.shortfallAge === null &&
-                  base.shortfallAge !== null;
-                const shortfallWorsened =
-                  sc.result.shortfallAge !== null &&
-                  base.shortfallAge === null;
-
                 return (
-                  <div
+                  <li
                     key={sc.title}
-                    className="rounded-xl p-4"
-                    style={{
-                      background: "#fff",
-                      border: "2px solid #0a0a0a18",
-                    }}
+                    className="flex items-start gap-2 text-[11px]"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <p className="text-xs font-bold text-[#0a0a0a]">{sc.title}</p>
-                        <p className="mt-0.5 text-[10px] leading-relaxed text-[#0a0a0a]/50">
-                          {sc.detail}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p
-                          className="text-lg font-bold tabular-nums"
-                          style={{ color: positive ? "#22863a" : "#c8383a" }}
-                        >
-                          {fmtDelta(delta)}
-                        </p>
-                        <p className="text-[9px] text-[#0a0a0a]/40">最終純資産の変化</p>
-                      </div>
-                    </div>
-
-                    {shortfallChanged && (
-                      <div
-                        className="mt-3 rounded-lg px-3 py-2 text-[10px] font-bold"
-                        style={{
-                          background: shortfallFixed ? "#f0fff4" : "#fff0f0",
-                          color: shortfallFixed ? "#22863a" : "#c8383a",
-                        }}
-                      >
-                        {shortfallFixed
-                          ? `✓ 資金ショート（${base.shortfallAge}歳）が解消されます`
-                          : shortfallWorsened
-                            ? `⚠ 資金ショートが${sc.result.shortfallAge}歳に発生します`
-                            : `資金ショート ${base.shortfallAge}歳 → ${sc.result.shortfallAge}歳`}
-                      </div>
-                    )}
-
-                    <div className="mt-3 flex items-center justify-between text-[10px] text-[#0a0a0a]/40">
-                      <span>
-                        最終純資産:{" "}
-                        <span
-                          className="font-bold"
-                          style={{
-                            color:
-                              sc.result.finalNetWorth < 0 ? "#c8383a" : "#0a0a0a",
-                          }}
-                        >
-                          {fmt(sc.result.finalNetWorth)}
-                        </span>
-                      </span>
-                      <span>
-                        {sc.result.shortfallAge
-                          ? `ショート: ${sc.result.shortfallAge}歳`
-                          : "ショートなし"}
-                      </span>
-                    </div>
-                  </div>
+                    <span
+                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[10px] font-bold text-white"
+                      style={{ background: "#22863a", borderRadius: 4 }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="flex-1 font-bold text-[#0a0a0a]">
+                      {sc.title}
+                    </span>
+                    <span className="shrink-0 font-bold tabular-nums text-[#22863a]">
+                      {fmtDelta(delta)}
+                    </span>
+                  </li>
                 );
               })}
-            </div>
+            </ol>
           </div>
-        );
-      })}
+        )}
 
-      {visible.length === 0 && (
-        <div
-          className="rounded-xl p-8 text-center"
-          style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
-        >
-          <p className="text-sm text-[#0a0a0a]/50">
-            詳細入力でデータを入力すると、プラスになる打ち手が表示されます。
-          </p>
-        </div>
-      )}
+        {/* Category groups */}
+        {(["income", "saving", "spending", "return", "drawdown"] as Cat[]).map(
+          (cat) => {
+            const items = visible.filter((s) => s.category === cat);
+            if (items.length === 0) return null;
+            return (
+              <div key={cat} className="mb-6">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
+                  {CAT_LABEL[cat]}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {items.map((sc) => {
+                    const delta = sc.result.finalNetWorth - base.finalNetWorth;
+                    const positive = delta >= 0;
+                    const shortfallChanged =
+                      sc.result.shortfallAge !== base.shortfallAge;
+                    const shortfallFixed =
+                      sc.result.shortfallAge === null &&
+                      base.shortfallAge !== null;
+                    const shortfallWorsened =
+                      sc.result.shortfallAge !== null &&
+                      base.shortfallAge === null;
+
+                    const pressed = preview?.title === sc.title;
+                    return (
+                      <div
+                        key={sc.title}
+                        className="cursor-pointer rounded-xl p-4 transition-all duration-150"
+                        style={{
+                          background: pressed ? "#f6fff8" : "#fff",
+                          border: pressed
+                            ? `2px solid ${positive ? "#22863a" : "#c8383a"}`
+                            : "2px solid #0a0a0a18",
+                          transform: pressed ? "scale(0.985)" : undefined,
+                          // 長押しで文字選択・iOSのメニューが出ないように
+                          WebkitTouchCallout: "none",
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
+                        }}
+                        {...pressHandlers(sc)}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-[#0a0a0a]">
+                              {sc.title}
+                            </p>
+                            <p className="mt-0.5 text-[10px] leading-relaxed text-[#0a0a0a]/50">
+                              {sc.detail}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p
+                              className="text-lg font-bold tabular-nums"
+                              style={{
+                                color: positive ? "#22863a" : "#c8383a",
+                              }}
+                            >
+                              {fmtDelta(delta)}
+                            </p>
+                            <p className="text-[9px] text-[#0a0a0a]/40">
+                              最終純資産の変化
+                            </p>
+                          </div>
+                        </div>
+
+                        {shortfallChanged && (
+                          <div
+                            className="mt-3 rounded-lg px-3 py-2 text-[10px] font-bold"
+                            style={{
+                              background: shortfallFixed
+                                ? "#f0fff4"
+                                : "#fff0f0",
+                              color: shortfallFixed ? "#22863a" : "#c8383a",
+                            }}
+                          >
+                            {shortfallFixed
+                              ? `✓ 資金ショート（${base.shortfallAge}歳）が解消されます`
+                              : shortfallWorsened
+                                ? `⚠ 資金ショートが${sc.result.shortfallAge}歳に発生します`
+                                : `資金ショート ${base.shortfallAge}歳 → ${sc.result.shortfallAge}歳`}
+                          </div>
+                        )}
+
+                        <div className="mt-3 flex items-center justify-between text-[10px] text-[#0a0a0a]/40">
+                          <span>
+                            最終純資産:{" "}
+                            <span
+                              className="font-bold"
+                              style={{
+                                color:
+                                  sc.result.finalNetWorth < 0
+                                    ? "#c8383a"
+                                    : "#0a0a0a",
+                              }}
+                            >
+                              {fmt(sc.result.finalNetWorth)}
+                            </span>
+                          </span>
+                          <span>
+                            {sc.result.shortfallAge
+                              ? `ショート: ${sc.result.shortfallAge}歳`
+                              : "ショートなし"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          },
+        )}
+
+        {visible.length === 0 && (
+          <div
+            className="rounded-xl p-8 text-center"
+            style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
+          >
+            <p className="text-sm text-[#0a0a0a]/50">
+              詳細入力でデータを入力すると、プラスになる打ち手が表示されます。
+            </p>
+          </div>
+        )}
+      </div>
+
+      <AllocationGuide plan={plan} base={base} />
 
       {/* Actions */}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">

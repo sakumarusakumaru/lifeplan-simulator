@@ -84,7 +84,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
   };
   // 取得額（簿価）。0 なら残高と同額（含み益なし）とみなす
   const cost = {
-    nisa: input.nisaCost > 0 ? input.nisaCost : input.nisaBal,
+    // 旧NISA（2023年まで）の分は新NISAの生涯枠に数えない
+    nisa: input.nisaCost > 0 ? input.nisaCost : Math.max(0, input.nisaBal - (input.nisaSplit?.oldBal ?? 0)),
     toku: input.tokuCost > 0 ? input.tokuCost : input.tokuBal,
     k: input.cryptoCost > 0 ? input.cryptoCost : input.cryptoBal,
     g: input.goldCost > 0 ? input.goldCost : input.goldBal,

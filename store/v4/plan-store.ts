@@ -166,8 +166,13 @@ export const usePlanStore = create<PlanStore>()(
               ...BASE.spousePension,
               ...(persistedPlan.spousePension ?? {}),
             },
-            nisaSplit: { ...BASE.nisaSplit, ...(persistedPlan.nisaSplit ?? {}) },
-            tokuSplit: { ...BASE.tokuSplit, ...(persistedPlan.tokuSplit ?? {}) },
+            // 投信／株のカード入力: まとめて入れていた人は、その金額を「投資信託」に入れて引き継ぐ
+            nisaSplit: persistedPlan.nisaSplit?.on
+              ? { ...BASE.nisaSplit, ...persistedPlan.nisaSplit }
+              : { ...BASE.nisaSplit, on: true, fundBal: persistedPlan.nisaBal ?? 0, fundR: persistedPlan.nisaR ?? BASE.nisaR },
+            tokuSplit: persistedPlan.tokuSplit?.on
+              ? { ...BASE.tokuSplit, ...persistedPlan.tokuSplit }
+              : { ...BASE.tokuSplit, on: true, fundBal: persistedPlan.tokuBal ?? BASE.tokuBal, fundR: persistedPlan.tokuR ?? BASE.tokuR },
             risk: {
               ...BASE.risk,
               ...(persistedPlan.risk ?? {}),
