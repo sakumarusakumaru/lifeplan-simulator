@@ -83,6 +83,7 @@ export function normalizeInsurance(raw: Partial<Insurance> & Record<string, unkn
     type,
     insured: (raw.insured as Insured) ?? "本人",
     contractor: raw.contractor === "配偶者" ? "配偶者" : "本人",
+    beneficiary: typeof raw.beneficiary === "string" ? raw.beneficiary : "",
     payMode: raw.payMode === "yearly" || raw.payMode === "single" ? raw.payMode : "monthly",
     premM: n(raw.premM, 0),
     start: n(raw.start, curAge),

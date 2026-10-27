@@ -103,6 +103,7 @@ export function InsuranceCard({
       company: p.company,
       insured: next === "学資保険" ? "子" : p.insured === "子" ? "本人" : p.insured,
       contractor: p.contractor,
+      beneficiary: p.beneficiary,
       payMode: next === "損害保険" && p.payMode === "monthly" ? "yearly" : p.payMode,
       premM: p.premM,
       start: p.start,
@@ -136,6 +137,12 @@ export function InsuranceCard({
             options={CONTRACTOR_OPTIONS}
           />
         </div>
+        <TextField
+          label="受取人（引き継ぎ書用）"
+          value={p.beneficiary}
+          onChange={(v) => onChange({ beneficiary: v })}
+          placeholder="例：妻、長男"
+        />
 
         <SubHead>保険料</SubHead>
         <div className="grid grid-cols-2 gap-2">

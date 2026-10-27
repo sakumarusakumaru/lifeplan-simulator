@@ -1,6 +1,5 @@
 "use client";
 
-import { HAS, normalizeInsurance, typeLabel } from "@/lib/v4/calc/insurance";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -8,7 +7,8 @@ import { NumberField } from "@/components/v4/inputs/NumberField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { TextField } from "@/components/v4/inputs/TextField";
 import { ageOn } from "@/lib/v4/calc/age";
-import { AFTER_DEATH_STEPS, buildInventory } from "@/lib/v4/calc/handover";
+import { autoContacts, buildAfterDeathSteps, buildInventory, insuranceRows, monthlyPayments } from "@/lib/v4/calc/handover";
+import { normalizeInsurance } from "@/lib/v4/calc/insurance";
 import { estimateInheritanceTax, legalHeirs } from "@/lib/v4/calc/inheritance";
 import { requiredCoverage, simulate } from "@/lib/v4/calc/simulate";
 import { buildSurvivorPhases } from "@/lib/v4/calc/survivor";
@@ -133,9 +133,23 @@ export default function HandoverPage() {
   const totalAssets = assets.reduce((a, r) => a + r.amount, 0);
   const totalDebts = debts.reduce((a, r) => a + r.amount, 0);
 
+  // 保険は「入力 → 支出 → 保険」の一覧から自動で入る。ここで足すのは一覧にない保険だけ
+  const insList = useMemo(() => plan.ins.map((p) => normalizeInsurance(p as never, plan.curAge, plan.endAge)), [plan.ins, plan.curAge, plan.endAge]);
+  const insRows = useMemo(() => insuranceRows(plan), [plan]);
+  const sameAsAuto = (p: HandoverPolicy) => insRows.some((x) => x.company === p.company && x.kind === p.kind);
+  const extraPolicies = h.policies.map((p, i) => ({ p, i })).filter(({ p }) => !sameAsAuto(p));
+  const contactsAuto = useMemo(() => autoContacts(plan, insList), [plan, insList]);
+  const extraContacts = h.contacts.filter((c) => !contactsAuto.some((a) => a.name && a.name === c.name));
+  const base = useMemo(() => simulate(plan), [plan]);
+  const payments = useMemo(() => monthlyPayments(plan, base.rows[0], insList), [plan, base, insList]);
+  const whereOf = (key: string, prefill?: string) => h.where[key] ?? prefill ?? "";
+
   const heirKids = !hasSpouse && plan.kids.length === 0 ? 1 : plan.kids.length;
   const heirs = legalHeirs(hasSpouse, heirKids);
-  const insuranceTotal = h.policies.reduce((a, p) => a + (p.benefit || 0), 0) || plan.risk.deathInsurance || 0;
+  const insuranceTotal =
+    insRows.reduce((a, x) => a + x.deathBenefit, 0) +
+    extraPolicies.reduce((a, { p }) => a + (p.benefit || 0), 0) +
+    (plan.risk.deathInsurance || 0);
   const estate = totalAssets - totalDebts + Math.max(0, insuranceTotal - 5_000_000 * heirs.count);
   const tax = estimateInheritanceTax(estate, hasSpouse, heirKids);
 
@@ -146,6 +160,7 @@ export default function HandoverPage() {
   const phases = buildSurvivorPhases(death.rows);
   const deathRow = death.rows.find((r) => r.age === plan.curAge);
   const hasFamily = hasSpouse || plan.kids.length > 0;
+  const steps = buildAfterDeathSteps(plan, { hasFamily, inheritanceTaxable: tax.taxable > 0 });
 
   const setWhere = (key: string, v: string) => upd({ where: { ...h.where, [key]: v } });
   const updPolicy = (i: number, p: Partial<HandoverPolicy>) =>
@@ -153,20 +168,9 @@ export default function HandoverPage() {
   const updContact = (i: number, p: Partial<HandoverContact>) =>
     upd({ contacts: h.contacts.map((x, j) => (j === i ? { ...x, ...p } : x)) });
 
-  const importPolicies = () => {
-    const fromIns = plan.ins
-      .map((raw) => normalizeInsurance(raw as never, plan.curAge, plan.endAge))
-      .filter((p) => p.enabled)
-      .map((p) => ({
-        company: [p.company, p.name].filter(Boolean).join(" "),
-        kind: HAS.incomeProt(p.type) && p.incomeProtM > 0 ? `${typeLabel(p.type)}（月${p.incomeProtM / 10000}万円）` : typeLabel(p.type),
-        insured: p.insured,
-        beneficiary: "",
-        benefit: HAS.death(p.type) ? p.deathBenefit : 0,
-        contact: "",
-      }));
-    upd({ policies: [...h.policies, ...fromIns] });
-  };
+  // 受取人は保険そのものの情報なので、入力画面の保険に書き戻す
+  const setBeneficiary = (index: number, v: string) =>
+    setField("ins", insList.map((p, i) => (i === index ? { ...p, beneficiary: v } : p)));
 
   if (!hydrated) {
     return (
@@ -197,7 +201,8 @@ export default function HandoverPage() {
         <h1 className="text-2xl font-bold text-[#0a0a0a]">家族に渡す お金の引き継ぎ書</h1>
         <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/65">
           もしものとき、家族が「どこに何があるか」「当面のお金はどうなるか」「何をいつまでにやるか」がわかる書類です。
-          金額はシミュレーターの入力から自動で入ります。下の欄に金融機関名や連絡先を足して、PDFで保存・印刷してください。
+          財産・ローン・保険・毎月の引き落とし・勤務先などは、シミュレーターに入れた内容から自動で入ります。
+          足りないところ（金融機関名・受取人・電話番号など）を下の欄に足して、PDFで保存・印刷してください。
         </p>
         <div className="mt-3 rounded-lg px-3 py-2 text-[11px] leading-relaxed" style={{ background: "#fff8e7", border: "1.5px solid #d4a01760" }}>
           <b>口座番号・暗証番号・パスワードは書かないでください。</b>
@@ -236,14 +241,15 @@ export default function HandoverPage() {
             <TextField label="あなたの名前" value={h.author} onChange={(v) => upd({ author: v })} placeholder="例：佐藤 太郎" />
           </FormCard>
 
-          <FormCard no="2" title="財産・ローンの保管場所" note="金額は入力済みの内容から自動で入ります。どこの金融機関にあるかを書いてください。">
+          <FormCard no="2" title="財産・ローンの保管場所" note="金額と内訳は入力済みの内容から自動で入ります。どこの金融機関にあるかを書いてください。">
             {inventory.filter((r) => r.amount > 0 && !r.key.startsWith("extra-")).map((r) => (
               <TextField
                 key={r.key}
                 label={`${r.label}（${man(r.amount)}）`}
-                value={h.where[r.key] ?? ""}
+                value={whereOf(r.key, r.prefill)}
                 onChange={(v) => setWhere(r.key, v)}
                 placeholder={r.placeholder}
+                hint={r.detail || undefined}
               />
             ))}
             {inventory.every((r) => r.amount <= 0) ? (
@@ -263,11 +269,36 @@ export default function HandoverPage() {
             <AddBtn label="財産を追加" onClick={() => upd({ extraAssets: [...h.extraAssets, { label: "", where: "", amount: 0 }] })} />
           </FormCard>
 
-          <FormCard no="3" title="保険" note="生命保険・医療保険・火災保険など。受取人が今の家族になっているかも確認しましょう。">
-            {h.policies.map((p, i) => (
+          <FormCard no="3" title="保険" note="「入力」→「支出」→「保険」の内容が自動で入ります。受取人と、証券の保管場所・担当者を足してください。">
+            {insRows.map((x) => (
+              <div key={x.index} className="flex flex-col gap-2 rounded-lg p-2" style={{ background: "#f0f0ee" }}>
+                <p className="text-[12px] font-bold">
+                  {x.company || "（保険名未記入）"}　<span className="font-normal text-[#0a0a0a]/60">{x.kind}</span>
+                </p>
+                <p className="text-[11px] leading-relaxed text-[#0a0a0a]/70">
+                  契約者 {x.contractor}・被保険者 {x.insured}
+                  {x.benefit ? `／${x.benefit}` : ""}
+                  {x.premiumM > 0 ? `／保険料 月${Math.round(x.premiumM).toLocaleString()}円` : ""}
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <TextField label="受取人" value={x.beneficiary} onChange={(v) => setBeneficiary(x.index, v)} placeholder="例：妻、長男" />
+                  <TextField
+                    label="証券の保管場所・担当者"
+                    value={whereOf(`ins-${x.index}`)}
+                    onChange={(v) => setWhere(`ins-${x.index}`, v)}
+                    placeholder="例：書斎の引き出し。担当 ○○さん"
+                  />
+                </div>
+              </div>
+            ))}
+            {!insRows.length ? (
+              <p className="text-[11px] text-[#0a0a0a]/55">「入力」→「支出」→「保険」に保険を入れると、ここに自動で出ます。</p>
+            ) : null}
+            <p className="mt-1 text-[11px] font-bold">一覧にない保険（勤務先の団体保険・クレジットカード付帯の保険など）</p>
+            {extraPolicies.map(({ p, i }) => (
               <div key={i} className="grid grid-cols-1 gap-2 rounded-lg p-2 sm:grid-cols-2" style={{ background: "#f0f0ee" }}>
                 <TextField label="保険会社・商品名" value={p.company} onChange={(v) => updPolicy(i, { company: v })} />
-                <TextField label="種類" value={p.kind} onChange={(v) => updPolicy(i, { kind: v })} placeholder="例：定期保険、医療保険" />
+                <TextField label="種類" value={p.kind} onChange={(v) => updPolicy(i, { kind: v })} placeholder="例：団体定期保険" />
                 <TextField label="被保険者" value={p.insured} onChange={(v) => updPolicy(i, { insured: v })} />
                 <TextField label="受取人" value={p.beneficiary} onChange={(v) => updPolicy(i, { beneficiary: v })} />
                 <NumberField label="死亡保険金" value={p.benefit} unit="円" onChange={(v) => updPolicy(i, { benefit: v })} />
@@ -277,13 +308,20 @@ export default function HandoverPage() {
                 </button>
               </div>
             ))}
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <AddBtn label="保険を追加" onClick={() => upd({ policies: [...h.policies, { company: "", kind: "", insured: "", beneficiary: "", benefit: 0, contact: "" }] })} />
-              {plan.ins.length ? <AddBtn label={`入力画面の保険（${plan.ins.length}件）を取り込む`} onClick={importPolicies} /> : null}
-            </div>
+            <AddBtn label="一覧にない保険を追加" onClick={() => upd({ policies: [...h.policies, { company: "", kind: "", insured: "本人", beneficiary: "", benefit: 0, contact: "" }] })} />
           </FormCard>
 
-          <FormCard no="4" title="連絡先" note="困ったときに家族が連絡する相手">
+          <FormCard no="4" title="連絡先" note="勤務先と保険会社は入力済みの内容から出しています。電話番号などを足してください。">
+            {contactsAuto.map((c) => (
+              <TextField
+                key={c.key}
+                label={`${c.role}：${c.name}`}
+                value={whereOf(c.key)}
+                onChange={(v) => setWhere(c.key, v)}
+                placeholder="電話番号・部署・担当者名など"
+                hint={c.why}
+              />
+            ))}
             {h.contacts.map((c, i) => (
               <div key={i} className="grid grid-cols-1 gap-2 rounded-lg p-2 sm:grid-cols-3" style={{ background: "#f0f0ee" }}>
                 <SelectField
@@ -362,7 +400,7 @@ export default function HandoverPage() {
           <div className="mt-5 rounded-lg p-3 text-[12px] leading-relaxed" style={{ border: `1.5px solid ${INK}30` }}>
             <p className="mb-1 font-bold">この書類の見かた</p>
             <ol className="list-decimal pl-5">
-              <li>2ページ：お金がどこにあるか</li>
+              <li>2ページ：お金がどこにあるか・毎月の引き落とし</li>
               <li>3ページ：入っている保険</li>
               <li>4ページ：当面の生活費はどうなるか（遺族年金など）</li>
               <li>5ページ：いつまでに何をするか</li>
@@ -389,8 +427,11 @@ export default function HandoverPage() {
               <tbody>
                 {assets.map((r) => (
                   <tr key={r.key}>
-                    <Td>{r.label}</Td>
-                    <Td>{(r.key.startsWith("extra-") ? h.extraAssets[Number(r.key.slice(6))]?.where : h.where[r.key]) || <span className="text-[#0a0a0a]/35">（未記入）</span>}</Td>
+                    <Td>
+                      {r.label}
+                      {r.detail ? <div className="text-[10px] text-[#0a0a0a]/60">{r.detail}</div> : null}
+                    </Td>
+                    <Td>{(r.key.startsWith("extra-") ? h.extraAssets[Number(r.key.slice(6))]?.where : whereOf(r.key, r.prefill)) || <span className="text-[#0a0a0a]/35">（未記入）</span>}</Td>
                     <Td right>{man(r.amount)}</Td>
                   </tr>
                 ))}
@@ -417,8 +458,11 @@ export default function HandoverPage() {
               <tbody>
                 {debts.map((r) => (
                   <tr key={r.key}>
-                    <Td>{r.label}</Td>
-                    <Td>{h.where[r.key] || <span className="text-[#0a0a0a]/35">（未記入）</span>}</Td>
+                    <Td>
+                      {r.label}
+                      {r.detail ? <div className="text-[10px] text-[#0a0a0a]/60">{r.detail}</div> : null}
+                    </Td>
+                    <Td>{whereOf(r.key, r.prefill) || <span className="text-[#0a0a0a]/35">（未記入）</span>}</Td>
                     <Td right>{man(r.amount)}</Td>
                   </tr>
                 ))}
@@ -432,22 +476,62 @@ export default function HandoverPage() {
               住宅ローンには団体信用生命保険（団信）が付いている想定です。亡くなった場合、銀行に連絡すると残りのローンは保険で返済されます。
             </p>
           ) : null}
+          {payments.length ? (
+            <>
+              <p className="mb-2 mt-6 text-[12px] font-bold">毎月の引き落とし・積立（止める・名義を変える手続きが必要）</p>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <Th>内容</Th>
+                    <Th>手続きのめやす</Th>
+                    <Th right>月額</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((x) => (
+                    <tr key={x.label}>
+                      <Td>{x.label}</Td>
+                      <Td>{x.note}</Td>
+                      <Td right>{Math.round(x.monthly).toLocaleString()}円</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : null}
         </DocPage>
 
         <DocPage no={3} title="入っている保険">
-          {h.policies.length ? (
+          {insRows.length || extraPolicies.length || plan.risk.deathInsurance > 0 ? (
             <table className="w-full border-collapse">
               <thead>
                 <tr>
                   <Th>保険会社・商品</Th>
-                  <Th>種類</Th>
+                  <Th>種類・保障</Th>
                   <Th>被保険者 → 受取人</Th>
                   <Th right>死亡保険金</Th>
                 </tr>
               </thead>
               <tbody>
-                {h.policies.map((p, i) => (
-                  <tr key={i}>
+                {insRows.map((x) => (
+                  <tr key={`a-${x.index}`}>
+                    <Td>
+                      {x.company || "（未記入）"}
+                      {whereOf(`ins-${x.index}`) ? <div className="text-[10px] text-[#0a0a0a]/60">{whereOf(`ins-${x.index}`)}</div> : null}
+                    </Td>
+                    <Td>
+                      {x.kind}
+                      {x.benefit ? <div className="text-[10px] text-[#0a0a0a]/60">{x.benefit}</div> : null}
+                      {x.premiumM > 0 ? <div className="text-[10px] text-[#0a0a0a]/60">保険料 月{Math.round(x.premiumM).toLocaleString()}円（契約者 {x.contractor}）</div> : null}
+                    </Td>
+                    <Td>
+                      {x.insured} → {x.beneficiary || "—"}
+                    </Td>
+                    <Td right>{x.deathBenefit ? man(x.deathBenefit) : "—"}</Td>
+                  </tr>
+                ))}
+                {extraPolicies.map(({ p, i }) => (
+                  <tr key={`m-${i}`}>
                     <Td>
                       {p.company || "（未記入）"}
                       {p.contact ? <div className="text-[10px] text-[#0a0a0a]/60">{p.contact}</div> : null}
@@ -459,6 +543,14 @@ export default function HandoverPage() {
                     <Td right>{p.benefit ? man(p.benefit) : "—"}</Td>
                   </tr>
                 ))}
+                {plan.risk.deathInsurance > 0 && !extraPolicies.length ? (
+                  <tr>
+                    <Td>（一覧にない保険）</Td>
+                    <Td>勤務先の団体保険など</Td>
+                    <Td>本人 → —</Td>
+                    <Td right>{man(plan.risk.deathInsurance)}</Td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           ) : (
@@ -467,6 +559,7 @@ export default function HandoverPage() {
           <p className="mt-3 text-[11px] leading-relaxed text-[#0a0a0a]/70">
             保険金の請求は保険会社に連絡して行います（請求できる期限は一般に3年）。
             死亡保険金のうち「500万円 × 法定相続人の数」までは相続税がかかりません。
+            医療保険などの給付金で、本人が受け取る前に亡くなった分も請求できます。
           </p>
         </DocPage>
 
@@ -510,7 +603,7 @@ export default function HandoverPage() {
                       const names = [p.kiso ? "遺族基礎年金" : null, p.kosei ? "遺族厚生年金" : null, p.chukorei ? "中高齢寡婦加算" : null, p.prot ? "収入保障保険" : null].filter(Boolean).join("・");
                       return (
                         <tr key={p.from}>
-                          <Td>{sa(p.from)}〜{sa(p.to)}歳</Td>
+                          <Td>{p.from === p.to ? `${sa(p.from)}歳` : `${sa(p.from)}〜${sa(p.to)}歳`}</Td>
                           <Td>{names}</Td>
                           <Td right>{((p.kiso + p.kosei + p.chukorei + p.prot) / 12 / 10000).toFixed(1)}万円</Td>
                         </tr>
@@ -532,9 +625,11 @@ export default function HandoverPage() {
         </DocPage>
 
         <DocPage no={5} title="いつまでに何をするか">
-          <p className="mb-3 text-[11px] text-[#0a0a0a]/65">亡くなった日からの一般的な期限の目安です。済んだら □ に印を付けてください。</p>
+          <p className="mb-3 text-[11px] text-[#0a0a0a]/65">
+            亡くなった日からの一般的な期限の目安です。入力内容（証券口座・住宅ローン・DCなど）に合わせて、必要な手続きを足しています。済んだら □ に印を付けてください。
+          </p>
           <div className="flex flex-col gap-3">
-            {AFTER_DEATH_STEPS.map((s) => (
+            {steps.map((s) => (
               <section key={s.when}>
                 <p className="mb-1 inline-block rounded px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: INK }}>
                   {s.when}
@@ -554,10 +649,20 @@ export default function HandoverPage() {
 
         <DocPage no={6} title="連絡先・遺言書・伝えたいこと">
           <p className="mb-2 text-[12px] font-bold">連絡先</p>
-          {h.contacts.length ? (
+          {contactsAuto.length || extraContacts.length ? (
             <table className="w-full border-collapse">
               <tbody>
-                {h.contacts.map((c, i) => (
+                {contactsAuto.map((c) => (
+                  <tr key={c.key}>
+                    <Td>{c.role}</Td>
+                    <Td>
+                      {c.name}
+                      <div className="text-[10px] text-[#0a0a0a]/60">{c.why}</div>
+                    </Td>
+                    <Td right>{whereOf(c.key) || <span className="text-[#0a0a0a]/35">（未記入）</span>}</Td>
+                  </tr>
+                ))}
+                {extraContacts.map((c, i) => (
                   <tr key={i}>
                     <Td>{c.role}</Td>
                     <Td>{c.name}</Td>

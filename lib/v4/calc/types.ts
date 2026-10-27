@@ -94,6 +94,7 @@ export interface Insurance {
   company: string;              // 保険会社（引き継ぎ書用・計算には使わない）
   type: InsuranceType;
   insured: Insured;             // 被保険者（この人が亡くなると死亡保険金）
+  beneficiary: string;          // 受取人（引き継ぎ書用・計算には使わない）
   contractor: "本人" | "配偶者"; // 契約者＝保険料を払い、満期金・年金を受け取る人（保険料控除・一時所得の対象）
   payMode: "monthly" | "yearly" | "single"; // 月払・年払・一時払
   premM: number;                // 保険料（月払は月額、年払は年額、一時払は払込額）
