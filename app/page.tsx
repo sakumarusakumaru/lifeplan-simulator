@@ -185,6 +185,9 @@ export default function LandingPage() {
         </button>
 
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
+          <Link href="/lite" className="font-bold text-[#c8383a] underline hover:text-[#0a0a0a]">
+            → まずは3分で試す（Lite版）
+          </Link>
           <Link href="/guide" className="font-bold text-[#0a0a0a] underline hover:text-[#c8383a]">
             → 使い方ガイドを見る
           </Link>
