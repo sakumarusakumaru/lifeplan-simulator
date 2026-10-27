@@ -205,6 +205,13 @@ export interface HandoverInput {
   message: string;                  // 家族へのひとこと
 }
 
+// 相続税の試算の設定
+export interface InheritSettings {
+  selfSharePct: number;  // 夫婦の財産（現金・運用資産・自宅）のうち本人名義の割合（%）。残りは配偶者名義
+  spouseMode: "legal" | "all" | "cap16" | "none" | "best"; // 一次相続で配偶者が相続する分: 法定相続分／全部／1億6千万円まで／相続しない／一次＋二次が最も少ない割合
+  smallLand: boolean;    // 自宅の土地に小規模宅地等の特例（330㎡まで80%減）を使う
+}
+
 export interface RiskInput {
   who: "self" | "spouse";       // 亡くなる人
   deathAge: number;             // 亡くなる時の本人の年齢（本人基準）
@@ -343,6 +350,9 @@ export interface PlanInput {
 
   // 家族に渡す「お金の引き継ぎ書」
   handover: HandoverInput;
+
+  // 相続税の試算の設定（未設定なら既定値）
+  inheritSet?: InheritSettings;
 
   // 運用の振れ幅（モンテカルロ）のリスク水準
   mcRisk: "stable" | "balanced" | "aggressive";

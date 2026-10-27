@@ -156,6 +156,21 @@ export default function RiskPage() {
           </p>
         </div>
 
+        <Link
+              href="/v4/handover"
+              className="mb-6 flex items-center gap-3 rounded-xl px-4 py-4 transition-colors hover:bg-[#f6fff8]"
+              style={{ background: "#ffffff", border: "2.5px solid #22863a" }}
+            >
+              <span className="text-2xl" aria-hidden>✉</span>
+              <span className="flex flex-1 flex-col">
+                <span className="text-sm font-bold text-[#0a0a0a]">家族に渡す「お金の引き継ぎ書」をつくる</span>
+                <span className="text-[11px] leading-relaxed text-[#0a0a0a]/65">
+                  資産・負債・保険・毎月の契約・デジタル・重要書類の場所・手続きを、入力済みの内容から自動でまとめ、A4のPDFで保存・印刷できます
+                </span>
+              </span>
+              <span className="text-sm font-bold" aria-hidden>→</span>
+            </Link>
+
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[300px_1fr]">
           {/* 条件 */}
           <aside className="flex flex-col gap-2 self-start rounded-xl bg-white p-4" style={{ border: `2.5px solid ${INK}` }}>
@@ -382,20 +397,7 @@ export default function RiskPage() {
 
             <InheritanceGuide plan={plan} base={base} real={real} />
 
-            <Link
-              href="/v4/handover"
-              className="mb-8 flex items-center gap-3 rounded-xl px-4 py-4 transition-colors hover:bg-[#f6fff8]"
-              style={{ background: "#ffffff", border: "2.5px solid #22863a" }}
-            >
-              <span className="text-2xl" aria-hidden>✉</span>
-              <span className="flex flex-1 flex-col">
-                <span className="text-sm font-bold text-[#0a0a0a]">家族に渡す「お金の引き継ぎ書」をつくる</span>
-                <span className="text-[11px] leading-relaxed text-[#0a0a0a]/65">
-                  お金のありか・保険・遺族年金の見通し・亡くなった後の手続きを、A4のPDFにまとめて保存・印刷できます
-                </span>
-              </span>
-              <span className="text-sm font-bold" aria-hidden>→</span>
-            </Link>
+
 
             <Section no="05" title="計算の前提 ／ ASSUMPTIONS">
               <ul className="flex flex-col gap-1.5 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={{ border: `2px solid ${INK}18` }}>

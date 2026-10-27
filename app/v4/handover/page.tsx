@@ -32,7 +32,7 @@ import {
   type FieldDef,
   type Side,
 } from "@/lib/v4/calc/handoverSchema";
-import { estimateInheritanceTax, legalHeirs } from "@/lib/v4/calc/inheritance";
+import { inheritanceTax, legalHeirs, planInheritance } from "@/lib/v4/calc/inheritance";
 import { normalizeInsurance } from "@/lib/v4/calc/insurance";
 import { requiredCoverage, simulate } from "@/lib/v4/calc/simulate";
 import { buildSurvivorPhases } from "@/lib/v4/calc/survivor";
@@ -230,8 +230,10 @@ export default function HandoverPage() {
   const heirs = legalHeirs(hasSpouse, heirKids);
   const insuranceTotal =
     insRows.reduce((a, x) => a + x.deathBenefit, 0) + extraPolicies.reduce((a, { p }) => a + (p.benefit || 0), 0) + (plan.risk.deathInsurance || 0);
+  // 引き継ぎ書に書いた財産・負債で計算（配偶者の取得割合・名義の割合は「もしも・相続」の設定を使う）
+  const inh = planInheritance(plan, base.rows[0], hasSpouse, heirKids);
   const estate = totalAssets - totalDebts + Math.max(0, insuranceTotal - 5_000_000 * heirs.count);
-  const tax = estimateInheritanceTax(estate, hasSpouse, heirKids);
+  const tax = inheritanceTax(estate * ((plan.inheritSet?.selfSharePct ?? 100) / 100), hasSpouse, heirKids, inh.spouseRatio, plan.kids.map((k) => plan.curAge - k.offset));
 
   const phases = buildSurvivorPhases(death.rows);
   const deathRow = death.rows.find((r) => r.age === plan.curAge);
@@ -464,7 +466,10 @@ export default function HandoverPage() {
               <p className="text-lg font-bold tabular-nums" style={{ color: tax.payable > 0 ? RED : GREEN }}>
                 {tax.taxable > 0 ? man(tax.payable) : "かからない見込み"}
               </p>
-              <p className="text-[9px] text-[#0a0a0a]/55">基礎控除 {man(tax.deduction)}</p>
+              <p className="text-[9px] text-[#0a0a0a]/55">
+                総額 {man(tax.totalTax)}・基礎控除 {man(tax.deduction)}
+                {hasSpouse && heirKids > 0 && inh.second ? `。配偶者がその後亡くなると、二次相続でさらに約${man(inh.second.payable)}` : ""}
+              </p>
             </div>
           </div>
           <p className="mb-1 mt-5 text-[11px] font-bold">財産と負債の一覧（{todayStr}時点）</p>

@@ -3,9 +3,10 @@
 import { useState } from "react";
 
 import { ageOn } from "@/lib/v4/calc/age";
-import { basicDeduction, estateAt, estimateInheritanceTax, legalHeirs } from "@/lib/v4/calc/inheritance";
+import { DEFAULT_INHERIT, basicDeduction, legalHeirs, planInheritance } from "@/lib/v4/calc/inheritance";
 import { deflator } from "@/lib/v4/calc/realValue";
-import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
+import type { InheritSettings, PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
+import { usePlanStore } from "@/store/v4/plan-store";
 
 const INK = "#0a0a0a";
 const RED = "#c8383a";
@@ -52,8 +53,8 @@ const STAGES: Stage[] = [
     title: "親の相続と、自分の資産の棚卸し",
     points: [
       "親の相続が先に来ることが多い時期。実家や親の口座・保険の把握、相続人どうしの話し合いを早めに",
-      "自分の資産を一覧にして、相続税の基礎控除（3,000万円＋600万円×法定相続人）と比べてみる",
-      "生命保険金には「500万円×法定相続人」の非課税枠がある",
+      "自分の資産を一覧にして、相続税の基礎控除（3,000万円＋600万円×法定相続人）と比べてみる。夫婦の財産は名義ごとに分けて考える",
+      "生命保険金・死亡退職金には、それぞれ「500万円×法定相続人」の非課税枠がある",
     ],
   },
   {
@@ -109,16 +110,26 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
   const [key, setKey] = useState(current.key);
   const stage = STAGES.find((s) => s.key === key) ?? current;
 
+  const setField = usePlanStore((st) => st.setField);
+  const set = { ...DEFAULT_INHERIT, ...(plan.inheritSet ?? {}) };
+  const updSet = (p: Partial<InheritSettings>) => setField("inheritSet", { ...set, ...p });
+  const [showDetail, setShowDetail] = useState(false);
+
   const at = (age: number) => {
     const a = Math.min(plan.endAge, Math.max(plan.curAge, age));
     const row = base.rows.find((r) => r.age === a) ?? base.rows[0];
-    const estate = row ? estateAt(plan, row, heirs.count, real ? deflator(plan, a) : 1) : 0;
-    return { age: a, ...estimateInheritanceTax(estate, hasSpouse, kids) };
+    const p = planInheritance(plan, row, hasSpouse, kids, real ? deflator(plan, a) : 1);
+    return { age: a, estate: p.breakdown.total, deduction: p.first.deduction, p };
   };
   const repAge = stage.key === current.key ? plan.curAge : stage.rep;
   const est = at(repAge);
+  const P = est.p;
   const timeline = stages.map((s) => at(s.key === current.key ? plan.curAge : s.rep));
   const maxEstate = Math.max(basicDeduction(heirs.count), ...timeline.map((t) => t.estate), 1);
+  const pct = (r: number) => `${Math.round(r * 100)}%`;
+  const b = P.breakdown;
+  const twoStep = hasSpouse && kids > 0;
+  const best = P.scan.find((x) => x.ratio === P.bestRatio);
 
   return (
     <section className="mb-8">
@@ -191,25 +202,169 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
 
       <div className="mt-2 rounded-xl bg-white p-4" style={{ border: `2.5px solid ${INK}` }}>
         <p className="text-sm font-bold text-[#0a0a0a]">{stage.title}</p>
+        {/* 試算の条件 */}
+        <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg p-2.5 sm:grid-cols-3" style={{ background: "#f7f7f5" }}>
+          {hasSpouse ? (
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-[#0a0a0a]/70">本人名義の財産の割合</span>
+              <span className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={set.selfSharePct}
+                  onChange={(e) => updSet({ selfSharePct: Number(e.target.value) })}
+                  className="flex-1"
+                />
+                <b className="w-10 text-right text-[12px] tabular-nums">{set.selfSharePct}%</b>
+              </span>
+              <span className="text-[9px] leading-snug text-[#0a0a0a]/55">現金・運用資産・自宅のうち本人名義の分。残りは配偶者の財産（二次相続で使う）</span>
+            </label>
+          ) : null}
+          {twoStep ? (
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-[#0a0a0a]/70">一次相続で配偶者が相続する分</span>
+              <select
+                value={set.spouseMode}
+                onChange={(e) => updSet({ spouseMode: e.target.value as InheritSettings["spouseMode"] })}
+                className="rounded-md bg-white px-2 py-1.5 text-[12px] font-bold"
+                style={{ border: `2px solid ${INK}` }}
+              >
+                <option value="legal">法定相続分（1/2）</option>
+                <option value="all">全部</option>
+                <option value="cap16">1億6,000万円まで</option>
+                <option value="none">相続しない（子だけ）</option>
+                <option value="best">一次＋二次の税が最も少ない割合</option>
+              </select>
+            </label>
+          ) : null}
+          {plan.homeOwned ? (
+            <label className="flex items-start gap-2 self-center text-[11px] font-bold">
+              <input type="checkbox" checked={set.smallLand} onChange={(e) => updSet({ smallLand: e.target.checked })} className="mt-0.5" />
+              <span>
+                自宅の土地に小規模宅地等の特例を使う
+                <span className="block text-[9px] font-normal text-[#0a0a0a]/55">配偶者が相続すると330㎡まで評価が8割減</span>
+              </span>
+            </label>
+          ) : null}
+        </div>
+
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div className="rounded-lg p-2.5" style={{ background: "#f0f0ee" }}>
-            <p className="text-[10px] font-bold text-[#0a0a0a]/55">{est.age}歳時点の財産の目安</p>
-            <p className="text-base font-bold tabular-nums">{man(est.estate)}</p>
+            <p className="text-[10px] font-bold text-[#0a0a0a]/55">{est.age}歳で亡くなった場合の相続財産</p>
+            <p className="text-base font-bold tabular-nums">{man(b.total)}</p>
+            <p className="text-[9px] text-[#0a0a0a]/50">基礎控除 {man(P.first.deduction)}</p>
           </div>
           <div className="rounded-lg p-2.5" style={{ background: "#f0f0ee" }}>
-            <p className="text-[10px] font-bold text-[#0a0a0a]/55">基礎控除</p>
-            <p className="text-base font-bold tabular-nums">{man(est.deduction)}</p>
+            <p className="text-[10px] font-bold text-[#0a0a0a]/55">相続税の総額（軽減の前）</p>
+            <p className="text-base font-bold tabular-nums">{P.first.taxable > 0 ? man(P.first.totalTax) : "0円"}</p>
+            <p className="text-[9px] text-[#0a0a0a]/50">分け方に関係なく決まる、家族全体の税</p>
           </div>
-          <div className="col-span-2 rounded-lg p-2.5 sm:col-span-1" style={{ background: est.payable > 0 ? "#fff1f1" : "#f0fff4" }}>
-            <p className="text-[10px] font-bold text-[#0a0a0a]/55">相続税の目安（家族全体）</p>
-            <p className="text-base font-bold tabular-nums" style={{ color: est.payable > 0 ? RED : GREEN }}>
-              {est.taxable > 0 ? man(est.payable) : "かからない見込み"}
+          <div className="col-span-2 rounded-lg p-2.5 sm:col-span-1" style={{ background: P.first.payable > 0 ? "#fff1f1" : "#f0fff4" }}>
+            <p className="text-[10px] font-bold text-[#0a0a0a]/55">{twoStep ? "一次相続で払う税" : "実際に払う税"}</p>
+            <p className="text-base font-bold tabular-nums" style={{ color: P.first.payable > 0 ? RED : GREEN }}>
+              {P.first.taxable <= 0 ? "かからない見込み" : P.first.payable > 0 ? man(P.first.payable) : "0円（軽減で）"}
             </p>
-            {est.taxable > 0 && hasSpouse ? (
-              <p className="text-[9px] text-[#0a0a0a]/50">配偶者が法定相続分を相続した場合（税額軽減後）</p>
+            {P.first.spouseRelief > 0 || P.first.minorRelief > 0 ? (
+              <p className="text-[9px] text-[#0a0a0a]/50">
+                {P.first.spouseRelief > 0 ? `配偶者の税額軽減 −${man(P.first.spouseRelief)}` : ""}
+                {P.first.minorRelief > 0 ? `　未成年者控除 −${man(P.first.minorRelief)}` : ""}
+              </p>
             ) : null}
           </div>
         </div>
+
+        {twoStep ? (
+          <div className="mt-2 rounded-lg p-3" style={{ border: `2px solid ${RED}50`, background: "#fffafa" }}>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div>
+                <p className="text-[10px] font-bold text-[#0a0a0a]/55">二次相続（配偶者がその後亡くなったとき）</p>
+                <p className="text-base font-bold tabular-nums" style={{ color: (P.second?.payable ?? 0) > 0 ? RED : GREEN }}>
+                  {(P.second?.payable ?? 0) > 0 ? man(P.second?.payable ?? 0) : "かからない見込み"}
+                </p>
+                <p className="text-[9px] text-[#0a0a0a]/50">
+                  配偶者の財産 {man(P.secondEstate)}・相続人は子{kids}人
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-[#0a0a0a]/55">一次＋二次の合計</p>
+                <p className="text-lg font-bold tabular-nums" style={{ color: P.total > 0 ? RED : GREEN }}>
+                  {man(P.total)}
+                </p>
+                <p className="text-[9px] text-[#0a0a0a]/50">配偶者が {pct(P.spouseRatio)} 相続した場合</p>
+              </div>
+              {best ? (
+                <div className="col-span-2 sm:col-span-1">
+                  <p className="text-[10px] font-bold text-[#0a0a0a]/55">合計が最も少ない分け方</p>
+                  <p className="text-base font-bold tabular-nums" style={{ color: GREEN }}>
+                    配偶者 {pct(best.ratio)}：{man(best.total)}
+                  </p>
+                  {best.total < P.total ? <p className="text-[9px] text-[#0a0a0a]/50">いまの分け方より {man(P.total - best.total)} 少ない</p> : null}
+                </div>
+              ) : null}
+            </div>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full text-[10px] tabular-nums">
+                <thead>
+                  <tr className="text-[#0a0a0a]/55">
+                    <th className="py-1 text-left font-bold">配偶者が相続する割合</th>
+                    {P.scan.filter((_, i) => i % 5 === 0).map((x) => (
+                      <th key={x.ratio} className="py-1 text-right font-bold">
+                        {pct(x.ratio)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["first", "second", "total"] as const).map((k) => (
+                    <tr key={k} className="border-t" style={{ borderColor: "#0a0a0a15" }}>
+                      <td className="py-1 font-bold">{k === "first" ? "一次相続" : k === "second" ? "二次相続" : "合計"}</td>
+                      {P.scan.filter((_, i) => i % 5 === 0).map((x) => (
+                        <td key={x.ratio} className="py-1 text-right" style={{ fontWeight: k === "total" ? 700 : 400 }}>
+                          {man(x[k])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-1 text-[9px] leading-relaxed text-[#0a0a0a]/55">
+              一次相続で配偶者が多く相続するほど一次の税は軽くなりますが、その分が二次相続で子にかかります。二次相続は、配偶者の財産がその後増えも減りもしない前提の目安です（実際は生活費で減ったり、運用で増えたりします）。
+            </p>
+          </div>
+        ) : null}
+
+        <button type="button" onClick={() => setShowDetail((v) => !v)} className="mt-2 text-[11px] font-bold underline">
+          {showDetail ? "計算の内訳を閉じる" : "計算の内訳を見る"}
+        </button>
+        {showDetail ? (
+          <table className="mt-1 w-full text-[11px] tabular-nums">
+            <tbody>
+              {[
+                ["現金・運用資産（本人名義）", b.financial],
+                [`自宅${b.homeLandCut > 0 ? `（小規模宅地等の特例 −${man(b.homeLandCut)} の後）` : ""}`, b.home],
+                ["投資用不動産", b.realEstate],
+                [`死亡保険金 ${man(b.insuranceGross)} のうち非課税枠（500万円×${heirs.count}人）を超える分`, b.insurance],
+                [`死亡退職金・DC死亡一時金 ${man(b.retirementGross)} のうち非課税枠を超える分`, b.retirement],
+                [`ローン（債務）${plan.risk?.danshin && plan.useHomeLoan ? "。住宅ローンは団信で0になるので含めない" : ""}`, -b.loans],
+                ["＝ 相続財産（課税価格）", b.total],
+                [`− 基礎控除（3,000万円＋600万円×${heirs.count}人）`, -P.first.deduction],
+                ["＝ 課税遺産総額", P.first.taxable],
+                ["相続税の総額（法定相続分で分けたと仮定して計算）", P.first.totalTax],
+                ["− 配偶者の税額軽減", -P.first.spouseRelief],
+                ["− 未成年者控除", -P.first.minorRelief],
+                ["＝ 一次相続で払う税", P.first.payable],
+              ].map(([label, v]) => (
+                <tr key={label as string} className="border-t" style={{ borderColor: "#0a0a0a10" }}>
+                  <td className="py-1 pr-2">{label as string}</td>
+                  <td className="whitespace-nowrap py-1 text-right font-bold">{man(v as number)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : null}
         <ul className="mt-3 flex flex-col gap-1.5">
           {stage.points.map((p) => (
             <li key={p} className="flex gap-2 text-[12px] leading-relaxed text-[#0a0a0a]/80">
@@ -219,8 +374,8 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
           ))}
         </ul>
         <p className="mt-3 text-[10px] leading-relaxed text-[#0a0a0a]/50">
-          ※ 自宅・不動産は購入価格から築年数で減価した目安で、実際の相続税評価（路線価・固定資産税評価額）や小規模宅地等の特例は入れていません。
-          子がいない場合の親・兄弟姉妹の相続、生前贈与の足し戻し、二次相続も含めていない概算です。実際の判断は税理士にご相談ください。
+          ※ 自宅・不動産は購入価格から築年数で減価した目安で、実際の相続税評価（土地は路線価、建物は固定資産税評価額）とは違います。
+          小規模宅地等の特例は面積330㎡以内・配偶者が相続する前提です。子がいない場合の親・兄弟姉妹の相続、生前贈与の足し戻し、葬式費用、相次相続控除は含めていない概算です。実際の判断は税理士にご相談ください。
         </p>
       </div>
     </section>
