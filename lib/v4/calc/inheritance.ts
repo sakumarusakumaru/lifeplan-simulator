@@ -5,6 +5,7 @@
 //   配偶者の税額軽減: 配偶者が法定相続分（または1億6,000万円）まで相続した分は税がかからない
 // 含めないもの: 小規模宅地等の特例（自宅の土地の評価減）、路線価・固定資産税評価額での評価、
 //   生前贈与の加算、債務・葬式費用、二次相続
+import { normalizeInsurance, selfDeathBenefitAt } from "./insurance";
 import { computeRealEstateValue } from "./finance";
 import type { PlanInput, YearlyResult } from "./types";
 
@@ -82,7 +83,9 @@ export function estateAt(plan: PlanInput, row: YearlyResult, heirCount: number, 
     : 0;
   const re = plan.res.reduce((acc, r) => acc + computeRealEstateValue({ ...r, currentValueOverride: 0 }, year), 0);
   const loans = row.hlBal + row.reD.reduce((acc, d) => acc + d.bal, 0);
-  const insuranceOver = Math.max(0, (plan.risk?.deathInsurance ?? 0) - 500 * MAN * heirCount);
+  const insList = (plan.ins ?? []).map((p) => normalizeInsurance(p as never, plan.curAge, plan.endAge));
+  const deathBenefit = (plan.risk?.deathInsurance ?? 0) + selfDeathBenefitAt(insList, row.age);
+  const insuranceOver = Math.max(0, deathBenefit - 500 * MAN * heirCount);
   // 不動産・保険は名目のモデルなので、「今の価値」表示なら同じく割り戻す
   return financial + (home + re + insuranceOver) / deflate - loans;
 }

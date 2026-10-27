@@ -5,6 +5,7 @@ import { Field } from "./Field";
 interface Option<T extends string> {
   value: T;
   label: string;
+  group?: string; // 指定すると、同じ group の選択肢をまとめて見出しを付ける
 }
 
 interface SelectFieldProps<T extends string> {
@@ -32,11 +33,23 @@ export function SelectField<T extends string>({
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
+        {options.some((o) => o.group)
+          ? [...new Set(options.map((o) => o.group ?? ""))].map((g) => (
+              <optgroup key={g} label={g}>
+                {options
+                  .filter((o) => (o.group ?? "") === g)
+                  .map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+              </optgroup>
+            ))
+          : options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
       </select>
     </Field>
   );

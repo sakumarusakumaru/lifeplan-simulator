@@ -281,6 +281,8 @@ export interface HouseholdTaxInput {
   hlDeductCredit: number; // 住宅ローン控除の控除可能額（0.7%×年末残高 等）
   // 本人に追加する所得控除（ひとり親控除・寡婦控除など）
   extraDeduction?: { income: number; jumin: number };
+  // 配偶者に追加する所得控除（生命保険料控除など）
+  spouseExtraDeduction?: { income: number; jumin: number };
 }
 
 // 配偶者と死別したときの控除
@@ -385,8 +387,9 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
   let jmSp = 0;
   if (sp && inp.spouse) {
     const ded = sp.shaho + inp.spouse.dcSelfContribY;
-    const t = Math.max(0, sp.goukei - kisoKojoIncomeTax(sp.goukei, year) - ded);
-    const tj = Math.max(0, sp.goukei - kisoKojoJumin(sp.goukei) - ded);
+    const spExtra = inp.spouseExtraDeduction ?? { income: 0, jumin: 0 };
+    const t = Math.max(0, sp.goukei - kisoKojoIncomeTax(sp.goukei, year) - ded - spExtra.income);
+    const tj = Math.max(0, sp.goukei - kisoKojoJumin(sp.goukei) - ded - spExtra.jumin);
     itSp = calcShotokuzei(t) * fk;
     jmSp = tj * 0.1 + (sp.goukei > 45 * MAN ? 5000 : 0);
   }

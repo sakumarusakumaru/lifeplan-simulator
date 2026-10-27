@@ -1,6 +1,7 @@
 import { ageOn, parseYMD, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
-import { EDU, calcInsuranceY, pmt } from "./finance";
+import { EDU, pmt } from "./finance";
+import { createInsuranceState, insuranceDeduction, insuranceYear, normalizeInsurance } from "./insurance";
 import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable } from "./pension";
 import {
   DC_MAX_CONTRIB_AGE,
@@ -167,6 +168,11 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
 
   const lumps: LumpRecord[] = [];
 
+  // 保険（旧データの種類名もここで読み替える）
+  const insList = (input.ins ?? []).map((p) => normalizeInsurance(p as never, input.curAge, input.endAge));
+  const insState = createInsuranceState(insList, input.curAge);
+  const insDeath = deathOn ? { who: selfDies ? ("本人" as const) : ("配偶者" as const), age: deathAge } : null;
+
   // 子どもを年上から並べる（児童手当の「第何子」判定用）
   const kidsByAge = [...input.kids].sort((a, b) => a.offset - b.offset);
 
@@ -180,6 +186,15 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const selfGone = selfDies && dead;
     const spouseGone = spouseDies && dead;
     let deathLump = 0;
+    const insY = insuranceYear(
+      insList,
+      insState,
+      age,
+      infl,
+      input.kids.map((k) => k.offset),
+      insDeath,
+    );
+    deathLump += insY.deathLump;
     if (deathOn && age === deathAge) {
       deathLump += (risk.deathInsurance || 0) + (opts.extraInsurance ?? 0);
       // 団体信用生命保険: 本人が亡くなると住宅ローンの残債は0
@@ -276,6 +291,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         penIdx,
       );
       if (age < risk.incomeProtEndAge) incomeProt = (risk.incomeProtM || 0) * 12;
+      incomeProt += insY.incomeProt;
     }
 
     // ── 児童手当 ──
@@ -406,6 +422,13 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     let marginal = input.taxRate / 100;
     const ordinaryGross = job + side + spouseJob + pen + dcAnnuity + sevAnnuity;
     const kidsDependent = kidAgesNow.some((a) => a <= 22);
+    // 生命保険料控除・地震保険料控除（保険料を払う人＝契約者ごと）
+    const insDedSelf = insuranceDeduction(insY.dedPrem["本人"], year, kidsDependent);
+    const insDedSpouse = insuranceDeduction(insY.dedPrem["配偶者"], year, kidsDependent);
+    const addDed = (a: { income: number; jumin: number } | undefined, b: { income: number; jumin: number }) => ({
+      income: (a?.income ?? 0) + b.income,
+      jumin: (a?.jumin ?? 0) + b.jumin,
+    });
     if (input.taxMode === "detailed" && selfGone) {
       // 本人が亡くなった後: 遺族（配偶者）だけで税・社会保険を計算
       if (spouseAge !== null) {
@@ -416,14 +439,14 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
             wageY: spouseJob,
             workStyle: spouseWorkStyle,
             penY: spousePenY,
-            otherShotokuY: reProfitTot,
+            otherShotokuY: reProfitTot + insY.taxable["本人"] + insY.taxable["配偶者"],
             dcSelfContribY: 0,
             dependentOfSpouse: false,
           },
           spouse: null,
           kidAges: kidAgesNow,
           hlDeductCredit: 0,
-          extraDeduction: widowDeduction(kidsDependent, survivorSex),
+          extraDeduction: addDed(widowDeduction(kidsDependent, survivorSex), addDed(insDedSelf, insDedSpouse)),
         });
         tax = tr.total;
         socialIns = tr.shahoSelf;
@@ -436,7 +459,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         wageY: job,
         workStyle: selfWorkStyle,
         penY: selfPenY + kakyuu + dcAnnuity + sevAnnuity,
-        otherShotokuY: side + reProfitTot,
+        otherShotokuY: side + reProfitTot + insY.taxable["本人"] + (spouseGone ? insY.taxable["配偶者"] : 0),
         dcSelfContribY: dcSelf,
         dependentOfSpouse: false,
       };
@@ -447,7 +470,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
               wageY: spouseJob,
               workStyle: spouseWorkStyle,
               penY: spousePenY,
-              otherShotokuY: 0,
+              otherShotokuY: insY.taxable["配偶者"],
               dcSelfContribY: 0,
               dependentOfSpouse:
                 input.spousePension.category === "dependent" &&
@@ -462,7 +485,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         spouse,
         kidAges: kidAgesNow,
         hlDeductCredit: hlCredit,
-        extraDeduction: spouseGone ? widowDeduction(kidsDependent, survivorSex) : undefined,
+        extraDeduction: spouseGone
+          ? addDed(widowDeduction(kidsDependent, survivorSex), addDed(insDedSelf, insDedSpouse))
+          : insDedSelf,
+        spouseExtraDeduction: insDedSpouse,
       });
       tax = tr.total;
       socialIns = tr.shahoSelf + tr.shahoSpouse;
@@ -472,7 +498,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       const rate = input.taxRate / 100;
       const penRate = (input.taxRatePen ?? 10) / 100;
       const raw =
-        (job + side + spouseJob + Math.max(0, reProfitTot) - dcSelf) * rate +
+        (job + side + spouseJob + Math.max(0, reProfitTot) - dcSelf + insY.taxable["本人"] + insY.taxable["配偶者"] -
+          insDedSelf.income - insDedSpouse.income) * rate +
         (pen + dcAnnuity + sevAnnuity) * penRate;
       hlDeduct = Math.min(Math.max(0, raw), hlCredit);
       tax = Math.max(0, raw - hlDeduct);
@@ -487,7 +514,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const reTaxTot = Math.max(0, reProfitTot) * marginal;
 
     const net =
-      ordinaryGross + childAllow - tax + (sevGross - sevTax) + (dcLump - dcTax) + surv.total + incomeProt;
+      ordinaryGross + childAllow - tax + (sevGross - sevTax) + (dcLump - dcTax) + surv.total + incomeProt + insY.payout - insY.separateTax;
 
     // ── 一時収支・その他ローン・介護 ──
     let inherit = 0;
@@ -560,13 +587,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const homeRent = input.rentM * 12 * infl;
     const homeTax = input.homeTaxY * infl;
     const home = homeRent + homeTax + homePay;
-    // 亡くなった人が被保険者の保険料は払い終わる
-    const deadInsured = selfGone ? "本人" : spouseGone ? "配偶者" : null;
-    const ins = calcInsuranceY(
-      deadInsured ? input.ins.filter((p) => p.insured !== deadInsured) : input.ins,
-      age,
-      infl,
-    );
+    // 保険料（亡くなった人が被保険者の保険は払い終わる。払込免除も insuranceYear の中で判定）
+    const ins = insY.prem;
 
     // ── 積立（NISAは年間枠・生涯枠を自動チェック）──
     // 死亡後は遺族の生活を優先し、新しい積立は止めて計算する
@@ -739,6 +761,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       survChukorei: surv.chukorei,
       deathLump,
       incomeProt,
+      insPayout: insY.payout,
     });
   }
 

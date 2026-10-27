@@ -10,16 +10,15 @@ import { SelectField } from "@/components/v4/inputs/SelectField";
 import { TextField } from "@/components/v4/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
+import { InsuranceCard } from "@/components/v4/InsuranceCard";
 import { Section } from "@/components/v4/Section";
+import { deathCoverAt, newInsurance, normalizeInsurance, premiumAt } from "@/lib/v4/calc/insurance";
 import { kidAge, kidOffset } from "@/lib/v4/calc/age";
 import { computeRealEstateValue } from "@/lib/v4/calc/finance";
 import type {
   BuildingStructure,
   CareEvent,
   InheritanceEvent,
-  Insurance,
-  InsuranceType,
-  Insured,
   JukuMonthly,
   Kid,
   LifeExpenseEvent,
@@ -102,26 +101,6 @@ const JUKU_PRESETS: JukuPreset[] = [
   },
 ];
 
-const TYPE_OPTIONS: { value: InsuranceType; label: string }[] = [
-  { value: "生命（死亡・収入保障）", label: "生命（死亡・収入保障）" },
-  { value: "医療", label: "医療" },
-  { value: "がん・三大疾病", label: "がん・三大疾病" },
-  { value: "就業不能", label: "就業不能" },
-  { value: "介護", label: "介護" },
-  { value: "火災・地震", label: "火災・地震" },
-  { value: "自動車", label: "自動車" },
-  { value: "個人賠償・その他損保", label: "個人賠償・その他損保" },
-  { value: "貯蓄型", label: "貯蓄型" },
-  { value: "その他", label: "その他" },
-];
-
-const INSURED_OPTIONS: { value: Insured; label: string }[] = [
-  { value: "本人", label: "本人" },
-  { value: "配偶者", label: "配偶者" },
-  { value: "子", label: "子" },
-  { value: "その他", label: "その他" },
-];
-
 const NEW_KID = (): Kid => ({
   name: "新しい子",
   birth: "",
@@ -184,22 +163,11 @@ export function ExpenseMegaSection() {
     updateKid(i, { opt: { ...kid.opt, [key]: value } });
   };
 
-  const updateIns = (i: number, patch: Partial<Insurance>) =>
-    setField("ins", plan.ins.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
-  const addIns = () =>
-    setField("ins", [
-      ...plan.ins,
-      {
-        name: "新しい保険",
-        type: "生命（死亡・収入保障）" as InsuranceType,
-        insured: "本人" as Insured,
-        premM: 0,
-        start: plan.curAge,
-        end: plan.endAge,
-        memo: "",
-        enabled: true,
-      },
-    ]);
+  const addIns = () => setField("ins", [...plan.ins, newInsurance("定期保険", plan.curAge, plan.endAge)]);
+  const insList = plan.ins.map((p) => normalizeInsurance(p as never, plan.curAge, plan.endAge));
+  const insPremNow = insList.reduce((a, p) => a + premiumAt(p, plan.curAge, 1), 0);
+  const coverSelf = deathCoverAt(insList, "本人", plan.curAge);
+  const coverSpouse = deathCoverAt(insList, "配偶者", plan.curAge);
   const removeIns = (i: number) => setField("ins", plan.ins.filter((_, idx) => idx !== i));
 
   const updateIncome = (i: number, patch: Partial<InheritanceEvent>) =>
@@ -744,66 +712,36 @@ export function ExpenseMegaSection() {
 
         <CollapsibleSubGroup title="保険" defaultOpen={false}>
           <div className="flex flex-col gap-3">
-            {plan.ins.map((p, i) => (
-              <ListItemCard
+            {insList.length ? (
+              <div className="rounded-lg bg-white px-3 py-2 text-[11px] leading-relaxed tabular-nums" style={{ border: "1.5px solid #0a0a0a20" }}>
+                <p className="font-bold">いまの保険料 年{Math.round(insPremNow / 10000).toLocaleString()}万円（月{Math.round(insPremNow / 12 / 1000) / 10}万円）</p>
+                <p>
+                  本人が亡くなったら 死亡保険金{Math.round(coverSelf.lump / 10000).toLocaleString()}万円
+                  {coverSelf.incomeProtM > 0 ? `＋収入保障 月${Math.round(coverSelf.incomeProtM / 1000) / 10}万円` : ""}
+                </p>
+                {plan.spouseBirth ? (
+                  <p>
+                    配偶者が亡くなったら 死亡保険金{Math.round(coverSpouse.lump / 10000).toLocaleString()}万円
+                    {coverSpouse.incomeProtM > 0 ? `＋収入保障 月${Math.round(coverSpouse.incomeProtM / 1000) / 10}万円` : ""}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-[11px] leading-relaxed text-[#0a0a0a]/60">
+                保険証券や設計書を見ながら、1件ずつ入れてください。種類を選ぶと、その保険に合った入力欄に変わります。
+              </p>
+            )}
+            {insList.map((p, i) => (
+              <InsuranceCard
                 key={i}
-                kicker={`POLICY ${String(i + 1).padStart(2, "0")}${p.enabled ? "" : " · OFF"}`}
+                p={p}
+                index={i}
+                curAge={plan.curAge}
+                endAge={plan.endAge}
+                kids={plan.kids}
+                onChange={(patch) => setField("ins", insList.map((x, idx) => (idx === i ? { ...x, ...patch } : x)))}
                 onRemove={() => removeIns(i)}
-              >
-                <div className="mb-3">
-                  <CheckboxField
-                    label="この保険を計算に含める"
-                    value={p.enabled}
-                    onChange={(v) => updateIns(i, { enabled: v })}
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  <TextField
-                    label="保険名"
-                    value={p.name}
-                    onChange={(v) => updateIns(i, { name: v })}
-                  />
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
-                    <SelectField
-                      label="種類"
-                      value={p.type}
-                      onChange={(v) => updateIns(i, { type: v })}
-                      options={TYPE_OPTIONS}
-                    />
-                    <SelectField
-                      label="被保険者"
-                      value={p.insured}
-                      onChange={(v) => updateIns(i, { insured: v })}
-                      options={INSURED_OPTIONS}
-                    />
-                  </div>
-                  <NumberField
-                    label="月額保険料"
-                    value={p.premM}
-                    onChange={(v) => updateIns(i, { premM: v })}
-                    unit="円"
-                  />
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
-                    <NumberField
-                      label="払込開始"
-                      value={p.start}
-                      onChange={(v) => updateIns(i, { start: v })}
-                      unit="歳"
-                    />
-                    <NumberField
-                      label="払込終了"
-                      value={p.end}
-                      onChange={(v) => updateIns(i, { end: v })}
-                      unit="歳"
-                    />
-                  </div>
-                  <TextField
-                    label="メモ（計算非対象）"
-                    value={p.memo}
-                    onChange={(v) => updateIns(i, { memo: v })}
-                  />
-                </div>
-              </ListItemCard>
+              />
             ))}
             <AddButton label="保険を追加" onClick={addIns} />
           </div>

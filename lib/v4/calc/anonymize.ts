@@ -14,7 +14,8 @@ export function anonymizePlan(plan: PlanInput): PlanInput {
     sideJobs: plan.sideJobs.map((j, i) => ({ ...j, name: `副業${i + 1}` })),
     kids: plan.kids.map((k, i) => ({ ...k, name: `子${i + 1}`, birth: monthOnly(k.birth) })),
     res: plan.res.map((r, i) => ({ ...r, name: `物件${i + 1}` })),
-    ins: plan.ins.map((p, i) => ({ ...p, name: `保険${i + 1}`, memo: "" })),
+    // 保険会社名は残しても個人は特定しにくいが、念のため消す（種類・金額は検証に必要なので残す）
+    ins: plan.ins.map((p, i) => ({ ...p, name: `保険${i + 1}`, company: "", memo: "" })),
     inheritances: plan.inheritances.map((x, i) => ({ ...x, label: `一時収入${i + 1}` })),
     lifeExpenses: plan.lifeExpenses.map((x, i) => ({ ...x, label: `一時支出${i + 1}` })),
     otherLoans: plan.otherLoans.map((x, i) => ({ ...x, label: `ローン${i + 1}` })),

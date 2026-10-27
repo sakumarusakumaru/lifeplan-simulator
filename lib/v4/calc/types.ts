@@ -71,26 +71,62 @@ export interface RealEstate {
 }
 
 export type InsuranceType =
-  | "生命（死亡・収入保障）"
-  | "医療"
+  | "定期保険"
+  | "収入保障保険"
+  | "終身保険"
+  | "養老保険"
+  | "個人年金保険"
+  | "学資保険"
+  | "医療保険"
   | "がん・三大疾病"
-  | "就業不能"
-  | "介護"
-  | "火災・地震"
-  | "自動車"
-  | "個人賠償・その他損保"
-  | "貯蓄型"
+  | "就業不能保険"
+  | "介護保険"
+  | "損害保険"
+  | "共済"
   | "その他";
 
 export type Insured = "本人" | "配偶者" | "子" | "その他";
 
+// 保険1件。年齢はすべて本人の年齢（学資保険の受取だけ子どもの年齢）。
+// 種類ごとに使う項目が違う（どれを使うかは insurance.ts の HAS）
 export interface Insurance {
   name: string;
+  company: string;              // 保険会社（引き継ぎ書用・計算には使わない）
   type: InsuranceType;
-  insured: Insured;
-  premM: number;
-  start: number;
-  end: number;
+  insured: Insured;             // 被保険者（この人が亡くなると死亡保険金）
+  contractor: "本人" | "配偶者"; // 契約者＝保険料を払い、満期金・年金を受け取る人（保険料控除・一時所得の対象）
+  payMode: "monthly" | "yearly" | "single"; // 月払・年払・一時払
+  premM: number;                // 保険料（月払は月額、年払は年額、一時払は払込額）
+  start: number;                // 払込開始（契約した年齢。過去でもよい）
+  end: number;                  // 払込終了（終身払なら最終年齢）
+  coverEnd: number;             // 保障の終わりの年齢（定期・収入保障・医療など。0=終身）
+  renewYears: number;           // 更新型: 何年ごとに更新（0=更新なし・全期型）
+  renewRate: number;            // 更新型: 更新ごとに保険料が何%上がるか
+  deathBenefit: number;         // 死亡保険金（一時金）
+  incomeProtM: number;          // 収入保障保険: 亡くなったときの年金月額
+  incomeProtMinYears: number;   // 収入保障保険: 最低支払保証期間（年）
+  maturityAge: number;          // 養老保険: 満期の年齢
+  maturityAmount: number;       // 養老保険: 満期保険金
+  surrenderAge: number;         // 解約して返戻金を受け取る年齢（0=解約しない）
+  surrenderAmount: number;      // そのときの解約返戻金（設計書の返戻金表から）
+  annuityStart: number;         // 個人年金: 受取開始年齢
+  annuityYears: number;         // 個人年金: 受取年数（0=終身年金）
+  annuityY: number;             // 個人年金: 年金年額
+  qualifiedAnnuity: boolean;    // 個人年金: 税制適格特約あり（個人年金保険料控除の対象）
+  kid: number;                  // 学資保険: 何番目の子ども（0始まり）
+  eduPayouts: { kidAge: number; amount: number }[]; // 学資保険: 祝い金・満期金（子の年齢）
+  waiver: boolean;              // 契約者が亡くなったら以後の保険料を払わなくてよい（払込免除）
+  currency: "円" | "米ドル" | "豪ドル" | "変額"; // 外貨建て・変額は受取額が円で決まっていない
+  benefitDay: number;           // 医療: 入院日額 ／ 共済: 入院日額（計算には使わない）
+  benefitLump: number;          // がん・三大疾病・介護: 一時金（計算には使わない）
+  benefitM: number;             // 就業不能・介護: 月額給付（計算には使わない）
+  quakePremY: number;           // 損害保険: うち地震保険料（年額・地震保険料控除）
+  deductKind: "自動" | "一般" | "介護医療" | "個人年金" | "地震" | "なし"; // 保険料控除の区分（自動=種類から判定。控除証明書に合わせて変えられる）
+  stepAge: number;              // 共済: 保障が減る年齢（0=減らない）
+  stepDeathBenefit: number;     // 共済: 減った後の死亡保障
+  rebateRate: number;           // 共済: 割戻率（%・掛金に対して）
+  ikueiM: number;               // 学資保険: 育英年金（契約者が亡くなったときの月額）
+  ikueiUntilKidAge: number;     // 学資保険: 育英年金を受け取る子どもの年齢の上限
   memo: string;
   enabled: boolean;
 }
@@ -403,6 +439,7 @@ export interface YearlyResult {
   homeTax: number;
   homePay: number;
   ins: number;
+  insPayout: number;      // 保険の満期金・解約返戻金・祝い金・年金（税引き前）
   basic: number;
   basicL: number;
   special: number;

@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { DEFAULT_PLAN, EMPTY_PLAN } from "@/lib/v4/calc/defaults";
+import { normalizeInsurance } from "@/lib/v4/calc/insurance";
 import type { PlanInput } from "@/lib/v4/calc/types";
 
 // ver3（lp_v13）の保存データを ver4 の項目に読み替える。
@@ -155,6 +156,10 @@ export const usePlanStore = create<PlanStore>()(
             ...persistedPlan,
             kids: migratedKids,
             jobs: migratedJobs,
+            // 保険: 旧い種類名（「生命（死亡・収入保障）」など）を新しい種類に読み替え、足りない項目を補う
+            ins: (persistedPlan.ins ?? BASE.ins).map((p) =>
+              normalizeInsurance(p as never, persistedPlan.curAge ?? BASE.curAge, persistedPlan.endAge ?? BASE.endAge),
+            ),
             res: migratedRes,
             drawCustomOrder: migratedDrawOrder,
             drawOrder: migratedDrawMode,

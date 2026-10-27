@@ -1,5 +1,6 @@
 "use client";
 
+import { deathCoverAt, normalizeInsurance } from "@/lib/v4/calc/insurance";
 import Link from "next/link";
 import { useMemo } from "react";
 import {
@@ -114,8 +115,15 @@ export default function RiskPage() {
   }
 
   const deathRow = death.rows.find((r) => r.age === deathAge);
-  const lumpOther =
-    (deathRow?.deathLump ?? 0) - (risk.deathInsurance || 0) / (real ? deflator(effPlan, deathAge) : 1);
+  // 保険の一覧（入力 → 支出 → 保険）のうち、亡くなる人にかかっている分
+  const listCover = deathCoverAt(
+    (plan.ins ?? []).map((p) => normalizeInsurance(p as never, plan.curAge, plan.endAge)),
+    who === "self" ? "本人" : "配偶者",
+    deathAge,
+  );
+  const insLumpTotal = (risk.deathInsurance || 0) + listCover.lump;
+  const incomeProtTotalM = (risk.incomeProtM || 0) + listCover.incomeProtM;
+  const lumpOther = (deathRow?.deathLump ?? 0) - insLumpTotal / (real ? deflator(effPlan, deathAge) : 1);
   const survTotal = death.rows.reduce((a, r) => a + r.survKiso + r.survKosei + r.survChukorei, 0);
   const firstSurv = death.rows.find((r) => r.dead && r.survKiso + r.survKosei + r.survChukorei > 0);
   const phases = buildPhases(death.rows);
@@ -198,16 +206,24 @@ export default function RiskPage() {
                 hint="亡くなると残債が0になる"
               />
             ) : null}
+            <div className="rounded-lg bg-white px-3 py-2 text-[11px] leading-relaxed" style={{ border: `1.5px solid ${INK}20` }}>
+              <p className="font-bold">保険の一覧から（{deathAge}歳で亡くなった場合）</p>
+              <p className="tabular-nums">
+                死亡保険金 {man(listCover.lump)}
+                {listCover.incomeProtM > 0 ? `／収入保障 月${(listCover.incomeProtM / 10000).toFixed(1)}万円` : ""}
+              </p>
+              <p className="text-[10px] text-[#0a0a0a]/55">「入力」→「支出」→「保険」で、被保険者が{who === "self" ? "本人" : "配偶者"}の保険を集計しています。</p>
+            </div>
             <NumberField
-              label="加入中の死亡保険金"
+              label="一覧に入れていない死亡保険金"
               value={risk.deathInsurance}
               onChange={(v) => update({ deathInsurance: v })}
               unit="円"
-              hint="亡くなる人にかかっている定期・終身保険の合計"
+              hint="勤務先の団体保険など、保険の一覧に入れていないものがあれば"
             />
             <div className="grid grid-cols-2 gap-2">
               <NumberField
-                label="収入保障保険(月)"
+                label="一覧にない収入保障(月)"
                 value={risk.incomeProtM}
                 onChange={(v) => update({ incomeProtM: v })}
                 unit="円"
@@ -267,8 +283,8 @@ export default function RiskPage() {
                 />
                 <Kpi
                   label="加入中の保険"
-                  value={man((risk.deathInsurance || 0))}
-                  sub={risk.incomeProtM > 0 ? `＋収入保障 月${(risk.incomeProtM / 10000).toFixed(1)}万` : "死亡保険金"}
+                  value={man(insLumpTotal)}
+                  sub={incomeProtTotalM > 0 ? `＋収入保障 月${(incomeProtTotalM / 10000).toFixed(1)}万` : "死亡保険金"}
                 />
                 <Kpi
                   label="資金ショート"

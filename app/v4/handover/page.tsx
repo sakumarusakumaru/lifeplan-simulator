@@ -1,5 +1,6 @@
 "use client";
 
+import { HAS, normalizeInsurance, typeLabel } from "@/lib/v4/calc/insurance";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -154,13 +155,14 @@ export default function HandoverPage() {
 
   const importPolicies = () => {
     const fromIns = plan.ins
-      .filter((p) => p.enabled !== false)
+      .map((raw) => normalizeInsurance(raw as never, plan.curAge, plan.endAge))
+      .filter((p) => p.enabled)
       .map((p) => ({
-        company: p.name,
-        kind: p.type,
+        company: [p.company, p.name].filter(Boolean).join(" "),
+        kind: HAS.incomeProt(p.type) && p.incomeProtM > 0 ? `${typeLabel(p.type)}（月${p.incomeProtM / 10000}万円）` : typeLabel(p.type),
         insured: p.insured,
         beneficiary: "",
-        benefit: p.type.startsWith("生命") ? plan.risk.deathInsurance || 0 : 0,
+        benefit: HAS.death(p.type) ? p.deathBenefit : 0,
         contact: "",
       }));
     upd({ policies: [...h.policies, ...fromIns] });
