@@ -9,6 +9,11 @@
 
 ---
 
+## [4.12.1] - 2026-10-27
+
+### Fixed
+- Vercel のビルドが Google Fonts のダウンロード失敗でときどき落ちていた → フォントを npm パッケージ（@fontsource-variable/inter・noto-sans-jp 5.3.0）から自前で配信し、next/font/google をやめた。ビルド時に外部へフォントを取りに行かない
+
 ## [4.12.0] - 2026-10-27
 
 ### Changed

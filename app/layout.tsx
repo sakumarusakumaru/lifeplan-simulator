@@ -1,19 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_JP } from "next/font/google";
+
+// フォントは npm パッケージから自前で配信する（ビルド時に Google Fonts をダウンロードしないので、
+// 取得失敗で Vercel のビルドが落ちることがない）。日本語は unicode-range で分割され、使う文字の分だけ読み込む
+import "@fontsource-variable/inter";
+import "@fontsource-variable/noto-sans-jp";
 
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
-
-const notoJp = Noto_Sans_JP({
-  variable: "--font-noto-jp",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
 
 export const metadata: Metadata = {
   title: "LifePlan Simulator",
@@ -28,7 +20,7 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${inter.variable} ${notoJp.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="flex min-h-full flex-col">{children}</body>
     </html>

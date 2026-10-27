@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 :root {
+  /* 自前配信のフォント（app/layout.tsx で @fontsource-variable を読み込み） */
+  --font-inter: "Inter Variable";
+  --font-noto-jp: "Noto Sans JP Variable";
   --bb-black: #0a0a0a;
   --bb-cream: #f0f0ee;
   --bb-bg: #e8e8e6;
