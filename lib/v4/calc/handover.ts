@@ -1,7 +1,7 @@
 // 「お金の引き継ぎ書」の財産・負債の一覧。金額はシミュレーターの入力（作成日時点）から自動で入る
 import { computeRealEstateValue } from "./finance";
 import { HAS, deathBenefitAt, deathCoverActive, normalizeInsurance, premiumAt, typeLabel } from "./insurance";
-import type { DcType, Insurance, PlanInput, RealEstate, YearlyResult } from "./types";
+import type { DcType, HandoverItem, Insurance, PlanInput, RealEstate, YearlyResult } from "./types";
 
 const MAN = 10000;
 const manS = (yen: number) => `${Math.round(yen / MAN).toLocaleString()}万円`;
@@ -296,3 +296,127 @@ export const AFTER_DEATH_STEPS: { when: string; items: string[] }[] = [
   { when: "3年以内", items: ["不動産の相続登記（2024年4月から義務化）"] },
   { when: "5年以内", items: ["遺族年金・未支給年金の請求"] },
 ];
+
+// ── 項目別の引き継ぎ書（ver4.16〜） ──
+
+export const newItemId = () => `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+interface AutoSource {
+  src: string;
+  cat: string;
+  amount: number;
+  f: Record<string, string>; // はじめて作るときに入れておく値
+}
+
+const loanKindOf = (label: string) =>
+  /車|カー/.test(label) ? "自動車ローン" : /奨学/.test(label) ? "奨学金" : /教育|学資/.test(label) ? "教育ローン" : /カード/.test(label) ? "カードローン" : "その他";
+
+// シミュレーターの入力から作る項目
+export function autoSources(plan: PlanInput): AutoSource[] {
+  const year = new Date().getFullYear();
+  const job = currentJobs(plan)[0]?.name ?? "";
+  const out: AutoSource[] = [
+    { src: "cash", cat: "bank", amount: plan.cashBal, f: { kind: "普通", holder: "本人" } },
+    { src: "nisa", cat: "securities", amount: plan.nisaBal, f: { kind: "NISA", holdings: splitDetail(plan.nisaSplit) } },
+    { src: "toku", cat: "securities", amount: plan.tokuBal, f: { kind: "特定口座", holdings: splitDetail(plan.tokuSplit) } },
+    { src: "gold", cat: "securities", amount: plan.goldBal, f: { kind: "その他", holdings: "金・コモディティ（ETFなど）" } },
+    {
+      src: "dc",
+      cat: "dc",
+      amount: plan.dcBal,
+      f: { kind: DC_LABEL[plan.dcType] ?? "iDeCo", company: plan.dcType === "employee-dc" && job ? `勤務先（${job}）` : "" },
+    },
+    { src: "crypto", cat: "crypto", amount: plan.cryptoBal, f: {} },
+  ];
+  if (plan.homeOwned) {
+    out.push({
+      src: "home",
+      cat: "realestate",
+      amount: homeValueNow(plan, year),
+      f: {
+        label: "自宅",
+        kind: plan.homePropType === "mansion" ? "マンション" : plan.homePropType === "land" ? "土地" : "土地と建物",
+        memo: propDetail({ propType: plan.homePropType, structure: plan.homeStructure, builtYear: plan.homeBuiltYear }),
+      },
+    });
+  }
+  plan.res.forEach((r, i) =>
+    out.push({
+      src: `re-${i}`,
+      cat: "realestate",
+      amount: computeRealEstateValue(r, year),
+      f: {
+        label: r.name || `投資用不動産${i + 1}`,
+        kind: r.propType === "mansion" ? "マンション" : r.propType === "land" ? "土地" : "土地と建物",
+        memo: [propDetail(r), r.rent > 0 ? `家賃収入 月${(r.rent / MAN).toFixed(1)}万円` : ""].filter(Boolean).join("・"),
+      },
+    }),
+  );
+  if (plan.useHomeLoan && plan.hlBal > 0) {
+    out.push({
+      src: "hl",
+      cat: "housingLoan",
+      amount: plan.hlBal,
+      f: { danshin: plan.risk?.danshin ? "あり" : "なし", memo: `金利${plan.hlRate}%・残り約${plan.hlTerm}年` },
+    });
+  }
+  plan.res.forEach((r, i) => {
+    if (r.bal > 0)
+      out.push({
+        src: `reloan-${i}`,
+        cat: "loan",
+        amount: r.bal,
+        f: { kind: "不動産ローン", memo: `${r.name || `物件${i + 1}`}・金利${r.rate}%・期間${r.term}年` },
+      });
+  });
+  plan.otherLoans.forEach((ln, i) => {
+    const amount = ln.monthlyPay * ln.remainMonths;
+    if (amount > 0)
+      out.push({
+        src: `loan-${i}`,
+        cat: "loan",
+        amount,
+        f: { kind: loanKindOf(ln.label), memo: ln.label, monthly: `月${(ln.monthlyPay / MAN).toFixed(1)}万円・残り${ln.remainMonths}回` },
+      });
+  });
+  return out;
+}
+
+// 項目の金額（シミュレーターから作った項目は、手で直していなければ入力の金額）
+export function itemAmount(plan: PlanInput, item: HandoverItem, sources = autoSources(plan)): number {
+  if (typeof item.amount === "number" && Number.isFinite(item.amount)) return item.amount;
+  if (item.src) return sources.find((s) => s.src === item.src)?.amount ?? 0;
+  return 0;
+}
+
+// シミュレーターの入力にある財産・ローンが、引き継ぎ書の項目にまだなければ足す。
+// はじめて新しい形式にするときは、前の形式の「保管場所」「その他の財産」を移す。変化がなければ null
+export function syncHandoverItems(plan: PlanInput): HandoverItem[] | null {
+  const h = plan.handover;
+  const items = [...(h.items ?? [])];
+  let changed = false;
+  const migrate = (h.version ?? 1) < 2;
+  // 前の形式で書いた保管場所を、名前の欄に入れる
+  const OLD_KEY: Record<string, string> = { cash: "cash", nisa: "nisa", toku: "toku", gold: "gold", dc: "dc", crypto: "crypto", home: "home", hl: "hl" };
+  const NAME_FIELD: Record<string, string> = { bank: "bank", securities: "company", dc: "company", crypto: "exchange", realestate: "deed", housingLoan: "bank", loan: "lender" };
+  for (const s of autoSources(plan)) {
+    if (s.amount <= 0 || items.some((x) => x.src === s.src)) continue;
+    const f = Object.fromEntries(Object.entries(s.f).filter(([, v]) => v));
+    const old = migrate ? h.where?.[OLD_KEY[s.src] ?? s.src] : "";
+    if (old) {
+      const nf = NAME_FIELD[s.cat];
+      if (nf && !f[nf]) f[nf] = old;
+      else f.memo = [f.memo, old].filter(Boolean).join("／");
+    }
+    items.push({ id: newItemId(), cat: s.cat, src: s.src, f });
+    changed = true;
+  }
+  if (migrate) {
+    (h.extraAssets ?? []).forEach((x) => {
+      if (!x.label && !x.amount) return;
+      items.push({ id: newItemId(), cat: "otherAsset", f: { name: x.label, place: x.where }, amount: x.amount || 0 });
+    });
+    changed = true;
+  }
+  return changed ? items : null;
+}

@@ -175,9 +175,27 @@ export interface HandoverContact {
   name: string;
   phone: string;
 }
+// 引き継ぎ書の1項目（口座1つ・ローン1件・契約1件など）。欄の定義は handoverSchema.ts
+export interface HandoverItem {
+  id: string;
+  cat: string;                     // CATEGORIES の id
+  src?: string;                    // シミュレーターの入力から作った項目（"cash" "nisa" "hl" など）。金額は入力から自動
+  f: Record<string, string>;       // 欄の値（口座番号・ID・パスワードはここに入れない）
+  amount?: number;                 // 金額（src の項目で未指定なら入力から自動）
+}
+
 export interface HandoverInput {
+  version?: number;                // 2 = 項目別の形式に移行済み
+  items?: HandoverItem[];
+  docs?: Record<string, string>;   // 重要書類・印鑑の保管場所
+  profile?: Record<string, string>;
+  wish?: Record<string, string>;   // 医療・介護・葬儀・お墓などの希望
+  insExtra?: Record<string, Record<string, string>>; // 保険ごとの保管場所・担当者（キー: ins-番号）
+  pension?: Record<string, Record<string, string>>;  // 公的年金（キー: self / spouse）
+  catStatus?: Record<string, string>; // 区分ごとの「ある・ない・わからない」
+  givenTo?: string;                // 写しを渡した相手
   author: string;
-  where: Record<string, string>;   // 財産ごとの金融機関名・保管場所（キーは財産の種類）
+  where: Record<string, string>;   // 財産ごとの金融機関名・保管場所（旧形式。連絡先の電話番号などにも使う）
   extraAssets: { label: string; where: string; amount: number }[];
   policies: HandoverPolicy[];
   contacts: HandoverContact[];
