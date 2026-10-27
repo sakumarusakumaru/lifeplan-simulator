@@ -47,6 +47,7 @@ const fmtMan = (yen: number) => {
   return `${sign}${abs.toLocaleString()}万円`;
 };
 import { usePlanStore } from "@/store/v4/plan-store";
+import { removeLinked } from "@/store/v4/remove-linked";
 
 const SCHOOL_OPTIONS: { value: SchoolType; label: string }[] = [
   { value: "pub", label: "公立" },
@@ -142,7 +143,7 @@ export function ExpenseMegaSection() {
   const updateLoan = (i: number, patch: Partial<OtherLoan>) =>
     setField("otherLoans", plan.otherLoans.map((ln, idx) => (idx === i ? { ...ln, ...patch } : ln)));
   const addLoan = () => setField("otherLoans", [...plan.otherLoans, NEW_LOAN()]);
-  const removeLoan = (i: number) => setField("otherLoans", plan.otherLoans.filter((_, idx) => idx !== i));
+  const removeLoan = (i: number) => removeLinked("otherLoans", i);
 
   const updateKid = (i: number, patch: Partial<Kid>) => {
     const kids = plan.kids.map((k, idx) => (idx === i ? { ...k, ...patch } : k));
@@ -168,7 +169,7 @@ export function ExpenseMegaSection() {
   const insPremNow = insList.reduce((a, p) => a + premiumAt(p, plan.curAge, 1), 0);
   const coverSelf = deathCoverAt(insList, "本人", plan.curAge);
   const coverSpouse = deathCoverAt(insList, "配偶者", plan.curAge);
-  const removeIns = (i: number) => setField("ins", plan.ins.filter((_, idx) => idx !== i));
+  const removeIns = (i: number) => removeLinked("ins", i);
 
   const updateIncome = (i: number, patch: Partial<InheritanceEvent>) =>
     setField("inheritances", plan.inheritances.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)));

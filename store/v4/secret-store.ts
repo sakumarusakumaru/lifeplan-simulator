@@ -15,6 +15,7 @@ interface SecretStore {
   setEnabled: (v: boolean) => void;
   set: (key: string, v: string) => void;
   clear: () => void;                 // この端末から消す
+  remap: (fn: (key: string) => string | null) => void; // キーを付け替える（null は消す）
   setHydrated: () => void;
 }
 
@@ -35,6 +36,15 @@ export const useSecretStore = create<SecretStore>()(
           return { values };
         }),
       clear: () => set({ values: {}, enabled: false }),
+      remap: (fn) =>
+        set((s) => {
+          const values: Record<string, string> = {};
+          for (const [k, v] of Object.entries(s.values)) {
+            const nk = fn(k);
+            if (nk) values[nk] = v;
+          }
+          return { values };
+        }),
       setHydrated: () => set({ hydrated: true }),
     }),
     {

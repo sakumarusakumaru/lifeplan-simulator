@@ -59,8 +59,13 @@ function kokuminMonthsOf(p: PensionInput): number {
 
 export function calcPension(p: PensionInput, startAge: number): PensionBreakdown {
   if (p.mode === "manual") {
+    // 手入力は合計額（受給開始年齢による増減も入力に含む）。遺族厚生年金・在職老齢年金の計算用に、
+    // 国民年金の納付月数から見積もった老齢基礎年金を引いた残りを老齢厚生年金とみなす
     const m = Math.max(0, Math.round(p.manualMonth));
-    return { monthly: m, basicMonthly: 0, koseiMonthly: m, adjustment: 1 };
+    const basicEst =
+      p.category === "kosei" ? Math.round((FULL_BASIC_ANNUAL * (kokuminMonthsOf(p) / KOKUMIN_MAX_MONTHS)) / 12) : m;
+    const basicMonthly = Math.min(m, basicEst);
+    return { monthly: m, basicMonthly, koseiMonthly: m - basicMonthly, adjustment: 1 };
   }
 
   // 老齢基礎年金 (年額)
@@ -87,11 +92,15 @@ export function calcPension(p: PensionInput, startAge: number): PensionBreakdown
 }
 
 // 加給年金: 本人が65歳到達時、厚生年金加入20年以上 かつ 配偶者が65歳未満の年に加算
+//   配偶者が厚生年金加入20年以上の老齢厚生年金を受けている（繰上げ受給など）年は支給停止（2022年4月〜）
+//   配偶者の特別支給の老齢厚生年金（1966年4月1日以前生まれの女性など）は入れていない
 export function isKakyuuApplicable(
   selfP: PensionInput,
   selfAge: number,
   selfStartAge: number,
   spouseAge: number | null,
+  spouseP?: PensionInput,
+  spouseStartAge?: number,
 ): boolean {
   if (selfP.mode !== "auto") return false;
   if (selfP.category !== "kosei") return false;
@@ -100,5 +109,26 @@ export function isKakyuuApplicable(
   if (selfAge < Math.max(selfStartAge, PEN_AGE_NORMAL)) return false;
   if (spouseAge === null) return false;
   if (spouseAge >= PEN_AGE_NORMAL) return false;
+  if (
+    spouseP &&
+    spouseStartAge !== undefined &&
+    koseiMonthsOf(spouseP) >= KOSEI_KAKYUU_MIN_MONTHS &&
+    spouseAge >= spouseStartAge
+  ) {
+    return false;
+  }
   return true;
+}
+
+// 在職老齢年金（会社員として働きながら老齢厚生年金を受ける年。繰上げ受給中・70歳以上も同じ）
+//   支給停止額（月）=（総報酬月額相当額 ＋ 基本月額 − 支給停止調整額）÷ 2。老齢厚生年金（報酬比例）が上限で、
+//   老齢基礎年金は減らない。支給停止調整額は2026年4月から62万（それまで51万）。年単位なので2026年分以後は62万
+//   総報酬月額相当額 ≈ その年の給与 ÷ 12、基本月額 = 老齢厚生年金 ÷ 12（繰下げの増額分は除いて渡す）
+//   繰下げ待機中に停止される分は繰下げ増額の対象にならない点は入れていない
+export const ZAISHOKU_THRESHOLD_M = 620_000;
+export function zaishokuTeishiAnnual(koseiAnnual: number, wageY: number, year: number): number {
+  if (koseiAnnual <= 0 || wageY <= 0) return 0;
+  const threshold = year >= 2026 ? ZAISHOKU_THRESHOLD_M : 510_000;
+  const cutM = Math.max(0, (wageY / 12 + koseiAnnual / 12 - threshold) / 2);
+  return Math.min(koseiAnnual, cutM * 12);
 }

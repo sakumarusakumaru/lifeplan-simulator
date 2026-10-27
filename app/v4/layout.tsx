@@ -11,14 +11,15 @@ import { HeaderMenu } from "@/components/v4/HeaderMenu";
 import { InputProgress } from "@/components/v4/InputProgress";
 import type { PlanInput } from "@/lib/v4/calc/types";
 import { anonymizePlan } from "@/lib/v4/calc/anonymize";
-import { migrateV3Plan, usePlanStore } from "@/store/v4/plan-store";
+import { DEFAULT_PLAN, EMPTY_PLAN } from "@/lib/v4/calc/defaults";
+import { migrateV3Plan, normalizePlan, usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
 const TABS = [
   { href: "/v4/detail", label: "入力" },
   { href: "/v4/result", label: "レポート" },
   { href: "/v4/suggest", label: "比較" },
-  { href: "/v4/risk", label: "もしも・相続" },
+  { href: "/v4/risk", label: "もしも" },
 ];
 
 export default function V4Layout({ children }: { children: React.ReactNode }) {
@@ -26,7 +27,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   const activeIdx = TABS.findIndex((t) => pathname.startsWith(t.href));
 
   const plan = usePlanStore((s) => s.plan);
-  const patch = usePlanStore((s) => s.patch);
+  const replacePlan = usePlanStore((s) => s.replace);
   const reset = usePlanStore((s) => s.reset);
   const loadSample = usePlanStore((s) => s.loadSample);
   const planHydrated = usePlanStore((s) => s.hydrated);
@@ -136,13 +137,16 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
           throw new Error("JSONの形式が不正です");
         }
         // 検証用に書き出した形式（{ plan: {...} }）も読めるようにする
-        if ("plan" in data && !("curAge" in data)) data = data.plan;
+        const isReview = "plan" in data && !("curAge" in data);
+        if (isReview) data = data.plan;
         if (!("curAge" in data) || !("endAge" in data)) {
           throw new Error("ライフプランデータではありません");
         }
         // ver3 で保存したJSONも読めるように変換する
         const isV3 = "fundBal" in data || "fundNisaBal" in data;
-        patch(isV3 ? migrateV3Plan(data) : (data as Partial<PlanInput>));
+        if (isReview && !confirm("検証用のファイルには、名前・引き継ぎ書の中身が入っていません。読み込むと、今の入力と引き継ぎ書はこのファイルの内容に置き換わります。続けますか？")) return;
+        // 読み込んだ内容に足りない項目は、今の入力ではなく空の値で埋める（前の人の入力が混ざらないように）
+        replacePlan(normalizePlan(isV3 ? migrateV3Plan(data) : (data as Partial<PlanInput>), { ...DEFAULT_PLAN, ...EMPTY_PLAN }));
         alert("データを読み込みました");
       } catch (err) {
         alert(
@@ -163,7 +167,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
 
   // ステップのタブ。PCではヘッダー1段目に、スマホでは独立した行に出す
   // スマホ用のタブ: 4等分のセグメント。短い名前でスクロールせずに全部見える
-  const SHORT = ["入力", "レポート", "比較", "もしも・相続"];
+  const SHORT = ["入力", "レポート", "比較", "もしも"];
   const renderMobileTabs = () => (
     <nav className="grid grid-cols-4 gap-1 rounded-xl bg-white p-1" style={{ border: "2px solid #0a0a0a" }}>
       {TABS.map((tab, i) => {

@@ -128,14 +128,17 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
   const maxEstate = Math.max(basicDeduction(heirs.count), ...timeline.map((t) => t.estate), 1);
   const pct = (r: number) => `${Math.round(r * 100)}%`;
   const b = P.breakdown;
-  const twoStep = hasSpouse && kids > 0;
+  // 相続人になる子（亡くなる時点で生まれている子）
+  const hk = P.heirKids;
+  const kidOrphan = P.heirKidIdx.length === 0 && hk > 0; // 親・兄弟姉妹が相続する仮定
+  const twoStep = hasSpouse && hk > 0;
   const best = P.scan.find((x) => x.ratio === P.bestRatio);
   // 分け方を選べるのは、配偶者と子がいる場合と、子が2人以上いる場合
-  const canSplit = twoStep || (!hasSpouse && !noFamily && kids >= 2);
+  const canSplit = twoStep || (!hasSpouse && !kidOrphan && hk >= 2);
   const isCustom = set.spouseMode === "custom" && canSplit;
   const nameOf = (x: { who: string; kid: number }) =>
-    x.who === "spouse" ? "配偶者" : noFamily ? "親または兄弟姉妹" : plan.kids[x.kid]?.name || `子${x.kid + 1}`;
-  const legalPct = legalSharesPct(hasSpouse, kids);
+    x.who === "spouse" ? "配偶者" : kidOrphan ? "親または兄弟姉妹" : plan.kids[P.heirKidIdx[x.kid]]?.name || `子${P.heirKidIdx[x.kid] + 1}`;
+  const legalPct = legalSharesPct(hasSpouse, hk);
   const shares = set.shares && set.shares.length === legalPct.length ? set.shares : legalPct;
   const sharesSum = shares.reduce((a, x) => a + x, 0);
   const setMode = (m: InheritSettings["spouseMode"]) => {
@@ -382,7 +385,7 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
             </div>
             <p className="mt-1 text-[9px] text-[#0a0a0a]/55">
               合計 {Math.round(sharesSum * 10) / 10}%
-              {Math.abs(sharesSum - 100) > 0.05 ? "（100%になっていないので、入れた比率で分けて計算しています）" : ""}
+              {Math.abs(sharesSum - 100) > 0.5 ? "（100%になっていないので、入れた比率で分けて計算しています）" : ""}
               <button type="button" onClick={() => updSet({ shares: legalPct })} className="ml-2 font-bold underline">
                 法定相続分に戻す
               </button>
@@ -415,12 +418,12 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
                   const s2 = x.who === "kid" ? secondOf(x.kid) : undefined;
                   const taxSum = x.payable + (s2?.payable ?? 0);
                   const kept = x.take + (s2?.take ?? 0) - taxSum;
-                  const age = x.who === "kid" ? est.age - (plan.kids[x.kid]?.offset ?? 0) : null;
+                  const age = x.who === "kid" && !kidOrphan ? est.age - (plan.kids[P.heirKidIdx[x.kid]]?.offset ?? 0) : null;
                   return (
                     <tr key={`${x.who}${x.kid}`} className="border-t" style={{ borderColor: "#0a0a0a15" }}>
                       <td className="py-1 font-bold">
                         {nameOf(x)}
-                        {age !== null && !noFamily ? <span className="ml-1 font-normal text-[#0a0a0a]/50">{age}歳</span> : null}
+                        {age !== null ? <span className="ml-1 font-normal text-[#0a0a0a]/50">{age}歳</span> : null}
                       </td>
                       <td className="py-1 text-right">{Math.round(x.ratio * 1000) / 10}%</td>
                       <td className="py-1 text-right">{man(x.take)}</td>
@@ -463,7 +466,7 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
                   {(P.second?.payable ?? 0) > 0 ? man(P.second?.payable ?? 0) : "かからない見込み"}
                 </p>
                 <p className="text-[9px] text-[#0a0a0a]/50">
-                  配偶者の財産 {man(P.secondEstate)}・相続人は子{kids}人
+                  配偶者の財産 {man(P.secondEstate)}・相続人は子{hk}人
                 </p>
               </div>
               <div>

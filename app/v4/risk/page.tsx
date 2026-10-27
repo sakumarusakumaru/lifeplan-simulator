@@ -147,7 +147,7 @@ export default function RiskPage() {
     <main className="px-4 py-6 sm:px-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 border-b-2 border-[#0a0a0a] pb-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">RISK ／ もしも・相続</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">RISK ／ もしも</p>
           <h1 className="text-2xl font-bold text-[#0a0a0a]">
             {who === "self" ? "本人" : "配偶者"}が{deathAge}歳（本人の年齢）で亡くなったら
           </h1>

@@ -2,7 +2,7 @@ import { ageOn, parseYMD, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
 import { EDU, pmt } from "./finance";
 import { createInsuranceState, insuranceDeduction, insuranceYear, normalizeInsurance } from "./insurance";
-import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable } from "./pension";
+import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable, zaishokuTeishiAnnual } from "./pension";
 import {
   DC_MAX_CONTRIB_AGE,
   DC_PAYOUT_MAX_AGE,
@@ -34,7 +34,7 @@ import type {
   YearlyResult,
 } from "./types";
 
-type RealEstateSim = RealEstate & { payY: number };
+type RealEstateSim = RealEstate & { payY: number; startA: number };
 
 const MAN = 10000;
 
@@ -111,6 +111,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     ...r,
     bal: r.bal,
     payY: r.bal > 0 ? pmt(r.rate / 100 / 12, r.term * 12, r.bal) * 12 : 0,
+    startA: yearToStartAge(r.start, input),
   }));
 
   const spouseCurAge = ageOn(input.spouseBirth, input.baseDate);
@@ -156,6 +157,13 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
   const dcStartAge = Math.min(DC_PAYOUT_MAX_AGE, Math.max(DC_PAYOUT_MIN_AGE, input.dcStartAge));
   const dcYears = Math.min(20, Math.max(5, input.dcYears || 5));
   const dcContribEnd = Math.min(input.saveDcEndAge, dcStartAge, DC_MAX_CONTRIB_AGE);
+  // iDeCo（本人掛金）は老齢基礎年金を受け始めると出せない（繰上げ受給を含む）。会社掛金は続けられる
+  const dcSelfEnd = Math.min(dcContribEnd, input.penStartA);
+  // DC一時金の退職所得控除に使う掛金の拠出期間
+  const dcPeriodEnd = input.dcEmployerM > 0 ? dcContribEnd : dcSelfEnd;
+  if (input.saveDcM > 0 && dcSelfEnd < dcContribEnd) {
+    warn("dc-pension", `老齢基礎年金を受け始める${input.penStartA}歳からはiDeCoの掛金を出せないため、${input.penStartA}歳で本人掛金を止めて計算しています。`);
+  }
   if (input.saveDcEndAge > DC_MAX_CONTRIB_AGE && (input.saveDcM > 0 || input.dcEmployerM > 0)) {
     warn("dc-age", "iDeCoの掛金は70歳未満まで（2026年12月〜）。70歳以降の掛金は計算に入れていません。");
   }
@@ -214,7 +222,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     for (const j of input.jobs) {
       if (selfGone) {
         // 在職中の死亡: 退職金を勤続年数で按分して死亡退職金として受け取る（相続税の非課税枠内とみなす）
-        if (age === deathAge && age >= j.start && age < j.end && j.sev > 0) {
+        //   退職金を受け取る年の死亡は、まだ受け取っていないものとして全額を死亡退職金に
+        if (age === deathAge && j.sev > 0 && age === j.sevAge) {
+          deathLump += j.sev;
+        } else if (age === deathAge && age >= j.start && age < j.end && j.sev > 0) {
           deathLump += j.sev * Math.min(1, (age - j.start) / Math.max(1, j.end - j.start));
         }
         // 退職金を年金で受け取っている途中なら、残りを遺族が一時金で受け取る（保証期間つきを想定）
@@ -226,7 +237,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         continue;
       }
       if (age >= j.start && age < j.end) {
-        job += j.inc * Math.pow(1 + (j.raise || 0) / 100, age - j.start);
+        // 入力の年収は、今の勤務先なら今年の年収、これからの勤務先なら入社時の年収
+        job += j.inc * Math.pow(1 + (j.raise || 0) / 100, age - Math.max(input.curAge, j.start));
       }
       if (j.sev > 0) {
         const plan = sevPlanOf(j);
@@ -249,17 +261,33 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     }
 
     // ── 公的年金 ──
-    const selfPenY = !selfGone && age >= input.penStartA ? selfPenMonthly * 12 * penIdx : 0;
-    const spousePenY =
+    let selfPenY = !selfGone && age >= input.penStartA ? selfPenMonthly * 12 * penIdx : 0;
+    let spousePenY =
       !spouseGone && input.useSpousePen && spouseAge !== null && spouseAge >= input.penStartB
         ? spousePenMonthly * 12 * penIdx
         : 0;
+    // 在職老齢年金: 会社員として働く年は老齢厚生年金の一部（または全部）が止まる。繰下げの増額分は対象外
+    const zaishokuCut = (penY: number, br: typeof selfPenBreak, wageY: number, employee: boolean) => {
+      if (!employee || penY <= 0 || wageY <= 0) return { cut: 0, full: false };
+      const kosei = (br.koseiMonthly * 12 * penIdx) / Math.max(1, br.adjustment);
+      const cut = zaishokuTeishiAnnual(kosei, wageY, year);
+      return { cut, full: kosei > 0 && cut >= kosei };
+    };
+    const selfZ = zaishokuCut(selfPenY, selfPenBreak, job, selfWorkStyle === "employee");
+    const spouseZ = zaishokuCut(spousePenY, spousePenBreak, spouseJob, spouseWorkStyle === "employee");
+    selfPenY -= selfZ.cut;
+    spousePenY -= spouseZ.cut;
+    if (selfZ.cut > 0 || spouseZ.cut > 0) {
+      warn("zaishoku", "働きながら老齢厚生年金を受ける年は、在職老齢年金のしくみで年金の一部が止まる計算にしています（給与と老齢厚生年金の月額の合計が62万円を超えた分の半分）。", "info");
+    }
     let kakyuu = 0;
     if (
       !dead &&
       input.useSpousePen &&
-      isKakyuuApplicable(input.selfPension, age, input.penStartA, spouseAge)
+      !selfZ.full &&
+      isKakyuuApplicable(input.selfPension, age, input.penStartA, spouseAge, input.spousePension, input.penStartB)
     ) {
+      // 老齢厚生年金が在職で全額止まる年は加給年金も止まる
       kakyuu = KAKYUU_NENKIN_ANNUAL * penIdx;
     }
     const pen = selfPenY + spousePenY + kakyuu;
@@ -318,7 +346,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
           `DCの本人掛金 月${input.saveDcM.toLocaleString()}円は上限（${lim.note}）を超えるため、${year}年分以降は月${lim.selfMax.toLocaleString()}円で計算しています。`,
         );
       }
-      dcSelf = selfM * 12;
+      dcSelf = age < dcSelfEnd ? selfM * 12 : 0;
       dcEmp = input.dcEmployerM * 12;
     }
 
@@ -343,7 +371,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     let dcTax = 0;
     if (sevGross > 0 || dcLump > 0) {
       const parts: { from: number; to: number }[] = sevJobs.map((s) => ({ from: s.from, to: s.to }));
-      if (dcLump > 0) parts.push({ from: input.dcJoinAge, to: dcContribEnd });
+      if (dcLump > 0) parts.push({ from: input.dcJoinAge, to: dcPeriodEnd });
       const from = Math.min(...parts.map((p) => p.from));
       const to = Math.max(...parts.map((p) => p.to));
       const years = Math.max(1, to - from);
@@ -365,7 +393,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         );
       }
       const amount = sevGross + dcLump;
-      const totalTax = calcTaishokuTaxWithKojo(amount, kojo, year);
+      // 勤続5年以下は短期退職手当等（控除後300万を超える部分は1/2にならない）
+      const totalTax = calcTaishokuTaxWithKojo(amount, kojo, year, years <= 5);
       sevTax = amount > 0 ? (totalTax * sevGross) / amount : 0;
       dcTax = totalTax - sevTax;
       lumps.push({ age, hasDc: dcLump > 0, from, to });
@@ -380,13 +409,14 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const reD: RealEstateRowDetail[] = [];
     const reFlows: { rent: number; cost: number; pay: number; bal: number }[] = [];
     for (const r of rSims) {
-      const rent = r.rent * 12 * infl;
-      const costY = r.cost * infl;
-      const propTax = (r.propTax || 0) * infl;
-      const rStartA = yearToStartAge(r.start, input);
+      // 家賃・経費・固定資産税・ローンは運用開始年齢から
+      const active = age >= r.startA;
+      const rent = active ? r.rent * 12 * infl : 0;
+      const costY = active ? r.cost * infl : 0;
+      const propTax = active ? (r.propTax || 0) * infl : 0;
       let intr = 0;
       let pay = 0;
-      if (r.bal > 0 && age >= rStartA) {
+      if (r.bal > 0 && active) {
         intr = r.bal * (r.rate / 100);
         let p = r.payY;
         if (r.bal < p) p = r.bal + intr;
@@ -397,7 +427,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       reRentTot += rent;
       reCostTot += costY + propTax;
       rePayTot += pay;
-      reFlows.push({ rent, cost: costY + propTax, pay, bal: r.bal });
+      reFlows.push({ rent, cost: costY + propTax, pay, bal: active ? r.bal : 0 });
     }
 
     // ── 住宅ローン（返済は後で計上。控除は年末残高で）──
@@ -410,7 +440,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       hlBal = Math.max(0, hlBal - (p - i));
     }
     const hlCredit =
-      input.hlDeduct && input.useHomeLoan && age < input.hlDeductEndAge && !selfGone
+      input.hlDeduct && input.useHomeLoan && age >= input.hlStart && age < input.hlDeductEndAge && !selfGone
         ? 0.007 * Math.min(hlBal, input.hlDeductLimit)
         : 0;
 
@@ -472,11 +502,14 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
               penY: spousePenY,
               otherShotokuY: insY.taxable["配偶者"],
               dcSelfContribY: 0,
+              // 健康保険の扶養: 会社員（75歳未満）の配偶者で、年収130万未満（60歳以上は年金を含めて180万未満）。
+              // 国民年金の第3号は60歳で終わるが、健康保険の扶養は75歳まで続く
               dependentOfSpouse:
                 input.spousePension.category === "dependent" &&
-                spouseJob < 130 * MAN &&
                 selfEmployedNow &&
-                spouseAge < 60,
+                age < 75 &&
+                spouseAge < 75 &&
+                spouseJob + spousePenY < (spouseAge >= 60 ? 180 : 130) * MAN,
             }
           : null;
       const tr = calcHouseholdTax({
@@ -692,7 +725,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       }
     }
 
-    const reLoanRemain = rSims.reduce((a, r) => a + r.bal, 0);
+    // 運用開始前の物件のローンはまだ借りていない
+    const reLoanRemain = rSims.reduce((a, r) => a + (age >= r.startA ? r.bal : 0), 0);
     const otherLoanRemain = input.otherLoans.reduce((acc, ln) => {
       const remaining = Math.max(0, ln.remainMonths - t * 12);
       return acc + ln.monthlyPay * remaining;

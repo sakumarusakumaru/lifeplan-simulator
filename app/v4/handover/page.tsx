@@ -17,6 +17,7 @@ import {
   monthlyPayments,
   newItemId,
   syncHandoverItems,
+  hasOwnContent,
 } from "@/lib/v4/calc/handover";
 import {
   CAT_STATUS,
@@ -32,7 +33,7 @@ import {
   type FieldDef,
   type Side,
 } from "@/lib/v4/calc/handoverSchema";
-import { DEFAULT_INHERIT, inheritanceTax, legalHeirs, planInheritance, realEstateEval } from "@/lib/v4/calc/inheritance";
+import { DEFAULT_INHERIT, inheritanceTax, legalHeirs, planInheritance } from "@/lib/v4/calc/inheritance";
 import { normalizeInsurance } from "@/lib/v4/calc/insurance";
 import { requiredCoverage, simulate } from "@/lib/v4/calc/simulate";
 import { buildSurvivorPhases } from "@/lib/v4/calc/survivor";
@@ -119,7 +120,7 @@ function DocPage({ no, total, title, children }: { no: number; total: number; ti
       <div className="mb-4 flex items-baseline justify-between border-b-2 pb-2" style={{ borderColor: INK }}>
         <h2 className="text-lg font-bold">{title}</h2>
         <span className="text-[10px] tabular-nums text-[#0a0a0a]/50">
-          {no} / {total}
+          {no}章 / 全{total}章
         </span>
       </div>
       {children}
@@ -185,7 +186,7 @@ export default function HandoverPage() {
   const contactsAuto = useMemo(() => autoContacts(plan, insList), [plan, insList]);
   const base = useMemo(() => simulate(plan), [plan]);
   const payments = useMemo(() => monthlyPayments(plan, base.rows[0], insList), [plan, base, insList]);
-  // 「今、私に万一のことがあったら」の試算（もしも・相続と同じ計算）
+  // 「今、私に万一のことがあったら」の試算（もしもと同じ計算）
   const effPlan = useMemo(() => ({ ...plan, risk: { ...plan.risk, who: "self" as const, deathAge: plan.curAge } }), [plan]);
   const death = useMemo(() => simulate(effPlan, { death: true }), [effPlan]);
   const need = useMemo(() => requiredCoverage(effPlan), [effPlan]);
@@ -203,7 +204,7 @@ export default function HandoverPage() {
 
   const items = h.items ?? [];
   // シミュレーターから作った項目で、金額が0になり中身も書いていないものは出さない
-  const visible = items.filter((it) => !it.src || itemAmount(plan, it, sources) > 0 || Object.values(it.f).some(Boolean));
+  const visible = items.filter((it) => !it.src || itemAmount(plan, it, sources) > 0 || hasOwnContent(it, sources));
   const byCat = (cat: string) => visible.filter((it) => it.cat === cat);
   const amountOf = (it: HandoverItem) => itemAmount(plan, it, sources);
   const sideTotal = (side: Side) => CATEGORIES.filter((c) => c.side === side).reduce((a, c) => a + byCat(c.id).reduce((b, it) => b + amountOf(it), 0), 0);
@@ -227,27 +228,38 @@ export default function HandoverPage() {
   const whereOf = (key: string) => h.where[key] ?? "";
 
   const heirKids = !hasSpouse && plan.kids.length === 0 ? 1 : plan.kids.length;
-  const heirs = legalHeirs(hasSpouse, heirKids);
-  const insuranceTotal =
-    insRows.reduce((a, x) => a + x.deathBenefit, 0) + extraPolicies.reduce((a, { p }) => a + (p.benefit || 0), 0) + (plan.risk.deathInsurance || 0);
-  // 引き継ぎ書に書いた財産・負債で計算（配偶者の取得割合・名義の割合は「もしも・相続」の設定を使う）
+  // 相続税の目安は「もしも」の相続の計算（いまの年）をもとに、引き継ぎ書で手で足した・直した分だけを加える。
+  // 不動産は相続税評価額、保険は本人が契約者・被保険者のもの、名義の割合は金融資産と自宅だけにかける
   const inh = planInheritance(plan, base.rows[0], hasSpouse, heirKids);
-  // 相続税では、不動産は時価ではなく相続税評価額（シミュレーターから作った物件だけ置き換える。手で足した物件は書いた額のまま）
   const inhSet = { ...DEFAULT_INHERIT, ...(plan.inheritSet ?? {}) };
-  const reEvals = realEstateEval(plan, today.getFullYear(), inhSet);
-  let reAdjust = 0;
-  for (const it of byCat("realestate")) {
-    const ev = reEvals.find((p) => p.key === it.src);
-    if (!ev || ev.market <= 0) continue;
-    const amt = amountOf(it);
-    reAdjust += amt * (ev.value / ev.market) - amt;
-    // 自宅の土地の小規模宅地等の特例（配偶者が相続する前提）
-    if (ev.key === "home" && inhSet.smallLand && hasSpouse) reAdjust -= ev.land * (amt / ev.market) * 0.8;
+  const share = hasSpouse ? Math.min(100, Math.max(0, inhSet.selfSharePct)) / 100 : 1;
+  const heirs = legalHeirs(hasSpouse, inh.heirKids);
+  const FIN_SRC = new Set(["cash", "nisa", "nisaOld", "toku", "gold", "crypto"]);
+  let extra = 0;
+  for (const c of CATEGORIES) {
+    for (const it of byCat(c.id)) {
+      const sign = c.side === "debt" ? -1 : c.side === "asset" ? 1 : 0;
+      if (!sign) continue;
+      if (c.id === "housingLoan" && it.f.danshin === "あり") continue; // 団信で0になる
+      if (!it.src) {
+        extra += sign * amountOf(it);
+        continue;
+      }
+      // 入力から作った項目で、金額を手で直したものは差だけ
+      if (typeof it.amount !== "number") continue;
+      let delta = it.amount - (sources.find((x) => x.src === it.src)?.amount ?? 0);
+      const ev = inh.breakdown.props.find((x) => x.key === it.src);
+      if (ev && ev.market > 0) delta *= ev.value / ev.market;
+      if (FIN_SRC.has(it.src) || it.src === "home") delta *= share;
+      extra += sign * delta;
+    }
   }
-  // 団信のある住宅ローンは亡くなると0になるので、債務から外す
-  const danshinDebt = byCat("housingLoan").filter((it) => it.f.danshin === "あり").reduce((a, it) => a + amountOf(it), 0);
-  const estate = Math.max(0, totalAssets + reAdjust - (totalDebts - danshinDebt) + Math.max(0, insuranceTotal - 5_000_000 * heirs.count));
-  const tax = inheritanceTax(estate * ((plan.inheritSet?.selfSharePct ?? 100) / 100), hasSpouse, heirKids, inh.spouseRatio, plan.kids.map((k) => plan.curAge - k.offset), inh.kidShares);
+  const insGross = inh.breakdown.insuranceGross + extraPolicies.reduce((a, { p }) => a + (p.benefit || 0), 0);
+  const insTaxable = Math.max(0, insGross - 5_000_000 * heirs.count);
+  const estate = Math.max(0, inh.breakdown.total + extra + insTaxable - inh.breakdown.insurance);
+  const kidAgesNow = inh.heirKidIdx.map((i) => Math.max(0, plan.curAge - plan.kids[i].offset));
+  const tax = inheritanceTax(estate, hasSpouse, inh.heirKids, inh.spouseRatio, kidAgesNow, inh.kidShares);
+  const reDiscount = inh.breakdown.props.reduce((a, p) => a + p.market - p.value, 0) + inh.breakdown.homeLandCut;
 
   const phases = buildSurvivorPhases(death.rows);
   const deathRow = death.rows.find((r) => r.age === plan.curAge);
@@ -262,9 +274,9 @@ export default function HandoverPage() {
     if (it.src) {
       // シミュレーターから作った項目は消すと次に開いたときまた出るので、中身を空にして金額0にする
       updItem(it.id, { f: {}, amount: 0 });
-      return;
-    }
-    upd({ items: items.filter((x) => x.id !== it.id) });
+    } else upd({ items: items.filter((x) => x.id !== it.id) });
+    // その項目の口座番号なども、この端末から消す
+    useSecretStore.getState().remap((k) => (k.startsWith(`${it.id}.`) ? null : k));
   };
   const updPolicy = (i: number, p: Partial<HandoverPolicy>) => upd({ policies: h.policies.map((x, j) => (j === i ? { ...x, ...p } : x)) });
   const updContact = (i: number, p: Partial<HandoverContact>) => upd({ contacts: h.contacts.map((x, j) => (j === i ? { ...x, ...p } : x)) });
@@ -482,8 +494,8 @@ export default function HandoverPage() {
               </p>
               <p className="text-[9px] text-[#0a0a0a]/55">
                 総額 {man(tax.totalTax)}・基礎控除 {man(tax.deduction)}
-                {reAdjust !== 0 ? `。不動産は相続税評価額で計算（時価より${man(-reAdjust)}低い）` : ""}
-                {hasSpouse && heirKids > 0 && inh.second && inh.second.payable > 0 ? `。配偶者がその後亡くなると、二次相続でさらに約${man(inh.second.payable)}` : ""}
+                {reDiscount > 0 ? `。不動産は相続税評価額で計算（時価より${man(reDiscount)}低い）` : ""}
+                {hasSpouse && inh.heirKids > 0 && inh.second && inh.second.payable > 0 ? `。配偶者がその後亡くなると、二次相続でさらに約${man(inh.second.payable)}` : ""}
               </p>
             </div>
           </div>
@@ -988,7 +1000,7 @@ export default function HandoverPage() {
             {showForm ? "入力欄を閉じてプレビューだけ見る" : "入力欄を開く"}
           </button>
           <Link href="/v4/risk" className="self-center text-[12px] font-bold underline">
-            ← もしも・相続に戻る
+            ← もしもに戻る
           </Link>
         </div>
         <p className="mt-2 text-[10px] text-[#0a0a0a]/50">

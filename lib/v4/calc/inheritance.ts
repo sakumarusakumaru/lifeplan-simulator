@@ -16,7 +16,7 @@
 //   評価額がわかれば（固定資産税の課税明細書・税理士の計算）入力した額を使う
 // 含めないもの: 生前贈与の加算、葬式費用、相次相続控除、2割加算、子がいない場合の親・兄弟姉妹の相続、
 //   貸付事業用宅地の特例（200㎡まで50%減）、不動産投資ローンの団信
-import { normalizeInsurance, selfDeathBenefitAt } from "./insurance";
+import { normalizeInsurance, selfDeathBenefitAt, selfIncomeProtValueAt } from "./insurance";
 import { BUILDING_LIFESPAN, computeRealEstateValue } from "./finance";
 import type { InheritSettings, PlanInput, RealEstate, YearlyResult } from "./types";
 
@@ -118,8 +118,11 @@ export function inheritanceTax(estate: number, hasSpouse: boolean, kids: number,
 // 法定相続分の割合（%）。配偶者がいれば [配偶者, 子…]、いなければ [子…]
 export function legalSharesPct(hasSpouse: boolean, kids: number): number[] {
   if (kids === 0) return hasSpouse ? [100] : [];
-  const kidPct = (hasSpouse ? 50 : 100) / kids;
-  return [...(hasSpouse ? [50] : []), ...Array.from({ length: kids }, () => Math.round(kidPct * 10) / 10)];
+  const kidPct = Math.round(((hasSpouse ? 50 : 100) / kids) * 10) / 10;
+  const out = [...(hasSpouse ? [50] : []), ...Array.from({ length: kids }, () => kidPct)];
+  // 端数は最後の子で合わせて、合計を100%にする
+  out[out.length - 1] = Math.round((100 - out.slice(0, -1).reduce((a, x) => a + x, 0)) * 10) / 10;
+  return out;
 }
 
 // 前の版との互換（配偶者が法定相続分を相続した場合）
@@ -227,14 +230,20 @@ export function realEstateEval(plan: PlanInput, year: number, s: InheritSettings
 }
 
 // 在職中に亡くなったときの死亡退職金（退職金を勤続年数で按分。simulate.ts と同じ考え方）
+//   退職金を受け取る年の死亡は、まだ受け取っていないものとして全額
 function deathSeverance(plan: PlanInput, age: number) {
-  return plan.jobs.reduce((a, j) => (age >= j.start && age < j.end && j.sev > 0 ? a + j.sev * Math.min(1, (age - j.start) / Math.max(1, j.end - j.start)) : a), 0);
+  return plan.jobs.reduce((a, j) => {
+    if (j.sev <= 0) return a;
+    if (age === j.sevAge) return a + j.sev;
+    return age >= j.start && age < j.end ? a + j.sev * Math.min(1, (age - j.start) / Math.max(1, j.end - j.start)) : a;
+  }, 0);
 }
 
 // その年（年末）に本人が亡くなった場合の課税価格の内訳
 export function estateBreakdown(plan: PlanInput, row: YearlyResult, heirCount: number, deflate = 1, s: InheritSettings = plan.inheritSet ?? DEFAULT_INHERIT, hasSpouse = true): EstateBreakdown {
   const year = new Date().getFullYear() + (row.age - plan.curAge);
-  const share = Math.min(100, Math.max(0, s.selfSharePct)) / 100;
+  // 配偶者がいなければ、家族の財産はすべて本人のもの
+  const share = hasSpouse ? Math.min(100, Math.max(0, s.selfSharePct)) / 100 : 1;
   const a = row.ass;
   const householdFin = a.c + a.nisa + a.toku + a.k + a.g;
   const props = realEstateEval(plan, year, s).map((p) => ({ ...p, market: p.market / deflate, land: p.land / deflate, building: p.building / deflate, value: p.value / deflate }));
@@ -246,7 +255,9 @@ export function estateBreakdown(plan: PlanInput, row: YearlyResult, heirCount: n
   const re = props.filter((p) => p.key !== "home").reduce((acc, p) => acc + p.value, 0);
   const loans = row.hlBal + row.reD.reduce((acc, d) => acc + d.bal, 0);
   const insList = (plan.ins ?? []).map((p) => normalizeInsurance(p as never, plan.curAge, plan.endAge));
-  const insuranceGross = ((plan.risk?.deathInsurance ?? 0) + selfDeathBenefitAt(insList, row.age)) / deflate;
+  // 「一覧に入れていない死亡保険金」は亡くなる人にかかっている分なので、本人が亡くなる設定のときだけ入れる
+  const listedLump = (plan.risk?.who ?? "self") === "self" ? plan.risk?.deathInsurance ?? 0 : 0;
+  const insuranceGross = (listedLump + selfDeathBenefitAt(insList, row.age) + selfIncomeProtValueAt(insList, row.age)) / deflate;
   const insurance = Math.max(0, insuranceGross - 500 * MAN * heirCount);
   // DC（iDeCo・企業型DC）は本人名義。死亡一時金は退職手当金と同じ非課税枠
   const retirementGross = a.dc + deathSeverance(plan, row.age) / deflate;
@@ -281,6 +292,8 @@ export interface InheritancePlan {
   breakdown: EstateBreakdown;
   spouseRatio: number;           // 選んだ配偶者の取得割合
   kidShares: number[] | undefined; // 「自分で決める」のときの子それぞれの割合（0〜1）
+  heirKids: number;              // 相続人になる子の数（亡くなる時点で生まれている子。配偶者も子もいなければ親・兄弟姉妹の1人）
+  heirKidIdx: number[];          // その子が plan.kids の何番目か（親・兄弟姉妹のときは空）
   first: InheritanceEstimate;    // 一次相続
   second: InheritanceEstimate | null; // 二次相続（配偶者と子がいる場合）
   secondEstate: number;
@@ -289,32 +302,56 @@ export interface InheritancePlan {
   bestRatio: number;             // 一次＋二次が最も少ない割合
 }
 
-function secondFor(b: EstateBreakdown, first: InheritanceEstimate, kids: number, hasSpouse: boolean) {
+// 小規模宅地等の特例は配偶者が自宅を相続する前提。配偶者が相続しない分け方では使わない
+function withLandCut(b: EstateBreakdown, ratio: number): EstateBreakdown {
+  if (ratio > 0 || b.homeLandCut <= 0) return b;
+  return { ...b, home: b.home + b.homeLandCut, total: b.total + b.homeLandCut, homeLandCut: 0 };
+}
+
+function secondFor(b: EstateBreakdown, first: InheritanceEstimate, ratio: number, kids: number, hasSpouse: boolean) {
   if (!hasSpouse || kids === 0) return { second: null, secondEstate: 0 };
-  // 配偶者が受け取った分から配偶者自身の税を引き、配偶者名義の財産と合わせる（その後の増減は見ない）
+  // 配偶者が実際に受け取るのは、特例や非課税枠で減らす前の額（自宅の土地の8割減・保険金や退職金の非課税分も手元に残る）。
+  // そこから配偶者自身の税を引き、配偶者名義の財産と合わせる（その後の増減は見ない）。二次相続では小規模宅地等の特例を使わない
+  const received = ratio * (b.total + b.homeLandCut + (b.insuranceGross - b.insurance) + (b.retirementGross - b.retirement));
   const spousePaid = first.people.find((x) => x.who === "spouse")?.payable ?? 0;
-  const secondEstate = Math.max(0, b.spouseOwn + first.spouseTake - spousePaid);
+  const secondEstate = Math.max(0, b.spouseOwn + received - spousePaid);
   // 二次相続は子で等分（法定相続分）とする
   return { second: inheritanceTax(secondEstate, false, kids, 0), secondEstate };
 }
 
+// 金額だけを k で割る（割合・番号はそのまま）
+const KEEP = new Set(["ratio", "kid", "spouseRatio", "bestRatio", "heirKids", "heirKidIdx", "kidShares"]);
+function scaleMoney<T>(v: T, k: number, key = ""): T {
+  if (k === 1 || KEEP.has(key)) return v;
+  if (typeof v === "number") return (v / k) as T;
+  if (Array.isArray(v)) return v.map((x) => scaleMoney(x, k)) as T;
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([kk, x]) => [kk, scaleMoney(x, k, kk)])) as T;
+  return v;
+}
+
 // 一次相続・二次相続をまとめて試算する
+//   税は名目の金額で計算する（基礎控除・速算表は名目で決まっているため）。deflate は結果の表示を今の価値に直すためだけに使う
 export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: boolean, kids: number, deflate = 1): InheritancePlan {
   const s = { ...DEFAULT_INHERIT, ...(plan.inheritSet ?? {}) };
-  const heirs = legalHeirs(hasSpouse, kids);
-  const b = estateBreakdown(plan, row, heirs.count, deflate, s, hasSpouse);
-  const kidAges = plan.kids.map((k) => row.age - k.offset);
+  // 相続人になる子は、亡くなる時点で生まれている子だけ
+  const born = plan.kids.map((k, i) => ({ i, age: row.age - k.offset })).filter((x) => x.age >= 0);
+  const nKids = plan.kids.length > 0 ? (born.length > 0 ? born.length : hasSpouse ? 0 : 1) : kids;
+  const heirKidIdx = plan.kids.length > 0 ? born.map((x) => x.i) : [];
+  const kidAges = born.map((x) => x.age);
+  const heirs = legalHeirs(hasSpouse, nKids);
+  const b0 = estateBreakdown(plan, row, heirs.count, 1, s, hasSpouse);
   // 「自分で決める」: 入力した割合を合計100%に直して使う
-  const custom = s.spouseMode === "custom" && (s.shares?.length ?? 0) === (hasSpouse ? 1 : 0) + kids && kids > 0 ? s.shares! : null;
+  const custom = s.spouseMode === "custom" && (s.shares?.length ?? 0) === (hasSpouse ? 1 : 0) + nKids && nKids > 0 ? s.shares! : null;
   const customSum = custom ? custom.reduce((a, x) => a + Math.max(0, x), 0) : 0;
   const customRatio = custom && customSum > 0 && hasSpouse ? Math.max(0, custom[0]) / customSum : 0;
   const kidShares = custom && customSum > 0 ? custom.slice(hasSpouse ? 1 : 0).map((x) => Math.max(0, x) / customSum) : undefined;
   const calc = (ratio: number, ks?: number[]) => {
-    const first = inheritanceTax(b.total, hasSpouse, kids, ratio, kidAges, ks);
-    const { second, secondEstate } = secondFor(b, first, kids, hasSpouse);
-    return { first, second, secondEstate, total: first.payable + (second?.payable ?? 0) };
+    const b = withLandCut(b0, hasSpouse ? ratio : 0);
+    const first = inheritanceTax(b.total, hasSpouse, nKids, ratio, kidAges, ks);
+    const { second, secondEstate } = secondFor(b, first, ratio, nKids, hasSpouse);
+    return { b, first, second, secondEstate, total: first.payable + (second?.payable ?? 0) };
   };
-  const scan = hasSpouse && kids > 0
+  const scan = hasSpouse && nKids > 0
     ? Array.from({ length: 21 }, (_, i) => i * 0.05).map((ratio) => {
         const c = calc(ratio);
         return { ratio, first: c.first.payable, second: c.second?.payable ?? 0, total: c.total };
@@ -323,7 +360,7 @@ export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: b
   const bestRatio = scan.length ? scan.reduce((m, x) => (x.total < m.total ? x : m), scan[0]).ratio : 0;
   const ratio = !hasSpouse
     ? 0
-    : kids === 0
+    : nKids === 0
       ? 1
       : s.spouseMode === "legal"
         ? 0.5
@@ -332,12 +369,25 @@ export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: b
           : s.spouseMode === "none"
             ? 0
             : s.spouseMode === "cap16"
-              ? Math.min(1, (16000 * MAN) / Math.max(1, b.total))
+              ? Math.min(1, (16000 * MAN) / Math.max(1, b0.total))
               : s.spouseMode === "best"
                 ? bestRatio
                 : s.spouseMode === "custom" && kidShares
                   ? customRatio
                   : 0.5;
   const c = calc(ratio, kidShares);
-  return { breakdown: b, spouseRatio: ratio, kidShares, first: c.first, second: c.second, secondEstate: c.secondEstate, total: c.total, scan, bestRatio };
+  const out: InheritancePlan = {
+    breakdown: c.b,
+    spouseRatio: ratio,
+    kidShares,
+    heirKids: nKids,
+    heirKidIdx,
+    first: c.first,
+    second: c.second,
+    secondEstate: c.secondEstate,
+    total: c.total,
+    scan,
+    bestRatio,
+  };
+  return scaleMoney(out, deflate);
 }

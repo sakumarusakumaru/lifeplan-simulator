@@ -329,6 +329,7 @@ export function IncomeMegaSection() {
                       value={j.inc}
                       onChange={(v) => updateJob(i, { inc: v })}
                       unit="円"
+                      hint={j.start <= plan.curAge ? "今の勤務先は今年の年収" : "入社した年の年収"}
                     />
                     <PercentField
                       label="昇給率（年・複利）"

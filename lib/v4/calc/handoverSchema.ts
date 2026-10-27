@@ -487,5 +487,5 @@ export const WISH_FIELDS: FieldDef[] = [
   { key: "grave", label: "お墓・納骨", type: "note", wide: true },
   { key: "pet", label: "ペットのこと", type: "note", wide: true },
   { key: "keepsake", label: "形見分け・残してほしいもの", type: "note", wide: true },
-  { key: "notify", label: "亡くなったことを知らせてほしい人", type: "note", wide: true, placeholder: "例：大学の友人○○さん（連絡先は6ページ）" },
+  { key: "notify", label: "亡くなったことを知らせてほしい人", type: "note", wide: true, placeholder: "例：大学の友人○○さん（連絡先は「連絡先」の章）" },
 ];

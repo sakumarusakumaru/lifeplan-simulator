@@ -29,12 +29,15 @@ function SecretInput({ label, value, onChange }: { label: string; value: string;
   return (
     <Field label={`🔑 ${label}`} hint="この端末だけに保存・JSONには含めない">
       <input
-        type={focused ? "text" : "password"}
+        // type="password" にするとブラウザがパスワードとして保存しようとするので、text のまま入力中以外は●で表示する
+        type="text"
         autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
         spellCheck={false}
         className="bg-white px-2 py-1.5 text-xs font-bold outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#c8383a]"
         style={{ border: "2px dashed #b8860b", borderRadius: 8 }}
-        value={text}
+        value={focused ? text : text.replace(/./g, "●")}
         onFocus={() => setFocused(true)}
         onChange={(e) => setText(e.target.value)}
         onBlur={() => {

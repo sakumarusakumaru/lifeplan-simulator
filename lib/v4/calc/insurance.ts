@@ -337,7 +337,17 @@ export function insuranceYear(
 
     // 死亡保険金・収入保障（亡くなった年の判定は「亡くなる前の年まで保障が続いていたか」）
     if (death && p.insured === death.who && !HAS.edu(p.type) && deathCoverActive(p, death.age)) {
-      if (age === death.age) out.deathLump += deathBenefitAt(p, death.age);
+      if (age === death.age) {
+        const benefit = deathBenefitAt(p, death.age);
+        out.deathLump += benefit;
+        // 契約者が亡くなった人でなければ（例: 夫が妻に掛けた保険で、妻が亡くなった）、相続税ではなく契約者の一時所得
+        //   （受取人＝契約者とする。契約者・被保険者・受取人が3人とも違う贈与税の形は扱わない）
+        if (p.contractor !== death.who && benefit > 0) {
+          const cost = Math.min(state.unrecovered[i], benefit);
+          state.unrecovered[i] -= cost;
+          ichiji[p.contractor] += benefit - cost;
+        }
+      }
       if (HAS.incomeProt(p.type) && age >= death.age) {
         const until = Math.max(p.coverEnd > 0 ? p.coverEnd : death.age, death.age + Math.max(0, p.incomeProtMinYears));
         if (age < until) out.incomeProt += p.incomeProtM * 12;
@@ -398,6 +408,18 @@ export function selfDeathBenefitAt(list: Insurance[], age: number): number {
   return list
     .filter((p) => p.enabled && p.insured === "本人" && p.contractor === "本人" && deathCoverActive(p, age))
     .reduce((s, p) => s + deathBenefitAt(p, age), 0);
+}
+
+// 相続税の目安用: 本人が亡くなったときの収入保障保険の年金を受け取る権利（みなし相続財産・定期金に関する権利）
+//   残りの年金を予定利率1%で割り引いた額（複利年金現価）とする
+export function selfIncomeProtValueAt(list: Insurance[], age: number): number {
+  return list
+    .filter((p) => p.enabled && HAS.incomeProt(p.type) && p.insured === "本人" && p.contractor === "本人" && deathCoverActive(p, age))
+    .reduce((s, p) => {
+      const years = Math.max(p.coverEnd > 0 ? p.coverEnd - age : 0, Math.max(0, p.incomeProtMinYears));
+      const r = 0.01;
+      return s + p.incomeProtM * 12 * (years > 0 ? (1 - Math.pow(1 + r, -years)) / r : 0);
+    }, 0);
 }
 
 // もしもの備え用: その人がその年齢で亡くなったら出る保険（保険の一覧から）

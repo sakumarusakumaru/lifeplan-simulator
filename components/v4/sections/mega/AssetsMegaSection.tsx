@@ -18,6 +18,7 @@ import type {
   RealEstateType,
 } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
+import { removeLinked } from "@/store/v4/remove-linked";
 
 const PROP_TYPE_OPTIONS: { value: RealEstateType; label: string }[] = [
   { value: "mansion", label: "マンション（区分所有）" },
@@ -235,7 +236,7 @@ export function AssetsMegaSection() {
   const updateRe = (i: number, patch: Partial<RealEstate>) =>
     setField("res", plan.res.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const addRe = () => setField("res", [...plan.res, NEW_RE()]);
-  const removeRe = (i: number) => setField("res", plan.res.filter((_, idx) => idx !== i));
+  const removeRe = (i: number) => removeLinked("res", i);
 
   const totalBal =
     plan.cashBal + plan.nisaBal + plan.tokuBal + plan.cryptoBal + plan.goldBal + plan.dcBal;

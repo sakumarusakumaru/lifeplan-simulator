@@ -223,7 +223,7 @@ export function InsuranceCard({
             value={p.deathBenefit}
             onChange={(v) => onChange({ deathBenefit: v })}
             unit="円"
-            hint={t === "個人年金保険" ? "多くは払込保険料の相当額" : "「もしも・相続」の試算に入ります"}
+            hint={t === "個人年金保険" ? "多くは払込保険料の相当額" : "「もしも」の試算に入ります"}
           />
         ) : null}
         {t === "共済" ? (

@@ -48,11 +48,115 @@ function readV3Plan(): Partial<PlanInput> | null {
   }
 }
 
+// 保存データ・読み込んだJSONを今の形に揃える。足りない項目は BASE の値で埋める（前の入力は混ぜない）
+export function normalizePlan(source: Partial<PlanInput>, BASE: PlanInput): PlanInput {
+  const persistedPlan = source as Partial<PlanInput> & {
+    kids?: Array<{ s?: Record<string, unknown>; opt?: Record<string, unknown> } & Record<string, unknown>>;
+    jobs?: Array<Record<string, unknown>>;
+    res?: Array<Record<string, unknown>>;
+  };
+
+  // Kid フィールドの自動マイグレーション
+  // 旧: opt.grad / opt.dormU / opt.dormG → 新: s.g / opt.dorm
+  const migratedKids = (persistedPlan.kids ?? BASE.kids).map((kid) => {
+    const s = { ...(kid.s ?? {}) } as Record<string, unknown>;
+    const opt = { ...(kid.opt ?? {}) } as Record<string, unknown>;
+    if (s.g === undefined) {
+      s.g = opt.grad ? "pub" : "none";
+    }
+    if (opt.dorm === undefined) {
+      opt.dorm = Boolean(opt.dormU || opt.dormG);
+    }
+    return { ...kid, s, opt };
+  });
+
+  // Job フィールドの自動マイグレーション (raise追加)
+  const migratedJobs = (persistedPlan.jobs ?? BASE.jobs).map((j) => {
+    const obj = { ...j } as Record<string, unknown>;
+    if (obj.raise === undefined) obj.raise = 0;
+    return obj;
+  });
+
+  // drawCustomOrder: ver4 の口座単位に揃える
+  const ALL_DRAW_ASSETS = BASE.drawCustomOrder;
+  const persistedOrder = (persistedPlan.drawCustomOrder ?? []).filter((a) =>
+    ALL_DRAW_ASSETS.includes(a),
+  );
+  const migratedDrawOrder = [
+    ...persistedOrder,
+    ...ALL_DRAW_ASSETS.filter((a) => !persistedOrder.includes(a)),
+  ];
+  const migratedDrawMode =
+    persistedPlan.drawOrder === "custom" ? "custom" : BASE.drawOrder;
+
+  // RealEstate フィールドの自動マイグレーション (propTax + 評価額算定用フィールド追加)
+  const currentYear = new Date().getFullYear();
+  const migratedRes = (persistedPlan.res ?? BASE.res).map((r) => {
+    const obj = { ...r } as Record<string, unknown>;
+    if (obj.propTax === undefined) obj.propTax = 0;
+    if (obj.propType === undefined) obj.propType = "mansion";
+    if (obj.structure === undefined) obj.structure = "rc";
+    if (obj.builtYear === undefined) obj.builtYear = currentYear - 5;
+    if (obj.purchasePrice === undefined) obj.purchasePrice = obj.bal || 0;
+    if (obj.landRatio === undefined) obj.landRatio = 30;
+    if (obj.currentValueOverride === undefined) obj.currentValueOverride = 0;
+    return obj;
+  });
+
+  // 持ち家（自宅）フィールドのマイグレーション
+  const planWithHome = persistedPlan as typeof persistedPlan & Record<string, unknown>;
+  if (planWithHome.homeOwned === undefined) {
+    // 旧データ: useHomeLoan が true なら持ち家とみなす
+    planWithHome.homeOwned = Boolean(planWithHome.useHomeLoan);
+  }
+  if (planWithHome.homePropType === undefined) planWithHome.homePropType = "house";
+  if (planWithHome.homeStructure === undefined) planWithHome.homeStructure = "wood";
+  if (planWithHome.homeBuiltYear === undefined) planWithHome.homeBuiltYear = currentYear - 5;
+  if (planWithHome.homePurchasePrice === undefined) planWithHome.homePurchasePrice = 0;
+  if (planWithHome.homeLandRatio === undefined) planWithHome.homeLandRatio = 50;
+  if (planWithHome.homeCurrentValueOverride === undefined) planWithHome.homeCurrentValueOverride = 0;
+
+  return {
+    ...BASE,
+    ...persistedPlan,
+    kids: migratedKids,
+    jobs: migratedJobs,
+    // 保険: 旧い種類名（「生命（死亡・収入保障）」など）を新しい種類に読み替え、足りない項目を補う
+    ins: (persistedPlan.ins ?? BASE.ins).map((p) =>
+      normalizeInsurance(p as never, persistedPlan.curAge ?? BASE.curAge, persistedPlan.endAge ?? BASE.endAge),
+    ),
+    res: migratedRes,
+    drawCustomOrder: migratedDrawOrder,
+    drawOrder: migratedDrawMode,
+    selfPension: {
+      ...BASE.selfPension,
+      ...(persistedPlan.selfPension ?? {}),
+    },
+    spousePension: {
+      ...BASE.spousePension,
+      ...(persistedPlan.spousePension ?? {}),
+    },
+    // 投信／株のカード入力: まとめて入れていた人は、その金額を「投資信託」に入れて引き継ぐ
+    nisaSplit: persistedPlan.nisaSplit?.on
+      ? { ...BASE.nisaSplit, ...persistedPlan.nisaSplit }
+      : { ...BASE.nisaSplit, on: true, fundBal: persistedPlan.nisaBal ?? 0, fundR: persistedPlan.nisaR ?? BASE.nisaR },
+    tokuSplit: persistedPlan.tokuSplit?.on
+      ? { ...BASE.tokuSplit, ...persistedPlan.tokuSplit }
+      : { ...BASE.tokuSplit, on: true, fundBal: persistedPlan.tokuBal ?? BASE.tokuBal, fundR: persistedPlan.tokuR ?? BASE.tokuR },
+    handover: { ...BASE.handover, ...(persistedPlan.handover ?? {}) },
+    risk: {
+      ...BASE.risk,
+      ...(persistedPlan.risk ?? {}),
+    },
+  } as unknown as PlanInput;
+}
+
 interface PlanStore {
   plan: PlanInput;
   hydrated: boolean;
   setField: <K extends keyof PlanInput>(key: K, value: PlanInput[K]) => void;
   patch: (partial: Partial<PlanInput>) => void;
+  replace: (plan: PlanInput) => void; // JSONの読み込み（丸ごと置き換える）
   reset: () => void;          // 空の状態に戻す（はじめての人と同じ）
   loadSample: () => void;     // サンプル（35歳・会社員）を読み込む
   setHydrated: () => void;
@@ -67,6 +171,7 @@ export const usePlanStore = create<PlanStore>()(
         set((s) => ({ plan: { ...s.plan, [key]: value } })),
       patch: (partial) =>
         set((s) => ({ plan: { ...s.plan, ...partial } })),
+      replace: (plan) => set({ plan }),
       reset: () => set({ plan: EMPTY_PLAN }),
       loadSample: () => set({ plan: DEFAULT_PLAN }),
       setHydrated: () => set({ hydrated: true }),
@@ -82,109 +187,7 @@ export const usePlanStore = create<PlanStore>()(
         const source = loaded ?? {};
         // 保存データがない（はじめての人）は空の状態から。保存データがある人は不足項目をサンプル値で補う
         const BASE = loaded ? DEFAULT_PLAN : EMPTY_PLAN;
-        const persistedPlan = source as Partial<PlanInput> & {
-          kids?: Array<{ s?: Record<string, unknown>; opt?: Record<string, unknown> } & Record<string, unknown>>;
-          jobs?: Array<Record<string, unknown>>;
-          res?: Array<Record<string, unknown>>;
-        };
-
-        // Kid フィールドの自動マイグレーション
-        // 旧: opt.grad / opt.dormU / opt.dormG → 新: s.g / opt.dorm
-        const migratedKids = (persistedPlan.kids ?? BASE.kids).map((kid) => {
-          const s = { ...(kid.s ?? {}) } as Record<string, unknown>;
-          const opt = { ...(kid.opt ?? {}) } as Record<string, unknown>;
-          if (s.g === undefined) {
-            s.g = opt.grad ? "pub" : "none";
-          }
-          if (opt.dorm === undefined) {
-            opt.dorm = Boolean(opt.dormU || opt.dormG);
-          }
-          return { ...kid, s, opt };
-        });
-
-        // Job フィールドの自動マイグレーション (raise追加)
-        const migratedJobs = (persistedPlan.jobs ?? BASE.jobs).map((j) => {
-          const obj = { ...j } as Record<string, unknown>;
-          if (obj.raise === undefined) obj.raise = 0;
-          return obj;
-        });
-
-        // drawCustomOrder: ver4 の口座単位に揃える
-        const ALL_DRAW_ASSETS = BASE.drawCustomOrder;
-        const persistedOrder = (persistedPlan.drawCustomOrder ?? []).filter((a) =>
-          ALL_DRAW_ASSETS.includes(a),
-        );
-        const migratedDrawOrder = [
-          ...persistedOrder,
-          ...ALL_DRAW_ASSETS.filter((a) => !persistedOrder.includes(a)),
-        ];
-        const migratedDrawMode =
-          persistedPlan.drawOrder === "custom" ? "custom" : BASE.drawOrder;
-
-        // RealEstate フィールドの自動マイグレーション (propTax + 評価額算定用フィールド追加)
-        const currentYear = new Date().getFullYear();
-        const migratedRes = (persistedPlan.res ?? BASE.res).map((r) => {
-          const obj = { ...r } as Record<string, unknown>;
-          if (obj.propTax === undefined) obj.propTax = 0;
-          if (obj.propType === undefined) obj.propType = "mansion";
-          if (obj.structure === undefined) obj.structure = "rc";
-          if (obj.builtYear === undefined) obj.builtYear = currentYear - 5;
-          if (obj.purchasePrice === undefined) obj.purchasePrice = obj.bal || 0;
-          if (obj.landRatio === undefined) obj.landRatio = 30;
-          if (obj.currentValueOverride === undefined) obj.currentValueOverride = 0;
-          return obj;
-        });
-
-        // 持ち家（自宅）フィールドのマイグレーション
-        const planWithHome = persistedPlan as typeof persistedPlan & Record<string, unknown>;
-        if (planWithHome.homeOwned === undefined) {
-          // 旧データ: useHomeLoan が true なら持ち家とみなす
-          planWithHome.homeOwned = Boolean(planWithHome.useHomeLoan);
-        }
-        if (planWithHome.homePropType === undefined) planWithHome.homePropType = "house";
-        if (planWithHome.homeStructure === undefined) planWithHome.homeStructure = "wood";
-        if (planWithHome.homeBuiltYear === undefined) planWithHome.homeBuiltYear = currentYear - 5;
-        if (planWithHome.homePurchasePrice === undefined) planWithHome.homePurchasePrice = 0;
-        if (planWithHome.homeLandRatio === undefined) planWithHome.homeLandRatio = 50;
-        if (planWithHome.homeCurrentValueOverride === undefined) planWithHome.homeCurrentValueOverride = 0;
-
-        return {
-          ...currentState,
-          plan: {
-            ...BASE,
-            ...currentState.plan,
-            ...persistedPlan,
-            kids: migratedKids,
-            jobs: migratedJobs,
-            // 保険: 旧い種類名（「生命（死亡・収入保障）」など）を新しい種類に読み替え、足りない項目を補う
-            ins: (persistedPlan.ins ?? BASE.ins).map((p) =>
-              normalizeInsurance(p as never, persistedPlan.curAge ?? BASE.curAge, persistedPlan.endAge ?? BASE.endAge),
-            ),
-            res: migratedRes,
-            drawCustomOrder: migratedDrawOrder,
-            drawOrder: migratedDrawMode,
-            selfPension: {
-              ...BASE.selfPension,
-              ...(persistedPlan.selfPension ?? {}),
-            },
-            spousePension: {
-              ...BASE.spousePension,
-              ...(persistedPlan.spousePension ?? {}),
-            },
-            // 投信／株のカード入力: まとめて入れていた人は、その金額を「投資信託」に入れて引き継ぐ
-            nisaSplit: persistedPlan.nisaSplit?.on
-              ? { ...BASE.nisaSplit, ...persistedPlan.nisaSplit }
-              : { ...BASE.nisaSplit, on: true, fundBal: persistedPlan.nisaBal ?? 0, fundR: persistedPlan.nisaR ?? BASE.nisaR },
-            tokuSplit: persistedPlan.tokuSplit?.on
-              ? { ...BASE.tokuSplit, ...persistedPlan.tokuSplit }
-              : { ...BASE.tokuSplit, on: true, fundBal: persistedPlan.tokuBal ?? BASE.tokuBal, fundR: persistedPlan.tokuR ?? BASE.tokuR },
-            handover: { ...BASE.handover, ...(persistedPlan.handover ?? {}) },
-            risk: {
-              ...BASE.risk,
-              ...(persistedPlan.risk ?? {}),
-            },
-          } as unknown as PlanInput,
-        };
+        return { ...currentState, plan: normalizePlan(source, { ...BASE, ...currentState.plan }) };
       },
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();

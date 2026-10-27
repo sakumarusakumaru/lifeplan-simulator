@@ -1,7 +1,7 @@
 // 「お金の引き継ぎ書」の財産・負債の一覧。金額はシミュレーターの入力（作成日時点）から自動で入る
 import { computeRealEstateValue } from "./finance";
 import { HAS, deathBenefitAt, deathCoverActive, normalizeInsurance, premiumAt, typeLabel } from "./insurance";
-import type { DcType, HandoverItem, Insurance, PlanInput, RealEstate, YearlyResult } from "./types";
+import type { DcType, HandoverInput, HandoverItem, Insurance, PlanInput, RealEstate, YearlyResult } from "./types";
 
 const MAN = 10000;
 const manS = (yen: number) => `${Math.round(yen / MAN).toLocaleString()}万円`;
@@ -37,16 +37,6 @@ const propDetail = (r: Pick<RealEstate, "propType" | "structure" | "builtYear">)
     .filter(Boolean)
     .join("・");
 
-export interface InventoryRow {
-  key: string;            // 保管場所（where）を結びつけるキー
-  kind: "asset" | "debt";
-  label: string;
-  amount: number;
-  placeholder: string;    // 保管場所の入力例
-  detail?: string;        // 入力済みの内容から作る補足（内訳・ローンの条件など）
-  prefill?: string;       // 保管場所の欄に、入力済みの内容から入れておく文
-}
-
 function homeValueNow(plan: PlanInput, year: number): number {
   if (!plan.homeOwned) return 0;
   return computeRealEstateValue(
@@ -68,83 +58,6 @@ function homeValueNow(plan: PlanInput, year: number): number {
     },
     year,
   );
-}
-
-export function buildInventory(plan: PlanInput): InventoryRow[] {
-  const year = new Date().getFullYear();
-  const rows: InventoryRow[] = [
-    { key: "cash", kind: "asset", label: "現金・預金", amount: plan.cashBal, placeholder: "例：○○銀行 △△支店（普通・定期）、ゆうちょ銀行" },
-    { key: "nisa", kind: "asset", label: "NISA口座", amount: plan.nisaBal, placeholder: "例：○○証券のNISA口座", detail: splitDetail(plan.nisaSplit) },
-    { key: "toku", kind: "asset", label: "特定口座（証券）", amount: plan.tokuBal, placeholder: "例：○○証券・△△証券の特定口座", detail: splitDetail(plan.tokuSplit) },
-    {
-      key: "dc",
-      kind: "asset",
-      label: DC_LABEL[plan.dcType] ?? "iDeCo・企業型DC",
-      amount: plan.dcBal,
-      placeholder: "例：iDeCo（○○証券）、会社の企業型DC",
-      detail: plan.saveDcM > 0 || plan.dcEmployerM > 0 ? `掛金 月${((plan.saveDcM + plan.dcEmployerM) / MAN).toFixed(1)}万円` : "",
-      prefill: plan.dcType === "employee-dc" && currentJobs(plan)[0]?.name ? `勤務先（${currentJobs(plan)[0].name}）の企業型DC` : "",
-    },
-    { key: "crypto", kind: "asset", label: "暗号資産", amount: plan.cryptoBal, placeholder: "例：○○取引所（アプリ名）" },
-    { key: "gold", kind: "asset", label: "金・コモディティ", amount: plan.goldBal, placeholder: "例：○○証券の金ETF、自宅の金庫" },
-    {
-      key: "home",
-      kind: "asset",
-      label: "自宅（評価額の目安）",
-      amount: homeValueNow(plan, year),
-      placeholder: "例：所在地。権利証・登記識別情報は○○に保管",
-      detail: plan.homeOwned ? propDetail({ propType: plan.homePropType, structure: plan.homeStructure, builtYear: plan.homeBuiltYear }) : "",
-    },
-  ];
-  plan.res.forEach((r, i) => {
-    rows.push({
-      key: `re-${i}`,
-      kind: "asset",
-      label: `不動産投資：${r.name || `物件${i + 1}`}`,
-      amount: computeRealEstateValue(r, year),
-      placeholder: "例：所在地・管理会社",
-      detail: [propDetail(r), r.rent > 0 ? `家賃収入 月${(r.rent / MAN).toFixed(1)}万円` : ""].filter(Boolean).join("・"),
-    });
-  });
-  if (plan.useHomeLoan && plan.hlBal > 0) {
-    rows.push({
-      key: "hl",
-      kind: "debt",
-      label: "住宅ローン",
-      amount: plan.hlBal,
-      placeholder: "例：○○銀行",
-      detail: [`金利${plan.hlRate}%`, plan.hlTerm > 0 ? `残り約${plan.hlTerm}年` : "", plan.risk?.danshin ? "団信あり" : "団信なし"].filter(Boolean).join("・"),
-    });
-  }
-  plan.res.forEach((r, i) => {
-    if (r.bal > 0) {
-      rows.push({
-        key: `reloan-${i}`,
-        kind: "debt",
-        label: `不動産ローン：${r.name || `物件${i + 1}`}`,
-        amount: r.bal,
-        placeholder: "例：○○銀行",
-        detail: [`金利${r.rate}%`, r.term > 0 ? `期間${r.term}年` : ""].filter(Boolean).join("・"),
-      });
-    }
-  });
-  plan.otherLoans.forEach((ln, i) => {
-    const amount = ln.monthlyPay * ln.remainMonths;
-    if (amount > 0) {
-      rows.push({
-        key: `loan-${i}`,
-        kind: "debt",
-        label: ln.label || `ローン${i + 1}`,
-        amount,
-        placeholder: "例：○○信販",
-        detail: `月${(ln.monthlyPay / MAN).toFixed(1)}万円 × 残り${ln.remainMonths}回`,
-      });
-    }
-  });
-  (plan.handover?.extraAssets ?? []).forEach((x, i) => {
-    rows.push({ key: `extra-${i}`, kind: "asset", label: x.label || `その他の財産${i + 1}`, amount: x.amount, placeholder: "" });
-  });
-  return rows;
 }
 
 // ── 保険（入力画面の保険の一覧から） ──
@@ -221,7 +134,7 @@ export function monthlyPayments(plan: PlanInput, row: YearlyResult | undefined, 
     const y = premiumAt(p, plan.curAge, 1);
     add(`保険料：${[p.company, p.name].filter(Boolean).join(" ") || typeLabel(p.type)}`, y / 12, p.insured === "本人" ? "亡くなった人の保険は払込が終わる" : "契約者の変更が必要なことがある");
   });
-  if (plan.curAge < plan.nisaEndAge) add("NISAの積立", plan.nisaTsumitateM + plan.nisaGrowthM, "証券会社に連絡して止める");
+  if (plan.curAge < plan.nisaEndAge) add("新NISAの積立", plan.nisaTsumitateM + plan.nisaGrowthM, "証券会社に連絡して止める");
   if (plan.curAge < plan.saveTokuEndAge) add("特定口座の積立", plan.saveTokuM, "証券会社に連絡して止める");
   if (plan.curAge < plan.saveDcEndAge) add(DC_LABEL[plan.dcType] === "企業型DC" ? "企業型DCのマッチング拠出" : "iDeCoの掛金", plan.saveDcM, "死亡一時金の請求と一緒に止まる");
   if (plan.curAge < plan.saveCryptoEndAge) add("暗号資産の積立", plan.saveCryptoM, "取引所に連絡して止める");
@@ -391,6 +304,49 @@ export function autoSources(plan: PlanInput): AutoSource[] {
   return out;
 }
 
+// 入力で i 番目の保険・不動産・ローンを消したときに、引き継ぎ書の結びつき（"ins-番号" "re-番号" など）を付け替える。
+//   消した物の項目は消し、後ろの番号は1つ詰める。null は「消す」
+export function shiftIndexKey(key: string, prefixes: string[], removed: number): string | null {
+  const m = key.match(/^([a-z]+)-(\d+)(.*)$/);
+  if (!m || !prefixes.includes(m[1])) return key;
+  const n = Number(m[2]);
+  if (n === removed) return null;
+  return n > removed ? `${m[1]}-${n - 1}${m[3]}` : key;
+}
+
+export function handoverAfterRemove(h: HandoverInput, prefixes: string[], removed: number) {
+  const removedIds: string[] = [];
+  const items = (h.items ?? []).flatMap((it) => {
+    if (!it.src) return [it];
+    const src = shiftIndexKey(it.src, prefixes, removed);
+    if (src === null) {
+      removedIds.push(it.id);
+      return [];
+    }
+    return [src === it.src ? it : { ...it, src }];
+  });
+  const rekey = <T,>(o: Record<string, T> | undefined) => {
+    if (!o) return o;
+    const out: Record<string, T> = {};
+    for (const [k, v] of Object.entries(o)) {
+      const nk = shiftIndexKey(k, prefixes, removed);
+      if (nk) out[nk] = v;
+    }
+    return out;
+  };
+  return {
+    handover: { ...h, items, insExtra: rekey(h.insExtra), where: rekey(h.where) ?? {} },
+    // 口座番号などの別保存の値のキー（"項目ID.欄" と "ins-番号.欄"）の付け替え
+    secretKey: (key: string) => (removedIds.some((id) => key.startsWith(`${id}.`)) ? null : shiftIndexKey(key, prefixes, removed)),
+  };
+}
+
+// 本人が書き足した中身があるか（入力から作ったときに入れた値と同じなら、書いたことにしない）
+export function hasOwnContent(item: HandoverItem, sources: ReturnType<typeof autoSources>): boolean {
+  const auto = item.src ? sources.find((s) => s.src === item.src)?.f ?? {} : {};
+  return Object.entries(item.f).some(([k, v]) => v && v !== auto[k]);
+}
+
 // 項目の金額（シミュレーターから作った項目は、手で直していなければ入力の金額）
 export function itemAmount(plan: PlanInput, item: HandoverItem, sources = autoSources(plan)): number {
   if (typeof item.amount === "number" && Number.isFinite(item.amount)) return item.amount;
@@ -431,7 +387,10 @@ export function syncHandoverItems(plan: PlanInput): HandoverItem[] | null {
     if (it.cat !== "securities" || it.f.kind !== "NISA") continue;
     const f: Record<string, string> = { ...it.f, kind: "新NISA" };
     if (it.src === "nisa" && f.holdings && f.holdings === splitDetail(plan.nisaSplit, true)) f.holdings = splitDetail(plan.nisaSplit, false);
-    items[i] = { ...it, f };
+    // 金額を手で直していた場合は新旧の合計なので、別の項目にした旧NISAの分を引く
+    const oldNisa = items.some((x) => x.src === "nisaOld") ? autoSources(plan).find((x) => x.src === "nisaOld")?.amount ?? 0 : 0;
+    const amount = it.src === "nisa" && typeof it.amount === "number" && it.amount > 0 ? Math.max(0, it.amount - oldNisa) : it.amount;
+    items[i] = { ...it, f, amount };
     changed = true;
   }
   if (migrate) {
