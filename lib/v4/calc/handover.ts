@@ -21,14 +21,15 @@ export function currentJobs(plan: PlanInput) {
   return plan.jobs.filter((j) => j.start <= plan.curAge && plan.curAge < j.end && j.inc > 0);
 }
 
-const splitDetail = (sp: PlanInput["nisaSplit"] | undefined) => {
+// withOld: 旧NISAも並べる（ver4.18 までの引き継ぎ書の書き方。新NISAと旧NISAは別の項目にした）
+const splitDetail = (sp: PlanInput["nisaSplit"] | undefined, withOld = true) => {
   if (!sp?.on) return "";
   const parts = [
     sp.fundBal > 0 ? `投資信託 ${manS(sp.fundBal)}` : "",
     sp.stockBal > 0 ? `株 ${manS(sp.stockBal)}` : "",
-    (sp.oldBal ?? 0) > 0 ? `旧NISA ${manS(sp.oldBal ?? 0)}` : "",
+    withOld && (sp.oldBal ?? 0) > 0 ? `旧NISA ${manS(sp.oldBal ?? 0)}` : "",
   ].filter(Boolean);
-  return parts.length > 1 ? parts.join("・") : "";
+  return parts.length > 1 ? parts.join("・") : withOld ? "" : parts[0] ?? "";
 };
 
 const propDetail = (r: Pick<RealEstate, "propType" | "structure" | "builtYear">) =>
@@ -315,9 +316,17 @@ const loanKindOf = (label: string) =>
 export function autoSources(plan: PlanInput): AutoSource[] {
   const year = new Date().getFullYear();
   const job = currentJobs(plan)[0]?.name ?? "";
+  const oldNisa = plan.nisaSplit?.on ? Math.min(Math.max(0, plan.nisaBal), Math.max(0, plan.nisaSplit.oldBal ?? 0)) : 0;
   const out: AutoSource[] = [
     { src: "cash", cat: "bank", amount: plan.cashBal, f: { kind: "普通", holder: "本人" } },
-    { src: "nisa", cat: "securities", amount: plan.nisaBal, f: { kind: "NISA", holdings: splitDetail(plan.nisaSplit) } },
+    // 新NISAと旧NISA（2023年までの一般NISA・つみたてNISA）は枠も非課税期間も違うので分ける
+    { src: "nisa", cat: "securities", amount: Math.max(0, plan.nisaBal - oldNisa), f: { kind: "新NISA", holdings: splitDetail(plan.nisaSplit, false) } },
+    {
+      src: "nisaOld",
+      cat: "securities",
+      amount: oldNisa,
+      f: { kind: "旧NISA（一般・つみたて）", holdings: "2023年までに買った分。非課税期間（一般5年・つみたて20年）が終わると特定口座などに移る" },
+    },
     { src: "toku", cat: "securities", amount: plan.tokuBal, f: { kind: "特定口座", holdings: splitDetail(plan.tokuSplit) } },
     { src: "gold", cat: "securities", amount: plan.goldBal, f: { kind: "その他", holdings: "金・コモディティ（ETFなど）" } },
     {
@@ -408,7 +417,21 @@ export function syncHandoverItems(plan: PlanInput): HandoverItem[] | null {
       if (nf && !f[nf]) f[nf] = old;
       else f.memo = [f.memo, old].filter(Boolean).join("／");
     }
-    items.push({ id: newItemId(), cat: s.cat, src: s.src, f });
+    const nisaAt = items.findIndex((x) => x.src === "nisa");
+    if (s.src === "nisaOld" && nisaAt >= 0) {
+      // 旧NISAはふつう新NISAと同じ証券会社。新NISAのすぐ下に置く
+      if (items[nisaAt].f.company && !f.company) f.company = items[nisaAt].f.company;
+      items.splice(nisaAt + 1, 0, { id: newItemId(), cat: s.cat, src: s.src, f });
+    } else items.push({ id: newItemId(), cat: s.cat, src: s.src, f });
+    changed = true;
+  }
+  // ver4.18 までの「NISA」（新旧の合計）を「新NISA」に。自動で入れた中身の説明も新NISAの分に直す
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.cat !== "securities" || it.f.kind !== "NISA") continue;
+    const f: Record<string, string> = { ...it.f, kind: "新NISA" };
+    if (it.src === "nisa" && f.holdings && f.holdings === splitDetail(plan.nisaSplit, true)) f.holdings = splitDetail(plan.nisaSplit, false);
+    items[i] = { ...it, f };
     changed = true;
   }
   if (migrate) {

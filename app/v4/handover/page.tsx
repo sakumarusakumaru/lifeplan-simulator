@@ -32,7 +32,7 @@ import {
   type FieldDef,
   type Side,
 } from "@/lib/v4/calc/handoverSchema";
-import { inheritanceTax, legalHeirs, planInheritance } from "@/lib/v4/calc/inheritance";
+import { DEFAULT_INHERIT, inheritanceTax, legalHeirs, planInheritance, realEstateEval } from "@/lib/v4/calc/inheritance";
 import { normalizeInsurance } from "@/lib/v4/calc/insurance";
 import { requiredCoverage, simulate } from "@/lib/v4/calc/simulate";
 import { buildSurvivorPhases } from "@/lib/v4/calc/survivor";
@@ -232,7 +232,21 @@ export default function HandoverPage() {
     insRows.reduce((a, x) => a + x.deathBenefit, 0) + extraPolicies.reduce((a, { p }) => a + (p.benefit || 0), 0) + (plan.risk.deathInsurance || 0);
   // 引き継ぎ書に書いた財産・負債で計算（配偶者の取得割合・名義の割合は「もしも・相続」の設定を使う）
   const inh = planInheritance(plan, base.rows[0], hasSpouse, heirKids);
-  const estate = totalAssets - totalDebts + Math.max(0, insuranceTotal - 5_000_000 * heirs.count);
+  // 相続税では、不動産は時価ではなく相続税評価額（シミュレーターから作った物件だけ置き換える。手で足した物件は書いた額のまま）
+  const inhSet = { ...DEFAULT_INHERIT, ...(plan.inheritSet ?? {}) };
+  const reEvals = realEstateEval(plan, today.getFullYear(), inhSet);
+  let reAdjust = 0;
+  for (const it of byCat("realestate")) {
+    const ev = reEvals.find((p) => p.key === it.src);
+    if (!ev || ev.market <= 0) continue;
+    const amt = amountOf(it);
+    reAdjust += amt * (ev.value / ev.market) - amt;
+    // 自宅の土地の小規模宅地等の特例（配偶者が相続する前提）
+    if (ev.key === "home" && inhSet.smallLand && hasSpouse) reAdjust -= ev.land * (amt / ev.market) * 0.8;
+  }
+  // 団信のある住宅ローンは亡くなると0になるので、債務から外す
+  const danshinDebt = byCat("housingLoan").filter((it) => it.f.danshin === "あり").reduce((a, it) => a + amountOf(it), 0);
+  const estate = Math.max(0, totalAssets + reAdjust - (totalDebts - danshinDebt) + Math.max(0, insuranceTotal - 5_000_000 * heirs.count));
   const tax = inheritanceTax(estate * ((plan.inheritSet?.selfSharePct ?? 100) / 100), hasSpouse, heirKids, inh.spouseRatio, plan.kids.map((k) => plan.curAge - k.offset), inh.kidShares);
 
   const phases = buildSurvivorPhases(death.rows);
@@ -468,7 +482,8 @@ export default function HandoverPage() {
               </p>
               <p className="text-[9px] text-[#0a0a0a]/55">
                 総額 {man(tax.totalTax)}・基礎控除 {man(tax.deduction)}
-                {hasSpouse && heirKids > 0 && inh.second ? `。配偶者がその後亡くなると、二次相続でさらに約${man(inh.second.payable)}` : ""}
+                {reAdjust !== 0 ? `。不動産は相続税評価額で計算（時価より${man(-reAdjust)}低い）` : ""}
+                {hasSpouse && heirKids > 0 && inh.second && inh.second.payable > 0 ? `。配偶者がその後亡くなると、二次相続でさらに約${man(inh.second.payable)}` : ""}
               </p>
             </div>
           </div>

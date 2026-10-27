@@ -211,6 +211,7 @@ export interface InheritSettings {
   spouseMode: "legal" | "all" | "cap16" | "none" | "best" | "custom"; // 一次相続の分け方: 法定相続分／配偶者が全部／1億6千万円まで／配偶者は相続しない／一次＋二次が最も少ない割合／自分で決める
   smallLand: boolean;    // 自宅の土地に小規模宅地等の特例（330㎡まで80%減）を使う
   shares?: number[];     // 「自分で決める」の割合（%）。配偶者がいれば [配偶者, 子1, 子2, …]、いなければ [子1, 子2, …]
+  propValue?: Record<string, number>; // 不動産の相続税評価額がわかるときの入力（円・いまの額）。キー: "home" / "re-番号"
 }
 
 export interface RiskInput {

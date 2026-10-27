@@ -350,21 +350,48 @@ const INCOME_RATES = [
   { label: "年収1,000万", rate: 0.43 },
 ];
 
+// 新NISA（2024年〜）: 年360万円（つみたて投資枠120万＋成長投資枠240万）＝月30万円まで、生涯の非課税枠は1,800万円（買った金額で数える）
+const NISA_LIFETIME = 1800 * 10000;
+const TOKU_TAX = 0.20315;
+
+// 毎月同じ額を積み立てて、最後にまとめて売ったときの手取り（途中で売らない前提）
+function compareNisa(monthlyMan: number, years: number, retPct: number) {
+  const m = monthlyMan * 10000;
+  const r = retPct / 100 / 12;
+  let nisa = 0;
+  let nisaIn = 0;
+  let toku = 0;
+  let tokuIn = 0;
+  let all = 0;
+  let fullAt = 0; // 生涯枠がいっぱいになった月
+  for (let i = 1; i <= years * 12; i++) {
+    const toNisa = Math.max(0, Math.min(m, NISA_LIFETIME - nisaIn));
+    if (toNisa < m && !fullAt) fullAt = i;
+    nisa = (nisa + toNisa) * (1 + r);
+    nisaIn += toNisa;
+    toku = (toku + m - toNisa) * (1 + r);
+    tokuIn += m - toNisa;
+    all = (all + m) * (1 + r);
+  }
+  const principal = m * 12 * years;
+  const tokuTax = Math.max(0, toku - tokuIn) * TOKU_TAX;
+  const allTax = Math.max(0, all - principal) * TOKU_TAX;
+  return { principal, nisa, nisaIn, toku, tokuIn, tokuTax, withNisa: nisa + toku - tokuTax, all, allTax, allNet: all - allTax, fullAt };
+}
+
 function StepAccount() {
-  const [monthly, setMonthly] = useState(3);
+  const [monthly, setMonthly] = useState(5);
   const [years, setYears] = useState(20);
   const [ret, setRet] = useState(4);
   const [inc, setInc] = useState(1);
   const [ideco, setIdeco] = useState(2.3);
 
-  const principal = monthly * 10000 * 12 * years;
-  const r = ret / 100 / 12;
-  const n = years * 12;
-  const fv = r === 0 ? principal : monthly * 10000 * ((Math.pow(1 + r, n) - 1) / r);
-  const gain = Math.max(0, fv - principal);
-  const tax = gain * 0.20315;
-  const maxV = Math.max(fv, 1);
+  const c = compareNisa(monthly, years, ret);
+  const gain = Math.max(0, c.all - c.principal);
+  const maxV = Math.max(c.withNisa, c.allNet, 1);
   const saving = ideco * 10000 * 12 * INCOME_RATES[inc].rate;
+  const fullY = Math.floor((c.fullAt - 1) / 12);
+  const fullM = (c.fullAt - 1) % 12;
 
   return (
     <div className="flex flex-col gap-4">
@@ -372,16 +399,49 @@ function StepAccount() {
         <Kicker>ACCOUNTS</Kicker>
         <h2 className="text-xl font-bold text-[#0a0a0a]">税金は「何を買うか」より「どの口座か」で決まる</h2>
         <p className="mt-1 text-sm leading-relaxed text-[#0a0a0a]/70">
-          ver4 では投資を「投信／株」ではなく「NISA口座／特定口座／iDeCo」で入力します。同じ商品でも、口座が違えば手取りが変わるからです。
+          ver4 では投資を「投信／株」ではなく「新NISA／旧NISA／特定口座／iDeCo」で入力します。同じ投資信託を買っても、口座が違えば手取りが変わるからです。
         </p>
       </div>
 
       <Card>
-        <p className="mb-3 text-sm font-bold text-[#0a0a0a]">同じ積立を、NISAと特定口座でやったら？</p>
-        <div className="flex flex-col gap-2">
+        <p className="mb-2 text-sm font-bold text-[#0a0a0a]">同じ積立を、新NISAと特定口座でくらべる</p>
+        <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="rounded-lg px-3 py-2" style={{ background: "#f0fff4" }}>
+            <p className="text-[11px] font-bold" style={{ color: GREEN }}>新NISA（2024年〜）</p>
+            <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
+              利益に税金がかからない。1年に360万円まで（つみたて投資枠120万円＋成長投資枠240万円）＝毎月30万円まで。一生で使える枠は1,800万円（買った金額で数える。売ると翌年に枠が戻る）。
+            </p>
+          </div>
+          <div className="rounded-lg px-3 py-2" style={{ background: "#f3f4f6" }}>
+            <p className="text-[11px] font-bold text-[#64748b]">特定口座</p>
+            <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
+              いくらでも買える。売ったときの利益に20.315%（所得税15.315%＋住民税5%）。「源泉徴収あり」なら証券会社が税を払うので確定申告はいらない。
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Slider label="毎月の積立" value={monthly} min={1} max={30} step={1} onChange={setMonthly} format={(v) => `${v}万円`} />
+          <Slider label="積み立てる年数" value={years} min={1} max={40} step={1} onChange={setYears} format={(v) => `${v}年`} />
+          <Slider label="想定利回り（年）" value={ret} min={0} max={8} step={0.5} onChange={setRet} format={(v) => `${v}%`} />
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-[#0a0a0a]/70">
+          毎月{monthly}万円を{years}年＝元本 <b>{man(c.principal)}</b>。
+          {c.fullAt
+            ? `${fullY > 0 ? `${fullY}年` : ""}${fullM > 0 ? `${fullM}か月` : ""}で新NISAの生涯枠1,800万円がいっぱいになり、それ以降の${man(c.tokuIn)}は特定口座で積み立てる計算です。`
+            : `すべて新NISAの枠に収まります（生涯枠の残り ${man(NISA_LIFETIME - c.nisaIn)}）。`}
+          最後にまとめて売ったときの手取りをくらべます。
+        </p>
+
+        <div className="mt-3 flex flex-col gap-2">
           {[
-            { label: "NISA口座", value: fv, color: GREEN, note: "売却益は非課税" },
-            { label: "特定口座", value: fv - tax, color: "#64748b", note: `売却益に20.315%（−${man(tax)}）` },
+            {
+              label: c.tokuIn > 0 ? "新NISA＋枠を超えた分は特定口座" : "新NISAで積み立てる",
+              value: c.withNisa,
+              color: GREEN,
+              note: c.tokuIn > 0 ? `新NISA ${man(c.nisa)}（非課税）＋特定口座 ${man(c.toku)}（税 −${man(c.tokuTax)}）` : `運用益 ${man(gain)} に税金はかからない`,
+            },
+            { label: "全部を特定口座で積み立てる", value: c.allNet, color: "#64748b", note: `運用益 ${man(gain)} に20.315%（税 −${man(c.allTax)}）` },
           ].map((b) => (
             <div key={b.label}>
               <div className="mb-0.5 flex items-baseline justify-between text-[11px] font-bold">
@@ -389,23 +449,19 @@ function StepAccount() {
                 <span className="tabular-nums text-[#0a0a0a]">{man(b.value)}</span>
               </div>
               <div className="h-4 overflow-hidden rounded" style={{ background: "#0a0a0a10" }}>
-                <div
-                  className="h-full rounded transition-all duration-300"
-                  style={{ width: `${(b.value / maxV) * 100}%`, background: b.color }}
-                />
+                <div className="h-full rounded transition-all duration-300" style={{ width: `${(b.value / maxV) * 100}%`, background: b.color }} />
               </div>
               <p className="mt-0.5 text-[10px] text-[#0a0a0a]/50">{b.note}</p>
             </div>
           ))}
         </div>
         <p className="mt-2 text-[12px] font-bold" style={{ color: RED }}>
-          差は {man(tax)}（積み立てた元本 {man(principal)}）
+          新NISAを使うと、手取りが {man(c.withNisa - c.allNet)} 多い
         </p>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Slider label="毎月の積立" value={monthly} min={1} max={10} step={0.5} onChange={setMonthly} format={(v) => `${v}万円`} />
-          <Slider label="積立期間" value={years} min={5} max={35} step={1} onChange={setYears} format={(v) => `${v}年`} />
-          <Slider label="利回り（年）" value={ret} min={1} max={7} step={0.5} onChange={setRet} format={(v) => `${v}%`} />
-        </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-[#0a0a0a]/50">
+          枠は1人ごと（夫婦なら2人で3,600万円）。2023年までに一般NISA・つみたてNISAで買った分（旧NISA）は新NISAとは別枠で、一般NISAは5年、つみたてNISAは20年まで非課税のまま持てます（新NISAへは移せず、期間が終わると特定口座などに移ります）。
+          利回りは毎年同じとした計算で、実際の値動きは上下します。
+        </p>
       </Card>
 
       <Card>

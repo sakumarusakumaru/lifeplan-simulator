@@ -8,11 +8,17 @@
 //   配偶者の税額軽減 = 総額 × min(配偶者の課税価格, max(1億6,000万, 課税価格 × 配偶者の法定相続分)) ÷ 課税価格
 //   未成年者控除 = 10万 × (18 − 年齢)（子の税額から引く）
 //   二次相続: 残った配偶者が亡くなったとき。配偶者の財産 = 配偶者名義の財産 + 一次相続で受け取った分 − その税。相続人は子だけ
-// 含めないもの: 路線価・固定資産税評価額での評価（自宅・不動産は購入価格から築年数で減価した概算）、
-//   生前贈与の加算、葬式費用、相次相続控除、2割加算、子がいない場合の親・兄弟姉妹の相続
+// 不動産は時価ではなく相続税評価額で入れる（realEstateEval）
+//   土地 = 路線価（公示価格のおよそ8割）→ 時価の目安 × 0.8
+//   建物 = 固定資産税評価額 → 建築費の6割 × 経年減点（耐用年数で2割まで下がり、それより下がらない）
+//   マンション（2024年〜の区分所有マンションの評価）→ 時価の目安 × 0.6
+//   貸している物件: 土地は貸家建付地（× (1 − 借地権割合0.6 × 借家権割合0.3) = × 0.82）、建物は貸家（× 0.7）
+//   評価額がわかれば（固定資産税の課税明細書・税理士の計算）入力した額を使う
+// 含めないもの: 生前贈与の加算、葬式費用、相次相続控除、2割加算、子がいない場合の親・兄弟姉妹の相続、
+//   貸付事業用宅地の特例（200㎡まで50%減）、不動産投資ローンの団信
 import { normalizeInsurance, selfDeathBenefitAt } from "./insurance";
-import { computeRealEstateValue } from "./finance";
-import type { InheritSettings, PlanInput, YearlyResult } from "./types";
+import { BUILDING_LIFESPAN, computeRealEstateValue } from "./finance";
+import type { InheritSettings, PlanInput, RealEstate, YearlyResult } from "./types";
 
 const MAN = 10000;
 
@@ -121,11 +127,23 @@ export function estimateInheritanceTax(estate: number, hasSpouse: boolean, kids:
   return inheritanceTax(estate, hasSpouse, kids, 0.5);
 }
 
+export interface PropertyEval {
+  key: string;       // "home" / "re-番号"
+  label: string;
+  rental: boolean;   // 人に貸している
+  market: number;    // 時価の目安（購入価格から築年数で減価）
+  land: number;      // 相続税評価額のうち土地
+  building: number;  // 相続税評価額のうち建物
+  value: number;     // 相続税評価額
+  manual: boolean;   // 評価額を入力した
+}
+
 export interface EstateBreakdown {
   financial: number;     // 現金・NISA・特定口座・暗号資産・金（本人名義の割合をかけた後）
-  home: number;          // 自宅（小規模宅地等の特例の後）
+  home: number;          // 自宅（相続税評価・本人名義の分・小規模宅地等の特例の後）
   homeLandCut: number;   // 小規模宅地等の特例で減らした額
-  realEstate: number;    // 投資用不動産
+  realEstate: number;    // 投資用不動産（相続税評価）
+  props: PropertyEval[]; // 不動産ごとの評価（いまの額。本人名義の割合をかける前）
   loans: number;         // ローン（債務）
   insurance: number;     // 死亡保険金のうち非課税枠を超える分
   insuranceGross: number;
@@ -135,27 +153,77 @@ export interface EstateBreakdown {
   spouseOwn: number;     // 配偶者名義の財産（二次相続で使う）
 }
 
-function homeValue(plan: PlanInput, year: number) {
-  if (!plan.homeOwned) return 0;
-  return computeRealEstateValue(
-    {
-      name: "自宅",
-      rent: 0,
-      cost: 0,
-      propTax: 0,
-      bal: 0,
-      rate: 0,
-      term: 0,
-      start: 0,
-      propType: plan.homePropType ?? "house",
-      structure: plan.homeStructure ?? "wood",
-      builtYear: plan.homeBuiltYear ?? year,
-      purchasePrice: plan.homePurchasePrice ?? 0,
-      landRatio: plan.homeLandRatio ?? 50,
-      currentValueOverride: plan.homeCurrentValueOverride ?? 0,
-    },
-    year,
-  );
+const homeAsRealEstate = (plan: PlanInput): RealEstate => ({
+  name: "自宅",
+  rent: 0,
+  cost: 0,
+  propTax: 0,
+  bal: 0,
+  rate: 0,
+  term: 0,
+  start: 0,
+  propType: plan.homePropType ?? "house",
+  structure: plan.homeStructure ?? "wood",
+  builtYear: plan.homeBuiltYear ?? new Date().getFullYear(),
+  purchasePrice: plan.homePurchasePrice ?? 0,
+  landRatio: plan.homeLandRatio ?? 50,
+  currentValueOverride: plan.homeCurrentValueOverride ?? 0,
+});
+
+// マンションの評価額のうち土地（敷地権）の割合の目安
+const MANSION_LAND = 0.2;
+// 貸家建付地・貸家の割合（借地権割合60%・借家権割合30%・満室とする）
+const RENT_LAND = 1 - 0.6 * 0.3;
+const RENT_BUILDING = 1 - 0.3;
+
+// 1つの不動産の相続税評価額の目安
+export function propertyEval(r: RealEstate, year: number, rental: boolean, key: string, manualNow = 0, nowYear = new Date().getFullYear()): PropertyEval {
+  const market = computeRealEstateValue(r, year);
+  const age = Math.max(0, year - (r.builtYear || year));
+  let land = 0;
+  let building = 0;
+  if (r.propType === "land") {
+    land = market * 0.8; // 更地・駐車場は貸家建付地にならない
+  } else if (r.propType === "mansion") {
+    const v = market * 0.6;
+    land = v * MANSION_LAND * (rental ? RENT_LAND : 1);
+    building = v * (1 - MANSION_LAND) * (rental ? RENT_BUILDING : 1);
+  } else {
+    const ratio = Math.min(100, Math.max(0, r.landRatio || 0)) / 100;
+    // 時価を上書きしている場合も、土地と建物の比率は購入価格のときと同じとみなす
+    const landMarket = r.currentValueOverride > 0 ? market * ratio : r.purchasePrice * ratio;
+    const lifespan = BUILDING_LIFESPAN[r.structure] ?? 22;
+    const buildingFixed =
+      r.purchasePrice > 0
+        ? r.purchasePrice * (1 - ratio) * 0.6 * Math.max(0.2, 1 - (0.8 * age) / lifespan)
+        : Math.max(0, market - landMarket) * 0.6;
+    land = landMarket * 0.8 * (rental ? RENT_LAND : 1);
+    building = buildingFixed * (rental ? RENT_BUILDING : 1);
+  }
+  let value = land + building;
+  if (manualNow > 0) {
+    // 入力した評価額は、いまの額。先の年は自動の目安と同じ比率で動かす
+    const nowAuto = propertyEval(r, nowYear, rental, key).value;
+    const k = nowAuto > 0 ? value / nowAuto : 1;
+    const v = manualNow * k;
+    const landShare = value > 0 ? land / value : 0;
+    land = v * landShare;
+    building = v - land;
+    value = v;
+  }
+  return { key, label: r.name, rental, market, land, building, value, manual: manualNow > 0 };
+}
+
+// 自宅と投資用不動産の相続税評価（その年の額）
+export function realEstateEval(plan: PlanInput, year: number, s: InheritSettings = plan.inheritSet ?? DEFAULT_INHERIT): PropertyEval[] {
+  const out: PropertyEval[] = [];
+  const pv = s.propValue ?? {};
+  if (plan.homeOwned) out.push(propertyEval(homeAsRealEstate(plan), year, false, "home", pv.home ?? 0));
+  plan.res.forEach((r, i) => {
+    const key = `re-${i}`;
+    out.push({ ...propertyEval({ ...r, currentValueOverride: r.currentValueOverride ?? 0 }, year, r.rent > 0, key, pv[key] ?? 0), label: r.name || `投資用不動産${i + 1}` });
+  });
+  return out;
 }
 
 // 在職中に亡くなったときの死亡退職金（退職金を勤続年数で按分。simulate.ts と同じ考え方）
@@ -169,12 +237,13 @@ export function estateBreakdown(plan: PlanInput, row: YearlyResult, heirCount: n
   const share = Math.min(100, Math.max(0, s.selfSharePct)) / 100;
   const a = row.ass;
   const householdFin = a.c + a.nisa + a.toku + a.k + a.g;
-  const hv = homeValue(plan, year) / deflate;
-  // 小規模宅地等の特例（自宅の土地・330㎡まで80%減）。配偶者が相続する前提。マンションは土地の割合を2割とみなす
-  const landRatio = plan.homePropType === "mansion" ? 0.2 : plan.homePropType === "land" ? 1 : (plan.homeLandRatio ?? 50) / 100;
+  const props = realEstateEval(plan, year, s).map((p) => ({ ...p, market: p.market / deflate, land: p.land / deflate, building: p.building / deflate, value: p.value / deflate }));
+  const home = props.find((p) => p.key === "home");
+  const hv = home?.value ?? 0;
+  // 小規模宅地等の特例（自宅の土地・330㎡まで80%減）。配偶者が相続する前提
   const homeSelf = hv * share;
-  const homeLandCut = s.smallLand && hasSpouse ? homeSelf * landRatio * 0.8 : 0;
-  const re = plan.res.reduce((acc, r) => acc + computeRealEstateValue({ ...r, currentValueOverride: 0 }, year), 0) / deflate;
+  const homeLandCut = s.smallLand && hasSpouse && home ? home.land * share * 0.8 : 0;
+  const re = props.filter((p) => p.key !== "home").reduce((acc, p) => acc + p.value, 0);
   const loans = row.hlBal + row.reD.reduce((acc, d) => acc + d.bal, 0);
   const insList = (plan.ins ?? []).map((p) => normalizeInsurance(p as never, plan.curAge, plan.endAge));
   const insuranceGross = ((plan.risk?.deathInsurance ?? 0) + selfDeathBenefitAt(insList, row.age)) / deflate;
@@ -192,6 +261,7 @@ export function estateBreakdown(plan: PlanInput, row: YearlyResult, heirCount: n
     home: homeSelf - homeLandCut,
     homeLandCut,
     realEstate: re,
+    props,
     loans: hlDebt + reLoans,
     insurance,
     insuranceGross,

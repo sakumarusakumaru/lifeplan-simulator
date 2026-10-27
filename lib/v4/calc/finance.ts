@@ -22,7 +22,7 @@ export function calcInsuranceY(
 }
 
 // 建物構造別の法定耐用年数（年）
-const BUILDING_LIFESPAN: Record<BuildingStructure, number> = {
+export const BUILDING_LIFESPAN: Record<BuildingStructure, number> = {
   wood: 22,
   lightSteel: 27,
   heavySteel: 34,

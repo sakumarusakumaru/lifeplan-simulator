@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { ageOn } from "@/lib/v4/calc/age";
-import { DEFAULT_INHERIT, basicDeduction, legalHeirs, legalSharesPct, planInheritance } from "@/lib/v4/calc/inheritance";
+import { DEFAULT_INHERIT, basicDeduction, legalHeirs, legalSharesPct, planInheritance, realEstateEval } from "@/lib/v4/calc/inheritance";
 import { deflator } from "@/lib/v4/calc/realValue";
 import type { InheritSettings, PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
@@ -145,6 +145,14 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
     } else updSet({ spouseMode: m });
   };
   const setShare = (i: number, v: number) => updSet({ shares: shares.map((x, j) => (j === i ? Math.max(0, Math.min(100, v)) : x)) });
+  // 不動産の相続税評価（いまの額）。評価額がわかれば入力できる
+  const nowProps = realEstateEval(plan, new Date().getFullYear(), set);
+  const setPropValue = (key: string, yen: number) => {
+    const pv = { ...(set.propValue ?? {}) };
+    if (yen > 0) pv[key] = yen;
+    else delete pv[key];
+    updSet({ propValue: pv });
+  };
   // 二次相続で子がそれぞれ受け取る額と税（子で等分）
   const secondOf = (kid: number) => P.second?.people.find((x) => x.kid === kid);
 
@@ -273,6 +281,58 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
             </label>
           ) : null}
         </div>
+
+        {nowProps.length > 0 ? (
+          <div className="mt-2 overflow-x-auto rounded-lg p-2.5" style={{ background: "#f7f7f5" }}>
+            <p className="text-[10px] font-bold text-[#0a0a0a]/70">不動産は「時価」ではなく「相続税評価額」で計算します（いまの額）</p>
+            <table className="mt-1 w-full min-w-[460px] text-[10px] tabular-nums">
+              <thead>
+                <tr className="text-[#0a0a0a]/55">
+                  <th className="py-1 text-left font-bold">物件</th>
+                  <th className="py-1 text-right font-bold">時価の目安</th>
+                  <th className="py-1 text-right font-bold">土地（路線価）</th>
+                  <th className="py-1 text-right font-bold">建物（固定資産税評価）</th>
+                  <th className="py-1 text-right font-bold">相続税評価</th>
+                  <th className="py-1 pl-2 text-right font-bold">評価額がわかれば（万円）</th>
+                </tr>
+              </thead>
+              <tbody>
+                {nowProps.map((p) => (
+                  <tr key={p.key} className="border-t" style={{ borderColor: "#0a0a0a15" }}>
+                    <td className="py-1 font-bold">
+                      {p.label}
+                      {p.rental ? <span className="ml-1 font-normal text-[#0a0a0a]/50">貸している</span> : null}
+                    </td>
+                    <td className="py-1 text-right">{man(p.market)}</td>
+                    <td className="py-1 text-right">{p.manual ? "—" : man(p.land)}</td>
+                    <td className="py-1 text-right">{p.manual ? "—" : man(p.building)}</td>
+                    <td className="py-1 text-right font-bold">
+                      {man(p.value)}
+                      {p.market > 0 ? <span className="block text-[9px] font-normal text-[#0a0a0a]/50">時価の{Math.round((p.value / p.market) * 100)}%</span> : null}
+                    </td>
+                    <td className="py-1 pl-2 text-right">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        placeholder="自動"
+                        value={set.propValue?.[p.key] ? Math.round(set.propValue[p.key] / 10000) : ""}
+                        onChange={(e) => setPropValue(p.key, (Number(e.target.value) || 0) * 10000)}
+                        className="w-20 rounded-md bg-white px-1.5 py-1 text-right"
+                        style={{ border: `2px solid ${INK}` }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-1 text-[9px] leading-relaxed text-[#0a0a0a]/55">
+              土地は路線価（公示価格のおよそ8割）、建物は固定資産税評価額（建築費のおよそ6割から築年数で下がり、2割で止まる）、マンションは時価のおよそ6割（2024年からの評価のルール）で見積もっています。
+              人に貸している物件は、土地が貸家建付地（約18%減）、建物が貸家（30%減）になります。ローンは残高のまま差し引くので、借りて買った不動産は相続財産を大きく減らすことがあります。
+              実際の額は、毎年届く固定資産税の課税明細書（土地は評価額×約1.14、建物は評価額そのまま）や、国税庁の路線価図で確かめられます。
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div className="rounded-lg p-2.5" style={{ background: "#f0f0ee" }}>
@@ -463,8 +523,8 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
             <tbody>
               {[
                 ["現金・運用資産（本人名義）", b.financial],
-                [`自宅${b.homeLandCut > 0 ? `（小規模宅地等の特例 −${man(b.homeLandCut)} の後）` : ""}`, b.home],
-                ["投資用不動産", b.realEstate],
+                [`自宅（相続税評価${set.selfSharePct < 100 && hasSpouse ? "・本人名義の分" : ""}${b.homeLandCut > 0 ? `。小規模宅地等の特例 −${man(b.homeLandCut)} の後` : ""}）`, b.home],
+                ["投資用不動産（相続税評価）", b.realEstate],
                 [`死亡保険金 ${man(b.insuranceGross)} のうち非課税枠（500万円×${heirs.count}人）を超える分`, b.insurance],
                 [`死亡退職金・DC死亡一時金 ${man(b.retirementGross)} のうち非課税枠を超える分`, b.retirement],
                 [`ローン（債務）${plan.risk?.danshin && plan.useHomeLoan ? "。住宅ローンは団信で0になるので含めない" : ""}`, -b.loans],
@@ -493,8 +553,8 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
           ))}
         </ul>
         <p className="mt-3 text-[10px] leading-relaxed text-[#0a0a0a]/50">
-          ※ 自宅・不動産は購入価格から築年数で減価した目安で、実際の相続税評価（土地は路線価、建物は固定資産税評価額）とは違います。
-          小規模宅地等の特例は面積330㎡以内・配偶者が相続する前提です。子がいない場合の親・兄弟姉妹の相続、生前贈与の足し戻し、葬式費用、相次相続控除は含めていない概算です。実際の判断は税理士にご相談ください。
+          ※ 不動産の相続税評価は、評価額を入れていなければ購入価格と築年数からの目安です。
+          小規模宅地等の特例は面積330㎡以内・配偶者が相続する前提です。貸付事業用宅地の特例（200㎡まで50%減）と、不動産投資ローンの団信は入れていません。子がいない場合の親・兄弟姉妹の相続、生前贈与の足し戻し、葬式費用、相次相続控除は含めていない概算です。実際の判断は税理士にご相談ください。
         </p>
       </div>
     </section>
