@@ -50,6 +50,7 @@ export const DEFAULT_PLAN: PlanInput = {
   cryptoCost: 0,
   cryptoR: 0,
   cryptoTaxRate: 30,
+  cryptoSeparate2028: true,
   saveCryptoM: 0,
   saveCryptoEndAge: 60,
 

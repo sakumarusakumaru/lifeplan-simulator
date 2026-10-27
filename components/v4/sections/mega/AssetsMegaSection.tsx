@@ -549,12 +549,20 @@ export function AssetsMegaSection() {
           </div>
           <div className="mt-2">
             <Note>
-              2026年度税制改正で、登録済みの暗号資産は20.315%の分離課税に移る予定です（金商法改正の施行後、早くて2028年から）。2028年以降の売却は20.315%で計算しています。
+              2026年度税制改正大綱で、一定の暗号資産を20.315%の分離課税にする方針が示されています（金商法改正の施行が前提で、早くて2028年から。対象外の暗号資産もあり、確定ではありません）。
             </Note>
+          </div>
+          <div className="mt-2">
+            <CheckboxField
+              label="2028年以降の売却は分離課税（20.315%）とみなす"
+              value={plan.cryptoSeparate2028 !== false}
+              onChange={(v) => setField("cryptoSeparate2028", v)}
+              hint="オフにすると、2028年以降も上の税率（総合課税の目安）のまま計算します"
+            />
           </div>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="金・コモディティ" defaultOpen={false}>
+        <CollapsibleSubGroup title="金・コモディティ（金ETF等を想定）" defaultOpen={false}>
           <Quad
             bal={plan.goldBal}
             setBal={(v) => setField("goldBal", v)}

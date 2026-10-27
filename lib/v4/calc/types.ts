@@ -253,6 +253,7 @@ export interface PlanInput {
   cryptoCost: number;
   cryptoR: number;
   cryptoTaxRate: number;    // 売却益にかかる税率（%・目安）
+  cryptoSeparate2028?: boolean; // 2028年以降は分離課税20.315%とみなす（予定。false なら総合課税のまま）
   saveCryptoM: number;
   saveCryptoEndAge: number;
 

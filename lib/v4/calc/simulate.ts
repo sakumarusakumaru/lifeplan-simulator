@@ -91,6 +91,12 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     g: input.goldCost > 0 ? input.goldCost : input.goldBal,
   };
   let nisaGrowthCost = 0; // 成長投資枠の簿価（今後の買付分のみ追跡）
+  // 旧NISA（2023年まで）の分。NISA残高の内数として同じ利回りで運用し、取り崩すときは旧NISAから先に使う。
+  // 旧NISAを売っても新NISAの簿価（生涯枠）は変わらない
+  let nisaOld = Math.min(Math.max(0, input.nisaBal), Math.max(0, input.nisaSplit?.oldBal ?? 0));
+  // 暗号資産の2028年以降の分離課税（20.315%）は予定。オフなら総合課税の税率のまま計算する
+  const cryptoRateIn = (y: number) =>
+    y >= 2028 && input.cryptoSeparate2028 !== false ? CAPITAL_GAIN_TAX : (input.cryptoTaxRate ?? 30) / 100;
 
   const baseYear = (parseYMD(input.baseDate) ?? new Date()).getFullYear();
 
@@ -601,7 +607,9 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const shock = opts.returns;
     const g = (base: number, path?: number[]) =>
       path ? (1 + base / 100) * (1 + path[t]) - 1 : base / 100;
-    ass.nisa = (ass.nisa + nisaIn) * (1 + g(input.nisaR, shock?.sec));
+    const nisaGrowth = 1 + g(input.nisaR, shock?.sec);
+    ass.nisa = (ass.nisa + nisaIn) * nisaGrowth;
+    nisaOld *= nisaGrowth;
     cost.nisa += nisaIn;
     nisaGrowthCost += nisaG;
     ass.toku = (ass.toku + tToku) * (1 + g(input.tokuR, shock?.sec));
@@ -621,9 +629,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         key === "nisa"
           ? 0
           : key === "k"
-            ? year >= 2028
-              ? CAPITAL_GAIN_TAX // 2028年〜 申告分離課税20.315%（金商法改正の施行が前提）
-              : (input.cryptoTaxRate ?? 30) / 100
+            ? cryptoRateIn(year)
             : CAPITAL_GAIN_TAX;
       const gainOf = (key: DrawAsset) => (ass[key] > 0 ? Math.max(0, 1 - cost[key] / ass[key]) : 0);
       // おすすめ: 課税される口座の中から「1円売るのにかかる税金」が少ないものを毎年選んで先に売り、NISAは最後
@@ -643,10 +649,19 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         const netPerYen = 1 - gainRatio * rate;
         const gross = Math.min(bal, need / netPerYen);
         const taxPaid = gross * gainRatio * rate;
-        const ratio = gross / bal;
         ass[key as DrawAsset] -= gross;
-        cost[key] -= cost[key] * ratio;
-        if (key === "nisa") nisaGrowthCost -= nisaGrowthCost * ratio;
+        if (key === "nisa") {
+          // 旧NISAから先に使い、残りを新NISAから。新NISAの簿価は新NISA部分の売却割合だけ減らす
+          const fromOld = Math.min(gross, nisaOld);
+          const newBal = bal - nisaOld;
+          const fromNew = gross - fromOld;
+          nisaOld -= fromOld;
+          const newRatio = newBal > 0 ? fromNew / newBal : 0;
+          cost.nisa -= cost.nisa * newRatio;
+          nisaGrowthCost -= nisaGrowthCost * newRatio;
+        } else {
+          cost[key] -= cost[key] * (gross / bal);
+        }
         const got = gross - taxPaid;
         ass.c += got;
         need -= got;
@@ -717,7 +732,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       latentTax:
         Math.max(0, ass.toku - cost.toku) * CAPITAL_GAIN_TAX +
         Math.max(0, ass.g - cost.g) * CAPITAL_GAIN_TAX +
-        Math.max(0, ass.k - cost.k) * (year >= 2028 ? CAPITAL_GAIN_TAX : (input.cryptoTaxRate ?? 30) / 100),
+        Math.max(0, ass.k - cost.k) * cryptoRateIn(year),
       dead,
       survKiso: surv.kiso,
       survKosei: surv.kosei,
