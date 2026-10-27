@@ -33,8 +33,25 @@ export function DrawOrderEditor() {
     const nisaFirst = simulate({ ...plan, drawOrder: "custom", drawCustomOrder: ["nisa", "toku", "g", "k"] });
     const mine = auto ? rec : simulate(plan);
     const firstDraw = rec.rows.find((r) => r.draw > 0)?.age ?? null;
-    return { rec: afterTax(rec), nisaFirst: afterTax(nisaFirst), mine: afterTax(mine), firstDraw };
+    // 差の内訳: ① 途中で売ったときに払う税金の差 ② 最後に残る含み益にかかる税金の差 ③ それ以外（運用の差）
+    const sumSaleTax = (r: SimulationSummary) => r.rows.reduce((a, x) => a + x.saleTax, 0);
+    const lastOf = (r: SimulationSummary) => r.rows[r.rows.length - 1];
+    const diff = afterTax(rec) - afterTax(nisaFirst);
+    const saleTaxDiff = sumSaleTax(nisaFirst) - sumSaleTax(rec);
+    const latentDiff = (lastOf(nisaFirst)?.latentTax ?? 0) - (lastOf(rec)?.latentTax ?? 0);
+    return {
+      rec: afterTax(rec),
+      nisaFirst: afterTax(nisaFirst),
+      mine: afterTax(mine),
+      firstDraw,
+      diff,
+      saleTaxDiff,
+      latentDiff,
+      growthDiff: diff - saleTaxDiff - latentDiff,
+    };
   }, [plan, auto]);
+  // NISAと特定口座の想定利回りが違うと、それだけで「NISAを残すほど有利（または不利）」に見える
+  const rGap = Math.round((plan.nisaR - plan.tokuR) * 10) / 10;
 
   const move = (i: number, dir: -1 | 1) => {
     const order = [...plan.drawCustomOrder];
@@ -125,20 +142,52 @@ export function DrawOrderEditor() {
 
       <div className="rounded-lg px-3 py-2 text-[11px] leading-relaxed" style={{ background: "#f0fff4", border: `1.5px solid ${GREEN}60` }}>
         <p className="font-bold" style={{ color: GREEN }}>
-          {cmp.rec - cmp.nisaFirst >= 0
-            ? `おすすめの順番だと、NISAを先に使う場合より税引き後の最終純資産が ${man(cmp.rec - cmp.nisaFirst)} 多くなります`
-            : "このプランでは順番による差はほとんどありません"}
+          {Math.abs(cmp.diff) < 100_000
+            ? "このプランでは、順番による差はほとんどありません"
+            : cmp.diff > 0
+              ? `おすすめの順番だと、NISAを先に使う場合より税引き後の最終純資産が ${man(cmp.diff)} 多くなります`
+              : `このプランでは、NISAを先に使う方が税引き後の最終純資産が ${man(-cmp.diff)} 多くなります`}
         </p>
+        {Math.abs(cmp.diff) >= 100_000 ? (
+          <div className="mt-1.5 rounded-md bg-white px-2.5 py-2" style={{ border: "1px solid #0a0a0a15" }}>
+            <p className="mb-1 text-[10px] font-bold text-[#0a0a0a]/70">差の内訳（おすすめ順 − NISA先）</p>
+            <ul className="flex flex-col gap-0.5 tabular-nums">
+              <li className="flex justify-between gap-2">
+                <span>① 途中で売ったときに払う税金の差</span>
+                <span className="whitespace-nowrap font-bold">{man(cmp.saleTaxDiff)}</span>
+              </li>
+              <li className="flex justify-between gap-2">
+                <span>② 最後に残る含み益にかかる税金の差</span>
+                <span className="whitespace-nowrap font-bold">{man(cmp.latentDiff)}</span>
+              </li>
+              <li className="flex justify-between gap-2">
+                <span>③ 運用の差（税金を払う時期の違い・口座ごとの利回りの違い・NISA枠の使い直しなど）</span>
+                <span className="whitespace-nowrap font-bold">{man(cmp.growthDiff)}</span>
+              </li>
+            </ul>
+            {rGap !== 0 ? (
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-[#a07900]">
+                ※ NISAの想定利回り（{plan.nisaR.toFixed(1)}%）が特定口座（{plan.tokuR.toFixed(1)}%）より{rGap > 0 ? "高い" : "低い"}設定です。③の多くはこの利回りの差から来ています。
+                同じ商品をどちらの口座で持つかの比較をしたいときは、利回りをそろえて見てください。
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {!auto ? (
-          <p className="mt-0.5 text-[#0a0a0a]/70">
+          <p className="mt-1 text-[#0a0a0a]/70">
             いまの順番（自分で決める）: 税引き後 {man(cmp.mine)}／おすすめ: {man(cmp.rec)}
           </p>
         ) : null}
-        <p className="mt-0.5 text-[10px] text-[#0a0a0a]/55">
+        <p className="mt-1 text-[10px] text-[#0a0a0a]/55">
           {cmp.firstDraw !== null ? `取り崩しが始まるのは${cmp.firstDraw}歳ごろ。` : "このプランでは運用資産を取り崩す年はありません。"}
-          税引き後＝特定口座などに残った利益にかかる税金（売ったら払う分）を差し引いた金額。相続しても取得価額は引き継がれるので、この税金は消えません。
+          「税引き後」は、最後の年に特定口座・金・暗号資産を全部売ったらかかる税金を差し引いた金額です。
+          相続の場合、特定口座などの課税口座は亡くなった人の取得価額を引き継ぐので、この税金は残ります。
+          NISA口座は相続した日の時価が新しい取得価額になるので、それまでの値上がり益に税金はかかりません（どちらも相続税の対象にはなります）。
         </p>
       </div>
+      <p className="text-[10px] leading-relaxed text-[#0a0a0a]/50">
+        この順番は税金だけを基準にしています。売ることで株式などの割合が偏りすぎないか（資産配分）や、暴落時にNISAを売らずに済む現金があるかは、別に考える必要があります。
+      </p>
       <p className="text-[10px] leading-relaxed text-[#0a0a0a]/50">
         入っていないもの: iDeCo・企業型DC（取り崩すのではなく、受取開始年齢に一時金か年金で受け取ります）、自宅・不動産（売却しない前提）、退職金（受け取り方は「収入」の勤務先ごとに選べます）。
       </p>

@@ -56,6 +56,7 @@ export function HeaderMenu({
   setMcOn,
   onSample,
   onExport,
+  onExportReview,
   onImport,
   onPdf,
   onReset,
@@ -66,6 +67,7 @@ export function HeaderMenu({
   setMcOn: (v: boolean) => void;
   onSample: () => void;
   onExport: () => void;
+  onExportReview: () => void;
   onImport: () => void;
   onPdf: () => void;
   onReset: () => void;
@@ -182,6 +184,13 @@ export function HeaderMenu({
               <span className="text-[10px] text-[#0a0a0a]/55">
                 JSONファイルでダウンロード（バックアップ・別の端末へ）
               </span>
+            </span>
+          </button>
+          <button type="button" role="menuitem" className={item} onClick={run(onExportReview)}>
+            <span aria-hidden>⇩</span>
+            <span className="flex flex-col">
+              <span className="font-bold">検証用に保存（個人情報を除く）</span>
+              <span className="text-[10px] text-[#0a0a0a]/55">名前・連絡先・メッセージを消したJSON。ほかのAIや専門家に渡すとき用</span>
             </span>
           </button>
           <button

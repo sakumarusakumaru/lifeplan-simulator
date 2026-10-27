@@ -10,6 +10,7 @@ import { GuideFlow } from "@/components/v4/GuideFlow";
 import { HeaderMenu } from "@/components/v4/HeaderMenu";
 import { InputProgress } from "@/components/v4/InputProgress";
 import type { PlanInput } from "@/lib/v4/calc/types";
+import { anonymizePlan } from "@/lib/v4/calc/anonymize";
 import { migrateV3Plan, usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
@@ -101,14 +102,25 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
   const example30 = Math.round(1000 / Math.pow(1 + plan.infl / 100, 30));
 
   // 入力データをJSONでDL（detailタブ用）
-  const exportPlan = () => {
-    const json = JSON.stringify(plan, null, 2);
+  const exportPlan = (forReview = false) => {
+    // 検証用は、名前・連絡先・メッセージなどを消し、ほかのAIや専門家に渡しやすい形にする
+    const json = JSON.stringify(
+      forReview
+        ? {
+            _note: "ライフプランシミュレーター ver4 の入力データ（検証用・個人情報を除いたもの）。計算の仕組みは同梱の検証用資料を参照",
+            _exportedAt: new Date().toISOString(),
+            plan: anonymizePlan(plan),
+          }
+        : plan,
+      null,
+      2,
+    );
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const ts = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = `lifeplan_${ts}.json`;
+    a.download = forReview ? `lifeplan_検証用_${ts}.json` : `lifeplan_${ts}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -119,10 +131,12 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = JSON.parse(e.target?.result as string);
+        let data = JSON.parse(e.target?.result as string);
         if (typeof data !== "object" || data === null) {
           throw new Error("JSONの形式が不正です");
         }
+        // 検証用に書き出した形式（{ plan: {...} }）も読めるようにする
+        if ("plan" in data && !("curAge" in data)) data = data.plan;
         if (!("curAge" in data) || !("endAge" in data)) {
           throw new Error("ライフプランデータではありません");
         }
@@ -305,7 +319,8 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
                   setUnlocked(true);
                 }
               }}
-              onExport={exportPlan}
+              onExport={() => exportPlan(false)}
+              onExportReview={() => exportPlan(true)}
               onImport={() => fileInputRef.current?.click()}
               onPdf={() => window.print()}
               onReset={() => {

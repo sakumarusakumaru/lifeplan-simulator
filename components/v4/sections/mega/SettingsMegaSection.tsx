@@ -183,7 +183,9 @@ export function SettingsMegaSection() {
               value={plan.cashFloor}
               onChange={(v) => setField("cashFloor", v)}
               unit="円"
-              hint="手元に最低限残しておく預金。これを下回る年に運用資産を売る"
+              hint={`手元に最低限残しておく預金。これを下回る年に運用資産を売る。${
+                plan.livingM > 0 ? `いまの生活費の約${Math.round((plan.cashFloor / plan.livingM) * 10) / 10}か月分（目安は退職後で1〜2年分）` : ""
+              }`}
             />
             <DrawOrderEditor />
             <CheckboxField
