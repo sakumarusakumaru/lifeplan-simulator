@@ -39,6 +39,16 @@ export function rateTax(share: number): number {
   return v * 0.55 - 7200 * MAN;
 }
 
+export interface HeirShare {
+  who: "spouse" | "kid";
+  kid: number;     // 子の番号（0始まり。配偶者は -1）
+  ratio: number;   // 相続する割合（0〜1）
+  take: number;    // 相続する額
+  tax: number;     // 総額を割合で分けた税（軽減の前）
+  relief: number;  // 配偶者の税額軽減・未成年者控除
+  payable: number; // 納める税
+}
+
 export interface InheritanceEstimate {
   estate: number;      // 課税価格（相続財産の目安）
   deduction: number;   // 基礎控除
@@ -48,43 +58,62 @@ export interface InheritanceEstimate {
   spouseRelief: number; // 配偶者の税額軽減
   minorRelief: number; // 未成年者控除
   payable: number;     // 実際に家族が払う税額
+  people: HeirShare[]; // 一人ずつ
 }
 
 // 一次相続（または配偶者がいない場合の相続）の税額
-//   spouseTakeRatio: 配偶者が相続する割合（0〜1）。残りを子で等分
-export function inheritanceTax(estate: number, hasSpouse: boolean, kids: number, spouseTakeRatio = 0.5, kidAges: number[] = []): InheritanceEstimate {
+//   spouseTakeRatio: 配偶者が相続する割合（0〜1）
+//   kidShares: 子それぞれが相続する割合（0〜1）。省略すると残りを子で等分
+export function inheritanceTax(estate: number, hasSpouse: boolean, kids: number, spouseTakeRatio = 0.5, kidAges: number[] = [], kidShares?: number[]): InheritanceEstimate {
   const h = legalHeirs(hasSpouse, kids);
   const deduction = basicDeduction(h.count);
   const taxable = Math.max(0, estate - deduction);
-  const empty = { estate, deduction, taxable, totalTax: 0, spouseTake: 0, spouseRelief: 0, minorRelief: 0, payable: 0 };
-  if (h.count === 0 || taxable <= 0) return empty;
   // 法定相続分: 配偶者と子 → 配偶者1/2・子で1/2を等分 / 子のみ → 等分 / 配偶者のみ → 全部
   const legalSpouse = h.spouse ? (h.kids > 0 ? 0.5 : 1) : 0;
   const legalKid = h.kids > 0 ? (1 - legalSpouse) / h.kids : 0;
-  let totalTax = rateTax(taxable * legalSpouse);
-  for (let i = 0; i < h.kids; i++) totalTax += rateTax(taxable * legalKid);
+  let totalTax = 0;
+  if (taxable > 0) {
+    totalTax = rateTax(taxable * legalSpouse);
+    for (let i = 0; i < h.kids; i++) totalTax += rateTax(taxable * legalKid);
+  }
   // 実際の分け方
   const sRatio = h.spouse ? (h.kids > 0 ? Math.min(1, Math.max(0, spouseTakeRatio)) : 1) : 0;
-  const spouseTake = estate * sRatio;
-  const spouseTax = totalTax * sRatio;
-  const spouseRelief = h.spouse ? Math.min(spouseTax, (totalTax * Math.min(spouseTake, Math.max(16000 * MAN, estate * legalSpouse))) / estate) : 0;
-  const kidTaxEach = h.kids > 0 ? (totalTax * (1 - sRatio)) / h.kids : 0;
-  let minorRelief = 0;
-  for (let i = 0; i < h.kids; i++) {
-    const age = kidAges[i];
-    if (age !== undefined && age < 18) minorRelief += Math.min(kidTaxEach, 10 * MAN * (18 - age));
+  const kidRatios = Array.from({ length: h.kids }, (_, i) =>
+    kidShares && kidShares.length === h.kids ? Math.max(0, kidShares[i]) : (1 - sRatio) / h.kids,
+  );
+  const people: HeirShare[] = [];
+  if (h.spouse) {
+    const tax = totalTax * sRatio;
+    const take = estate * sRatio;
+    const relief = estate > 0 ? Math.min(tax, (totalTax * Math.min(take, Math.max(16000 * MAN, estate * legalSpouse))) / estate) : 0;
+    people.push({ who: "spouse", kid: -1, ratio: sRatio, take, tax, relief, payable: tax - relief });
   }
-  const payable = Math.max(0, spouseTax - spouseRelief) + Math.max(0, kidTaxEach * h.kids - minorRelief);
+  kidRatios.forEach((r, i) => {
+    const tax = totalTax * r;
+    const age = kidAges[i];
+    const relief = age !== undefined && age < 18 ? Math.min(tax, 10 * MAN * (18 - age)) : 0;
+    people.push({ who: "kid", kid: i, ratio: r, take: estate * r, tax, relief, payable: tax - relief });
+  });
+  const rounded = people.map((x) => ({ ...x, take: Math.round(x.take), tax: Math.round(x.tax), relief: Math.round(x.relief), payable: Math.round(Math.max(0, x.payable)) }));
+  const sp = rounded.find((x) => x.who === "spouse");
   return {
     estate,
     deduction,
     taxable,
     totalTax: Math.round(totalTax),
-    spouseTake: Math.round(spouseTake),
-    spouseRelief: Math.round(spouseRelief),
-    minorRelief: Math.round(minorRelief),
-    payable: Math.round(payable),
+    spouseTake: sp?.take ?? 0,
+    spouseRelief: sp?.relief ?? 0,
+    minorRelief: rounded.filter((x) => x.who === "kid").reduce((a, x) => a + x.relief, 0),
+    payable: rounded.reduce((a, x) => a + x.payable, 0),
+    people: rounded,
   };
+}
+
+// 法定相続分の割合（%）。配偶者がいれば [配偶者, 子…]、いなければ [子…]
+export function legalSharesPct(hasSpouse: boolean, kids: number): number[] {
+  if (kids === 0) return hasSpouse ? [100] : [];
+  const kidPct = (hasSpouse ? 50 : 100) / kids;
+  return [...(hasSpouse ? [50] : []), ...Array.from({ length: kids }, () => Math.round(kidPct * 10) / 10)];
 }
 
 // 前の版との互換（配偶者が法定相続分を相続した場合）
@@ -181,6 +210,7 @@ export function estateAt(plan: PlanInput, row: YearlyResult, heirCount: number, 
 export interface InheritancePlan {
   breakdown: EstateBreakdown;
   spouseRatio: number;           // 選んだ配偶者の取得割合
+  kidShares: number[] | undefined; // 「自分で決める」のときの子それぞれの割合（0〜1）
   first: InheritanceEstimate;    // 一次相続
   second: InheritanceEstimate | null; // 二次相続（配偶者と子がいる場合）
   secondEstate: number;
@@ -192,8 +222,9 @@ export interface InheritancePlan {
 function secondFor(b: EstateBreakdown, first: InheritanceEstimate, kids: number, hasSpouse: boolean) {
   if (!hasSpouse || kids === 0) return { second: null, secondEstate: 0 };
   // 配偶者が受け取った分から配偶者自身の税を引き、配偶者名義の財産と合わせる（その後の増減は見ない）
-  const spousePaid = first.totalTax * (first.spouseTake / Math.max(1, first.estate)) - first.spouseRelief;
-  const secondEstate = Math.max(0, b.spouseOwn + first.spouseTake - Math.max(0, spousePaid));
+  const spousePaid = first.people.find((x) => x.who === "spouse")?.payable ?? 0;
+  const secondEstate = Math.max(0, b.spouseOwn + first.spouseTake - spousePaid);
+  // 二次相続は子で等分（法定相続分）とする
   return { second: inheritanceTax(secondEstate, false, kids, 0), secondEstate };
 }
 
@@ -203,8 +234,13 @@ export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: b
   const heirs = legalHeirs(hasSpouse, kids);
   const b = estateBreakdown(plan, row, heirs.count, deflate, s, hasSpouse);
   const kidAges = plan.kids.map((k) => row.age - k.offset);
-  const calc = (ratio: number) => {
-    const first = inheritanceTax(b.total, hasSpouse, kids, ratio, kidAges);
+  // 「自分で決める」: 入力した割合を合計100%に直して使う
+  const custom = s.spouseMode === "custom" && (s.shares?.length ?? 0) === (hasSpouse ? 1 : 0) + kids && kids > 0 ? s.shares! : null;
+  const customSum = custom ? custom.reduce((a, x) => a + Math.max(0, x), 0) : 0;
+  const customRatio = custom && customSum > 0 && hasSpouse ? Math.max(0, custom[0]) / customSum : 0;
+  const kidShares = custom && customSum > 0 ? custom.slice(hasSpouse ? 1 : 0).map((x) => Math.max(0, x) / customSum) : undefined;
+  const calc = (ratio: number, ks?: number[]) => {
+    const first = inheritanceTax(b.total, hasSpouse, kids, ratio, kidAges, ks);
     const { second, secondEstate } = secondFor(b, first, kids, hasSpouse);
     return { first, second, secondEstate, total: first.payable + (second?.payable ?? 0) };
   };
@@ -229,7 +265,9 @@ export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: b
               ? Math.min(1, (16000 * MAN) / Math.max(1, b.total))
               : s.spouseMode === "best"
                 ? bestRatio
-                : 0.5;
-  const c = calc(ratio);
-  return { breakdown: b, spouseRatio: ratio, first: c.first, second: c.second, secondEstate: c.secondEstate, total: c.total, scan, bestRatio };
+                : s.spouseMode === "custom" && kidShares
+                  ? customRatio
+                  : 0.5;
+  const c = calc(ratio, kidShares);
+  return { breakdown: b, spouseRatio: ratio, kidShares, first: c.first, second: c.second, secondEstate: c.secondEstate, total: c.total, scan, bestRatio };
 }

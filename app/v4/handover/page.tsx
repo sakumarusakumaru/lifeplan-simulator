@@ -233,7 +233,7 @@ export default function HandoverPage() {
   // 引き継ぎ書に書いた財産・負債で計算（配偶者の取得割合・名義の割合は「もしも・相続」の設定を使う）
   const inh = planInheritance(plan, base.rows[0], hasSpouse, heirKids);
   const estate = totalAssets - totalDebts + Math.max(0, insuranceTotal - 5_000_000 * heirs.count);
-  const tax = inheritanceTax(estate * ((plan.inheritSet?.selfSharePct ?? 100) / 100), hasSpouse, heirKids, inh.spouseRatio, plan.kids.map((k) => plan.curAge - k.offset));
+  const tax = inheritanceTax(estate * ((plan.inheritSet?.selfSharePct ?? 100) / 100), hasSpouse, heirKids, inh.spouseRatio, plan.kids.map((k) => plan.curAge - k.offset), inh.kidShares);
 
   const phases = buildSurvivorPhases(death.rows);
   const deathRow = death.rows.find((r) => r.age === plan.curAge);

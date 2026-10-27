@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { ageOn } from "@/lib/v4/calc/age";
-import { DEFAULT_INHERIT, basicDeduction, legalHeirs, planInheritance } from "@/lib/v4/calc/inheritance";
+import { DEFAULT_INHERIT, basicDeduction, legalHeirs, legalSharesPct, planInheritance } from "@/lib/v4/calc/inheritance";
 import { deflator } from "@/lib/v4/calc/realValue";
 import type { InheritSettings, PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
@@ -130,6 +130,23 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
   const b = P.breakdown;
   const twoStep = hasSpouse && kids > 0;
   const best = P.scan.find((x) => x.ratio === P.bestRatio);
+  // 分け方を選べるのは、配偶者と子がいる場合と、子が2人以上いる場合
+  const canSplit = twoStep || (!hasSpouse && !noFamily && kids >= 2);
+  const isCustom = set.spouseMode === "custom" && canSplit;
+  const nameOf = (x: { who: string; kid: number }) =>
+    x.who === "spouse" ? "配偶者" : noFamily ? "親または兄弟姉妹" : plan.kids[x.kid]?.name || `子${x.kid + 1}`;
+  const legalPct = legalSharesPct(hasSpouse, kids);
+  const shares = set.shares && set.shares.length === legalPct.length ? set.shares : legalPct;
+  const sharesSum = shares.reduce((a, x) => a + x, 0);
+  const setMode = (m: InheritSettings["spouseMode"]) => {
+    // 「自分で決める」に切り替えたときは、いまの分け方から始める
+    if (m === "custom" && !(set.shares && set.shares.length === legalPct.length)) {
+      updSet({ spouseMode: m, shares: P.first.people.map((x) => Math.round(x.ratio * 1000) / 10) });
+    } else updSet({ spouseMode: m });
+  };
+  const setShare = (i: number, v: number) => updSet({ shares: shares.map((x, j) => (j === i ? Math.max(0, Math.min(100, v)) : x)) });
+  // 二次相続で子がそれぞれ受け取る額と税（子で等分）
+  const secondOf = (kid: number) => P.second?.people.find((x) => x.kid === kid);
 
   return (
     <section className="mb-8">
@@ -222,20 +239,27 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
               <span className="text-[9px] leading-snug text-[#0a0a0a]/55">現金・運用資産・自宅のうち本人名義の分。残りは配偶者の財産（二次相続で使う）</span>
             </label>
           ) : null}
-          {twoStep ? (
+          {canSplit ? (
             <label className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-[#0a0a0a]/70">一次相続で配偶者が相続する分</span>
+              <span className="text-[10px] font-bold text-[#0a0a0a]/70">{twoStep ? "一次相続の分け方" : "子の分け方"}</span>
               <select
-                value={set.spouseMode}
-                onChange={(e) => updSet({ spouseMode: e.target.value as InheritSettings["spouseMode"] })}
+                value={canSplit && !twoStep && set.spouseMode !== "custom" ? "legal" : set.spouseMode}
+                onChange={(e) => setMode(e.target.value as InheritSettings["spouseMode"])}
                 className="rounded-md bg-white px-2 py-1.5 text-[12px] font-bold"
                 style={{ border: `2px solid ${INK}` }}
               >
-                <option value="legal">法定相続分（1/2）</option>
-                <option value="all">全部</option>
-                <option value="cap16">1億6,000万円まで</option>
-                <option value="none">相続しない（子だけ）</option>
-                <option value="best">一次＋二次の税が最も少ない割合</option>
+                {twoStep ? (
+                  <>
+                    <option value="legal">法定相続分（配偶者1/2・子で1/2を等分）</option>
+                    <option value="all">配偶者が全部</option>
+                    <option value="cap16">配偶者は1億6,000万円まで</option>
+                    <option value="none">配偶者は相続しない（子だけ）</option>
+                    <option value="best">一次＋二次の税が最も少ない割合</option>
+                  </>
+                ) : (
+                  <option value="legal">法定相続分（子で等分）</option>
+                )}
+                <option value="custom">自分で決める（一人ずつ）</option>
               </select>
             </label>
           ) : null}
@@ -275,6 +299,101 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
           </div>
         </div>
 
+        {isCustom ? (
+          <div className="mt-2 rounded-lg p-2.5" style={{ background: "#f7f7f5" }}>
+            <p className="text-[10px] font-bold text-[#0a0a0a]/70">一人ずつの割合（%）</p>
+            <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {P.first.people.map((x, i) => (
+                <label key={`${x.who}${x.kid}`} className="flex items-center gap-1.5 text-[11px] font-bold">
+                  <span className="min-w-0 flex-1 truncate">{nameOf(x)}</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={shares[i] ?? 0}
+                    onChange={(e) => setShare(i, Number(e.target.value) || 0)}
+                    className="w-16 rounded-md bg-white px-1.5 py-1 text-right tabular-nums"
+                    style={{ border: `2px solid ${INK}` }}
+                  />
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-[9px] text-[#0a0a0a]/55">
+              合計 {Math.round(sharesSum * 10) / 10}%
+              {Math.abs(sharesSum - 100) > 0.05 ? "（100%になっていないので、入れた比率で分けて計算しています）" : ""}
+              <button type="button" onClick={() => updSet({ shares: legalPct })} className="ml-2 font-bold underline">
+                法定相続分に戻す
+              </button>
+            </p>
+          </div>
+        ) : null}
+
+        {P.first.people.length > 0 ? (
+          <div className="mt-2 overflow-x-auto rounded-lg p-2.5" style={{ border: `2px solid ${INK}18` }}>
+            <p className="text-[11px] font-bold">一人ずつの相続額と税</p>
+            <table className="mt-1 w-full min-w-[480px] text-[10px] tabular-nums">
+              <thead>
+                <tr className="text-[#0a0a0a]/55">
+                  <th className="py-1 text-left font-bold">相続する人</th>
+                  <th className="py-1 text-right font-bold">割合</th>
+                  <th className="py-1 text-right font-bold">{twoStep ? "一次で受け取る" : "受け取る額"}</th>
+                  <th className="py-1 text-right font-bold">{twoStep ? "一次の税" : "納める税"}</th>
+                  {twoStep ? (
+                    <>
+                      <th className="py-1 text-right font-bold">二次で受け取る</th>
+                      <th className="py-1 text-right font-bold">二次の税</th>
+                      <th className="py-1 text-right font-bold">税の合計</th>
+                    </>
+                  ) : null}
+                  <th className="py-1 text-right font-bold">手元に残る</th>
+                </tr>
+              </thead>
+              <tbody>
+                {P.first.people.map((x) => {
+                  const s2 = x.who === "kid" ? secondOf(x.kid) : undefined;
+                  const taxSum = x.payable + (s2?.payable ?? 0);
+                  const kept = x.take + (s2?.take ?? 0) - taxSum;
+                  const age = x.who === "kid" ? est.age - (plan.kids[x.kid]?.offset ?? 0) : null;
+                  return (
+                    <tr key={`${x.who}${x.kid}`} className="border-t" style={{ borderColor: "#0a0a0a15" }}>
+                      <td className="py-1 font-bold">
+                        {nameOf(x)}
+                        {age !== null && !noFamily ? <span className="ml-1 font-normal text-[#0a0a0a]/50">{age}歳</span> : null}
+                      </td>
+                      <td className="py-1 text-right">{Math.round(x.ratio * 1000) / 10}%</td>
+                      <td className="py-1 text-right">{man(x.take)}</td>
+                      <td className="py-1 text-right">
+                        <span style={{ color: x.payable > 0 ? RED : undefined }}>{man(x.payable)}</span>
+                        {x.relief > 0 ? (
+                          <span className="block text-[9px] text-[#0a0a0a]/50">
+                            {x.who === "spouse" ? "配偶者の軽減" : "未成年者控除"} −{man(x.relief)}
+                          </span>
+                        ) : null}
+                      </td>
+                      {twoStep ? (
+                        <>
+                          <td className="py-1 text-right">{s2 ? man(s2.take) : "—"}</td>
+                          <td className="py-1 text-right" style={{ color: (s2?.payable ?? 0) > 0 ? RED : undefined }}>
+                            {s2 ? man(s2.payable) : "—"}
+                          </td>
+                          <td className="py-1 text-right font-bold">{man(taxSum)}</td>
+                        </>
+                      ) : null}
+                      <td className="py-1 text-right font-bold">{man(kept)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="mt-1 text-[9px] leading-relaxed text-[#0a0a0a]/55">
+              税は「相続税の総額」を受け取る割合で分けたあと、配偶者の税額軽減・未成年者控除（10万円×18歳までの年数）を引いた額です。
+              {twoStep ? "配偶者が受け取った分は、配偶者自身の財産と合わせて二次相続で子に等分で引き継ぐとしています（配偶者の「手元に残る」は、二次相続の前の額）。" : ""}
+            </p>
+          </div>
+        ) : null}
+
         {twoStep ? (
           <div className="mt-2 rounded-lg p-3" style={{ border: `2px solid ${RED}50`, background: "#fffafa" }}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -294,7 +413,7 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
                 </p>
                 <p className="text-[9px] text-[#0a0a0a]/50">配偶者が {pct(P.spouseRatio)} 相続した場合</p>
               </div>
-              {best ? (
+              {best && P.scan.some((x) => x.total > 0) ? (
                 <div className="col-span-2 sm:col-span-1">
                   <p className="text-[10px] font-bold text-[#0a0a0a]/55">合計が最も少ない分け方</p>
                   <p className="text-base font-bold tabular-nums" style={{ color: GREEN }}>
