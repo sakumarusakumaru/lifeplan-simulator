@@ -9,7 +9,7 @@ import { MonteCarloPanel } from "@/components/v4/MonteCarloPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import { ageOn, kidAge } from "@/lib/v4/calc/age";
-import { computeRealEstateValue } from "@/lib/v4/calc/finance";
+import { computeRealEstateValue, ownsHomeAt } from "@/lib/v4/calc/finance";
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { useSimResult } from "@/store/v4/useSimResult";
@@ -227,7 +227,7 @@ export default function ResultPage() {
 
   // 持ち家（自宅）の評価額
   const homeValue = useMemo(() => {
-    if (!plan.homeOwned) return 0;
+    if (!ownsHomeAt(plan, plan.curAge)) return 0;
     const yr = new Date().getFullYear();
     return computeRealEstateValue(
       {
@@ -687,7 +687,7 @@ const BS_COLORS = {
 
 // 自宅の評価額（指定した西暦年時点。築年数で減価）
 function propertyValues(plan: PlanInput, year: number) {
-  const home = plan.homeOwned
+  const home = ownsHomeAt(plan, plan.curAge + (year - new Date().getFullYear()))
     ? computeRealEstateValue(
         {
           name: "自宅",

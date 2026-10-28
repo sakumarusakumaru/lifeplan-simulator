@@ -614,11 +614,17 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
 
     // ── 生活費・住居・保険 ──
     const livingFactor = dead ? Math.max(0, risk.livingRate) / 100 : 1;
-    const basicL = input.livingM * 12 * infl * livingFactor;
+    // 働き終わったあとの生活費を別に入れていれば、その年齢から切り替える
+    const livingNow =
+      (input.livingRetireM ?? 0) > 0 && age >= (input.livingRetireAge ?? Infinity) ? (input.livingRetireM ?? 0) : input.livingM;
+    const basicL = livingNow * 12 * infl * livingFactor;
     const special = input.specialY * infl * livingFactor;
     const basic = basicL + special;
-    const homeRent = input.rentM * 12 * infl;
-    const homeTax = input.homeTaxY * infl;
+    // 家を買う予定の人は、買う年齢までは家賃、買ってからは固定資産税
+    const buyAge = input.homeBuyAge ?? 0;
+    const bought = buyAge > 0 && age >= buyAge;
+    const homeRent = bought ? 0 : input.rentM * 12 * infl;
+    const homeTax = buyAge > 0 && !bought ? 0 : input.homeTaxY * infl;
     const home = homeRent + homeTax + homePay;
     // 保険料（亡くなった人が被保険者の保険は払い終わる。払込免除も insuranceYear の中で判定）
     const ins = insY.prem;
@@ -731,8 +737,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       const remaining = Math.max(0, ln.remainMonths - t * 12);
       return acc + ln.monthlyPay * remaining;
     }, 0);
+    // 住宅ローンは借り始めてから（これから借りる予定の分は、まだ借金ではない）
+    const hlOutstanding = age >= input.hlStart ? hlBal : 0;
     const nw =
-      ass.c + ass.nisa + ass.toku + ass.k + ass.g + ass.dc - hlBal - reLoanRemain - otherLoanRemain;
+      ass.c + ass.nisa + ass.toku + ass.k + ass.g + ass.dc - hlOutstanding - reLoanRemain - otherLoanRemain;
 
     const taxShare = ordinaryGross > 0 ? Math.min(1, tax / ordinaryGross) : 0;
 
@@ -758,7 +766,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       basic,
       basicL,
       special,
-      hlBal,
+      hlBal: hlOutstanding,
       reD,
       eduD,
       eduKD,

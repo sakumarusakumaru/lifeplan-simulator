@@ -1,5 +1,5 @@
 // 「お金の引き継ぎ書」の財産・負債の一覧。金額はシミュレーターの入力（作成日時点）から自動で入る
-import { computeRealEstateValue } from "./finance";
+import { computeRealEstateValue, ownsHomeAt } from "./finance";
 import { HAS, deathBenefitAt, deathCoverActive, normalizeInsurance, premiumAt, typeLabel } from "./insurance";
 import type { DcType, HandoverInput, HandoverItem, Insurance, PlanInput, RealEstate, YearlyResult } from "./types";
 
@@ -250,7 +250,8 @@ export function autoSources(plan: PlanInput): AutoSource[] {
     },
     { src: "crypto", cat: "crypto", amount: plan.cryptoBal, f: {} },
   ];
-  if (plan.homeOwned) {
+  // 引き継ぎ書は「いま」持っているもの。これから買う家・これから借りるローンは入れない
+  if (ownsHomeAt(plan, plan.curAge)) {
     out.push({
       src: "home",
       cat: "realestate",
@@ -274,7 +275,7 @@ export function autoSources(plan: PlanInput): AutoSource[] {
       },
     }),
   );
-  if (plan.useHomeLoan && plan.hlBal > 0) {
+  if (plan.useHomeLoan && plan.hlBal > 0 && plan.hlStart <= plan.curAge) {
     out.push({
       src: "hl",
       cat: "housingLoan",

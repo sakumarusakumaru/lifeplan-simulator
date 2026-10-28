@@ -25,6 +25,9 @@ function run(q: LiteInput) {
   };
 }
 
+// 結果の要約だけ（スマホの下の帯用）
+export const liteBase = (q: LiteInput) => run(q);
+
 export interface LiteTip {
   label: string;
   shortfallAge: number | null;
@@ -32,8 +35,31 @@ export interface LiteTip {
   gain: number; // 100歳時点のお金の増え方（今の価値）
 }
 
+// 条件を満たす最小の値を、0.5万円きざみで二分探索する（ok(hi) が偽なら null）
+function solve(ok: (x: number) => boolean, hi: number): number | null {
+  if (!ok(hi)) return null;
+  let lo = 0;
+  while (hi - lo > 0.5) {
+    const mid = Math.round(((lo + hi) / 2) * 2) / 2;
+    if (ok(mid)) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+}
+
 export function liteResult(q: LiteInput) {
   const base = run(q);
+  // 足りない人: 100歳まで足りるには、毎月の積立をあといくら増やせばよいか（働いている間）
+  const needMonthly = base.shortfallAge !== null ? solve((x) => run({ ...q, investM: q.investM + x }).shortfallAge === null, 60) : null;
+  // 足りる人: 生活費を月いくらまで増やしても100歳まで足りるか（余裕）
+  const room =
+    base.shortfallAge === null
+      ? (() => {
+          const fails = (x: number) => run({ ...q, livingM: q.livingM + x, retireLivingM: q.retireLivingM > 0 ? q.retireLivingM + x : 0 }).shortfallAge !== null;
+          const firstFail = solve(fails, 50);
+          return firstFail === null ? 50 : Math.max(0, firstFail - 0.5);
+        })()
+      : null;
   // 3つの小さな行動で、どれだけ変わるか
   const variants: { label: string; q: LiteInput; ok: boolean }[] = [
     { label: "生活費を月1万円へらす", q: { ...q, livingM: Math.max(0, q.livingM - 1) }, ok: q.livingM >= 1 },
@@ -46,7 +72,25 @@ export function liteResult(q: LiteInput) {
       const r = run(v.q);
       return { label: v.label, shortfallAge: r.shortfallAge, final: r.final, gain: r.final - base.final };
     });
-  return { ...base, tips };
+  return { ...base, tips, needMonthly, room, accuracy: liteAccuracy(q) };
 }
 
 export type LiteResult = ReturnType<typeof liteResult>;
+
+// 精度メーター: 必須の14問で60%。任意の項目に答えるほど上がる（「ない」と答えたのも答えたことにする）
+export function liteAccuracy(q: LiteInput) {
+  const items: { key: string; label: string; w: number; done: boolean }[] = [
+    { key: "pension", label: "ねんきん定期便の見込み額", w: 12, done: q.pensionSelf > 0 },
+    ...(q.hasSpouse ? [{ key: "pensionSpouse", label: "配偶者の年金の見込み額", w: 6, done: q.pensionSpouse > 0 }] : []),
+    { key: "retireLiving", label: "働き終わったあとの生活費", w: 8, done: !!q.ans.retireLiving },
+    { key: "dc", label: "iDeCo・企業型DC", w: 5, done: !!q.ans.dc },
+    { key: "kidsPlan", label: "子どもの予定", w: 3, done: !!q.ans.kidsPlan },
+    ...(q.home === "rent" ? [{ key: "homePlan", label: "家を買う予定", w: 3, done: !!q.ans.homePlan }] : []),
+    { key: "events", label: "大きな出費の予定", w: 3, done: !!q.ans.events },
+  ];
+  const total = items.reduce((a, x) => a + x.w, 0);
+  const got = items.filter((x) => x.done).reduce((a, x) => a + x.w, 0);
+  const pct = Math.round(60 + (40 * got) / Math.max(1, total));
+  const next = items.filter((x) => !x.done).sort((a, b) => b.w - a.w)[0]?.label ?? null;
+  return { pct, next };
+}

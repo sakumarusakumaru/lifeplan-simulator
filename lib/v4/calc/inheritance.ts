@@ -17,7 +17,7 @@
 // 含めないもの: 生前贈与の加算、葬式費用、相次相続控除、2割加算、子がいない場合の親・兄弟姉妹の相続、
 //   貸付事業用宅地の特例（200㎡まで50%減）、不動産投資ローンの団信
 import { normalizeInsurance, selfDeathBenefitAt, selfIncomeProtValueAt } from "./insurance";
-import { BUILDING_LIFESPAN, computeRealEstateValue } from "./finance";
+import { BUILDING_LIFESPAN, computeRealEstateValue, ownsHomeAt } from "./finance";
 import type { InheritSettings, PlanInput, RealEstate, YearlyResult } from "./types";
 
 const MAN = 10000;
@@ -221,7 +221,7 @@ export function propertyEval(r: RealEstate, year: number, rental: boolean, key: 
 export function realEstateEval(plan: PlanInput, year: number, s: InheritSettings = plan.inheritSet ?? DEFAULT_INHERIT): PropertyEval[] {
   const out: PropertyEval[] = [];
   const pv = s.propValue ?? {};
-  if (plan.homeOwned) out.push(propertyEval(homeAsRealEstate(plan), year, false, "home", pv.home ?? 0));
+  if (ownsHomeAt(plan, plan.curAge + (year - new Date().getFullYear()))) out.push(propertyEval(homeAsRealEstate(plan), year, false, "home", pv.home ?? 0));
   plan.res.forEach((r, i) => {
     const key = `re-${i}`;
     out.push({ ...propertyEval({ ...r, currentValueOverride: r.currentValueOverride ?? 0 }, year, r.rent > 0, key, pv[key] ?? 0), label: r.name || `投資用不動産${i + 1}` });

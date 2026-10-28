@@ -265,6 +265,21 @@ export function ExpenseMegaSection() {
               onChange={(v) => setField("livingM", v)}
               unit="円"
             />
+            <div className="grid grid-cols-2 gap-2">
+              <NumberField
+                label="働き終わったあとの基本支出(月)"
+                value={plan.livingRetireM ?? 0}
+                onChange={(v) => setField("livingRetireM", v)}
+                unit="円"
+                hint="0なら上の基本支出のまま"
+              />
+              <NumberField
+                label="切り替える年齢"
+                value={plan.livingRetireAge ?? plan.jobs[0]?.end ?? 65}
+                onChange={(v) => setField("livingRetireAge", v)}
+                unit="歳"
+              />
+            </div>
             <NumberField
               label="特別費(年)"
               value={plan.specialY}
@@ -291,6 +306,13 @@ export function ExpenseMegaSection() {
                 unit="円"
               />
             </div>
+            <NumberField
+              label="家を買う年齢（予定がなければ0）"
+              value={plan.homeBuyAge ?? 0}
+              onChange={(v) => setField("homeBuyAge", v)}
+              unit="歳"
+              hint="この年齢から家賃が止まり、固定資産税がかかります。住宅ローンの開始年齢と頭金（ライフイベント）も合わせて入れてください。持ち家にチェックを入れると、買う年齢から自宅として数えます"
+            />
             <CheckboxField
               label="持ち家（自宅を所有している）"
               value={plan.homeOwned ?? plan.useHomeLoan}

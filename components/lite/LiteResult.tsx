@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
-import { finOf, liteResult } from "@/lib/lite/result";
+import { finOf, liteBase, liteResult } from "@/lib/lite/result";
 import { NEXT_INPUTS } from "@/lib/lite/toPlan";
 import { LITE_ASSUMPTIONS as A } from "@/lib/lite/types";
 import { useLiteStore } from "@/store/lite/lite-store";
@@ -13,7 +13,8 @@ import { LiteChart } from "./LiteChart";
 import { sendToV4 } from "./sendToV4";
 
 export function LiteResult() {
-  const q = useLiteStore((s) => s.q);
+  // 入力中は前の結果を出したまま、計算が追いついたら差し替える（打つたびに固まらないように）
+  const q = useDeferredValue(useLiteStore((s) => s.q));
   const router = useRouter();
   const ready = q.income > 0 && q.livingM > 0;
   const r = useMemo(() => (ready ? liteResult(q) : null), [q, ready]);
@@ -32,7 +33,7 @@ export function LiteResult() {
   const ok = r.shortfallAge === null;
   const data = r.rows.map((row) => ({ age: row.age, fin: Math.round(finOf(row)) }));
   const goV4 = () => {
-    if (sendToV4(q)) router.push("/v4/detail");
+    if (sendToV4(useLiteStore.getState().q)) router.push("/v4/detail");
   };
 
   return (
@@ -40,7 +41,11 @@ export function LiteResult() {
       <div className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `2.5px solid ${ok ? GREEN : RED}` }}>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">RESULT</p>
         <p className="mt-1 text-xl font-bold leading-snug sm:text-2xl" style={{ color: ok ? GREEN : RED }}>
-          {ok ? `${A.endAge}歳まで、お金は足りる見込み` : `${r.shortfallAge}歳で、お金が足りなくなる見込み`}
+          {ok
+            ? `${A.endAge}歳まで、お金は足りる見込み`
+            : r.final > 0
+              ? `${r.shortfallAge}歳で、一時的にお金が足りなくなる見込み`
+              : `${r.shortfallAge}歳で、お金が足りなくなる見込み`}
         </p>
         <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/60">
           金額はすべて「今の価値」です（物価が毎年{A.infl}%上がる分を割り戻した額）。家やローンは入れず、預金と投資だけを見ています。
@@ -65,6 +70,40 @@ export function LiteResult() {
         <div className="mt-3">
           <LiteChart data={data} retireAge={Math.max(q.age, q.retireAge)} />
         </div>
+
+        {/* 次にやること: 足りない人は積立をあといくら、足りる人は生活費の余裕 */}
+        <div className="mt-3 rounded-lg px-3 py-2.5" style={{ background: ok ? "#f0fff4" : "#fff1f1" }}>
+          {ok ? (
+            <p className="text-[13px] font-bold leading-snug">
+              生活費をあと月{r.room !== null && r.room >= 50 ? "50万円以上" : `${r.room}万円`}ふやしても、{A.endAge}歳まで足りる計算です
+            </p>
+          ) : r.needMonthly !== null ? (
+            <p className="text-[13px] font-bold leading-snug">
+              {A.endAge}歳まで足りるには、毎月の積立をあと <span style={{ color: RED }}>{r.needMonthly}万円</span>（働き終わるまで）
+            </p>
+          ) : (
+            <p className="text-[13px] font-bold leading-snug">積立をふやすだけでは届きません。生活費・働く年数・住まいを見直す必要があります</p>
+          )}
+          <p className="mt-0.5 text-[10px] text-[#0a0a0a]/55">
+            {ok ? "急な出費や、物価・運用が思ったより悪いときの余裕の目安です" : "積立は利回り年4%の計算。生活費を減らす・長く働くと、必要な額は下がります"}
+          </p>
+        </div>
+      </div>
+
+      {/* 精度メーター: 任意の項目に答えるほど上がる */}
+      <div className="rounded-2xl bg-white p-4" style={{ border: `2px solid ${INK}30` }}>
+        <div className="flex items-baseline justify-between">
+          <p className="text-sm font-bold">精度の目安</p>
+          <p className="text-lg font-bold tabular-nums">{r.accuracy.pct}%</p>
+        </div>
+        <div className="mt-1.5 h-2.5 overflow-hidden rounded-full" style={{ background: "#0a0a0a12" }}>
+          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${r.accuracy.pct}%`, background: r.accuracy.pct >= 90 ? GREEN : INK }} />
+        </div>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-[#0a0a0a]/60">
+          {r.accuracy.next
+            ? `次は「${r.accuracy.next}」を入れると、いちばん精度が上がります（カード05・06）`
+            : "Liteで入れられることは全部入っています。もっと細かくはver4で"}
+        </p>
       </div>
 
       {r.tips.length > 0 ? (
@@ -122,10 +161,12 @@ export function LiteResult() {
         <ul className="mt-2 flex flex-col gap-1">
           <li>・物価は毎年{A.infl}%、給料も同じだけ上がる（昇給{A.raise}%）。生活費・家賃も物価に合わせて上がり、働き終わったあとも同じ暮らしを続ける</li>
           <li>・投資の利回りは年{A.investR}%。投資はすべて新NISAにあるとみなす。預金が200万円を切ったら投資を取り崩す</li>
-          <li>・年金は、会社員なら22歳から働き終わるまで厚生年金に入っていたとして、今の年収から見積もる。自営業は国民年金を満額。受け取りは65歳から</li>
+          <li>・年金は、ねんきん定期便の額を入れなければ、会社員は22歳から働き終わるまで厚生年金に入っていたとして今の年収から見積もる。自営業は国民年金を満額。もらい始める年齢で増減（繰上げ1か月0.4%減・繰下げ1か月0.7%増）</li>
           <li>・税金・社会保険料・児童手当は2026年10月時点の制度で計算</li>
           <li>・教育費は文部科学省などの調査をもとにした目安（塾代を含む）。大学まで進学</li>
-          <li>・住宅ローンの金利は{A.loanRate}%。持ち家は固定資産税などを年{A.homeTaxY}万円</li>
+          <li>・住宅ローンの金利は{A.loanRate}%。これから買う家は値段から頭金を引いた残りを{A.buyLoanYears}年ローン、諸費用は値段の{A.buyCostRate}%。住宅ローン控除は入れていない</li>
+          <li>・持ち家は固定資産税を年{A.homeTaxY}万円、維持費をマンション月{A.upkeepMansionM}万円・戸建て月{A.upkeepHouseM}万円</li>
+          <li>・iDeCo・企業型DCは自分で出す掛金だけを入れ、65歳で一時金として受け取る</li>
           <li>・{A.endAge}歳まで生きる前提。病気・介護・相続などの大きな出来事は入れていない</li>
         </ul>
         <p className="mt-2">計算は ver4 と同じエンジンです。結果は概算で、将来を保証するものではありません。</p>
@@ -136,9 +177,9 @@ export function LiteResult() {
 
 // スマホ用: 画面の下に結果をいつも小さく出す（押すと結果の位置へ）
 export function LiteBar() {
-  const q = useLiteStore((s) => s.q);
+  const q = useDeferredValue(useLiteStore((s) => s.q));
   const ready = q.income > 0 && q.livingM > 0;
-  const r = useMemo(() => (ready ? liteResult(q) : null), [q, ready]);
+  const r = useMemo(() => (ready ? liteBase(q) : null), [q, ready]);
   const ok = r?.shortfallAge === null;
   return (
     <button

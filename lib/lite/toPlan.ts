@@ -1,7 +1,7 @@
 // ver4 Lite の入力を、ver4 の計算エンジン（PlanInput）に変換する。
 // Lite で聞かない項目は ver4 の「はじめての人」の値（EMPTY_PLAN）のまま。前提は LITE_ASSUMPTIONS
 import { EMPTY_PLAN } from "@/lib/v4/calc/defaults";
-import type { Kid, PensionInput, PlanInput, SchoolType } from "@/lib/v4/calc/types";
+import type { Kid, LifeExpenseEvent, PensionInput, PlanInput, SchoolType } from "@/lib/v4/calc/types";
 
 import { LITE_ASSUMPTIONS as A, type LiteInput } from "./types";
 
@@ -18,6 +18,12 @@ export function loanBalance(monthly: number, years: number, ratePct = A.loanRate
   return r === 0 ? monthly * n : (monthly * (1 - Math.pow(1 + r, -n))) / r;
 }
 
+// 受け取りを早める・遅らせると年金額が変わる（繰上げ 1か月0.4%減・繰下げ 1か月0.7%増、60〜75歳）
+export function pensionFactor(startAge: number) {
+  const m = (Math.min(75, Math.max(60, startAge)) - 65) * 12;
+  return m < 0 ? 1 + m * 0.004 : 1 + m * 0.007;
+}
+
 function schools(edu: LiteInput["edu"]): Kid["s"] {
   const p: SchoolType = "pub";
   if (edu === "private") return { k: "pri", e: p, j: "pri", h: "pri", u: "pri", g: "none" };
@@ -26,6 +32,7 @@ function schools(edu: LiteInput["edu"]): Kid["s"] {
 }
 
 export function liteToPlan(q: LiteInput): PlanInput {
+  const year = new Date().getFullYear();
   const income = Math.max(0, q.income) * MAN;
   const spouseIncome = q.hasSpouse && q.spouseWork !== "none" ? Math.max(0, q.spouseIncome) * MAN : 0;
   const retire = Math.max(q.age, q.retireAge);
@@ -47,10 +54,14 @@ export function liteToPlan(q: LiteInput): PlanInput {
     ...EMPTY_PLAN.spousePension,
     mode: "auto",
     category: spouseKosei ? "kosei" : spouseDependent ? "dependent" : "kokumin",
-    koseiYears: spouseKosei ? Math.max(0, 65 - WORK_START) : 0,
+    koseiYears: spouseKosei ? Math.max(0, Math.min(q.spouseRetireAge, 70) - WORK_START) : 0,
     koseiAvgIncome: spouseKosei ? spouseIncome : 0,
     kokuminMonths: 480,
   };
+
+  // ねんきん定期便の見込み額を入れたら、それを使う（受け取りを始める年齢で増減させる）
+  if (q.pensionSelf > 0) Object.assign(selfPension, { mode: "manual", manualMonth: Math.round(q.pensionSelf * MAN * pensionFactor(q.penStart)) });
+  if (q.hasSpouse && q.pensionSpouse > 0) Object.assign(spousePension, { mode: "manual", manualMonth: Math.round(q.pensionSpouse * MAN) });
 
   const kids: Kid[] = q.kidAges.map((a, i) => ({
     name: `子${i + 1}`,
@@ -59,8 +70,22 @@ export function liteToPlan(q: LiteInput): PlanInput {
     s: schools(q.edu),
     opt: { ronin: false, dorm: false, send: 50_000 },
   }));
+  // これから生まれる予定の子（1人目は futureKidsIn 年後、2人目からは2年おき）
+  for (let i = 0; i < Math.max(0, Math.min(5, q.futureKids)); i++) {
+    const inY = Math.max(0, q.futureKidsIn) + i * 2;
+    kids.push({ name: `子${kids.length + 1}（予定）`, birth: `${year + inY}-01-01`, offset: q.age + inY, s: schools(q.edu), opt: { ronin: false, dorm: false, send: 50_000 } });
+  }
 
-  const owner = q.home !== "rent";
+  // 大きな出費の予定と、家を買うときの頭金・諸費用
+  const lifeExpenses: LifeExpenseEvent[] = q.events
+    .filter((e) => e.amount > 0 && e.age >= q.age)
+    .map((e) => ({ age: e.age, amount: e.amount * MAN, label: e.label || "大きな出費" }));
+  const buy = q.home === "rent" && q.buyHome && q.buyAge > q.age && q.buyPrice > 0;
+  const buyLoan = buy ? Math.max(0, q.buyPrice - q.buyDown) * MAN : 0;
+  const buyLoanYears = Math.max(5, Math.min(A.buyLoanYears, 80 - q.buyAge));
+  if (buy) lifeExpenses.push({ age: q.buyAge, amount: (Math.min(q.buyDown, q.buyPrice) + (q.buyPrice * A.buyCostRate) / 100) * MAN, label: "家の頭金・諸費用" });
+
+  const owner = q.home !== "rent" || buy;
   const loan = q.home === "loan" && q.loanM > 0 && q.loanYears > 0;
   const investM = Math.max(0, q.investM) * MAN;
   const invest = Math.max(0, q.invest) * MAN;
@@ -75,8 +100,9 @@ export function liteToPlan(q: LiteInput): PlanInput {
     spouseWork: spouseIncome > 0 ? "work" : "none",
     spouseIncY: spouseIncome,
     spouseIncStart: q.hasSpouse ? q.spouseAge : 30,
-    spouseIncEnd: 65,
+    spouseIncEnd: q.spouseRetireAge,
     useSpousePen: q.hasSpouse,
+    penStartA: Math.min(75, Math.max(60, q.penStart)),
     jobs: [
       {
         name: employee ? "勤務先" : "事業",
@@ -92,14 +118,28 @@ export function liteToPlan(q: LiteInput): PlanInput {
     spousePension,
     kids,
     livingM: Math.max(0, q.livingM) * MAN,
+    livingRetireM: q.retireLivingM > 0 ? q.retireLivingM * MAN : 0,
+    livingRetireAge: retire,
+    lifeExpenses,
     rentM: q.home === "rent" ? Math.max(0, q.rentM) * MAN : 0,
     homeOwned: owner,
-    homeTaxY: owner ? A.homeTaxY * MAN : 0,
-    useHomeLoan: loan,
-    hlBal: loan ? Math.round(loanBalance(q.loanM * MAN, q.loanYears)) : 0,
+    homeBuyAge: buy ? q.buyAge : 0,
+    // 持ち家の固定資産税と維持費（マンションは管理費・修繕積立金、戸建ては修繕の積立）
+    homeTaxY: owner ? (A.homeTaxY + (q.homeType === "house" ? A.upkeepHouseM : A.upkeepMansionM) * 12) * MAN : 0,
+    ...(buy
+      ? {
+          homePropType: q.homeType,
+          homeStructure: q.homeType === "house" ? ("wood" as const) : ("rc" as const),
+          homeBuiltYear: year + (q.buyAge - q.age),
+          homePurchasePrice: q.buyPrice * MAN,
+          homeLandRatio: q.homeType === "house" ? 50 : 30,
+        }
+      : {}),
+    useHomeLoan: loan || buyLoan > 0,
+    hlBal: loan ? Math.round(loanBalance(q.loanM * MAN, q.loanYears)) : buyLoan,
     hlRate: A.loanRate,
-    hlTerm: loan ? q.loanYears : 30,
-    hlStart: q.age,
+    hlTerm: loan ? q.loanYears : buyLoan > 0 ? buyLoanYears : 30,
+    hlStart: buy ? q.buyAge : q.age,
     cashBal: Math.max(0, q.cash) * MAN,
     // 投資はまとめて新NISAに入っているとみなす（積立が枠を超えた分は特定口座へ）
     nisaBal: invest,
@@ -111,16 +151,22 @@ export function liteToPlan(q: LiteInput): PlanInput {
     nisaEndAge: retire,
     nisaOverflowToToku: true,
     dcType: employee ? "employee-none" : "self-employed",
+    dcBal: Math.max(0, q.dcBal) * MAN,
+    dcR: A.investR,
+    saveDcM: Math.max(0, q.dcM) * MAN,
+    dcJoinAge: q.age,
+    saveDcEndAge: Math.min(retire, 65),
+    dcStartAge: 65,
     risk: { ...EMPTY_PLAN.risk, deathAge: q.age },
   };
 }
 
 // ver4 に渡したあと「まだ入れていないこと」（精度を上げるための次の入力）
 export const NEXT_INPUTS = [
-  "ねんきん定期便の見込み額（年金を正確に）",
-  "退職金・企業年金・iDeCo",
-  "賞与や昇給の見込み、配偶者の働き方の変化",
+  "年金の加入記録（転職・休職・扶養の期間）",
+  "昇給・賞与の見込み、転職や時短などの働き方の変化",
   "保険（死亡保障・医療・学資・個人年金）",
-  "車・旅行・リフォームなど大きな出費",
+  "教育の細かい進路（塾・留学・仕送り・一人暮らし）",
+  "車のローン・奨学金・不動産投資",
   "親からの相続・介護",
 ];

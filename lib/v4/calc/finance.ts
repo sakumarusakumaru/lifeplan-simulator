@@ -80,3 +80,8 @@ export const EDU: Record<"k" | "e" | "j" | "h" | "u" | "g" | "r", Record<SchoolT
   g: { pub: 120, pri: 180, none: 0 },
   r: { pub: 100, pri: 100, none: 0 },
 };
+
+// その年齢で自宅を持っているか（家を買う予定の人は、買う年齢から）
+export function ownsHomeAt(plan: { homeOwned: boolean; homeBuyAge?: number }, age: number): boolean {
+  return plan.homeOwned && !((plan.homeBuyAge ?? 0) > 0 && age < (plan.homeBuyAge ?? 0));
+}

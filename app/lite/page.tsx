@@ -43,7 +43,7 @@ export default function LitePage() {
         {hydrated ? (
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
             <LiteInputs />
-            <div id="lite-result" className="scroll-mt-4 lg:sticky lg:top-4 lg:self-start">
+            <div id="lite-result" className="scroll-mt-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto lg:pb-2">
               <LiteResult />
             </div>
           </div>

@@ -370,8 +370,13 @@ export interface PlanInput {
   spousePension: PensionInput;
 
   livingM: number;
+  // 働き終わったあとの基本支出（月）。0・未設定なら livingM のまま。livingRetireAge から切り替える
+  livingRetireM?: number;
+  livingRetireAge?: number;
   specialY: number;
   rentM: number;
+  // 家を買う予定の年齢（未設定・0なら今の住まいのまま）。この年齢から家賃が止まり、固定資産税がかかる
+  homeBuyAge?: number;
   homeTaxY: number;
   useHomeLoan: boolean;
   hlBal: number;
