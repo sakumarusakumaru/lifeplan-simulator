@@ -160,13 +160,3 @@ export function liteToPlan(q: LiteInput): PlanInput {
     risk: { ...EMPTY_PLAN.risk, deathAge: q.age },
   };
 }
-
-// ver4 に渡したあと「まだ入れていないこと」（精度を上げるための次の入力）
-export const NEXT_INPUTS = [
-  "年金の加入記録（転職・休職・扶養の期間）",
-  "昇給・賞与の見込み、転職や時短などの働き方の変化",
-  "保険（死亡保障・医療・学資・個人年金）",
-  "教育の細かい進路（塾・留学・仕送り・一人暮らし）",
-  "車のローン・奨学金・不動産投資",
-  "親からの相続・介護",
-];

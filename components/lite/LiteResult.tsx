@@ -4,7 +4,6 @@ import { useDeferredValue, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 import { finOf, liteBase, liteResult } from "@/lib/lite/result";
-import { NEXT_INPUTS } from "@/lib/lite/toPlan";
 import { LITE_ASSUMPTIONS as A } from "@/lib/lite/types";
 import { useLiteStore } from "@/store/lite/lite-store";
 
@@ -136,25 +135,21 @@ export function LiteResult() {
         </div>
       ) : null}
 
-      <div className="rounded-2xl p-4 sm:p-5" style={{ background: INK, color: "#fff" }}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">NEXT</p>
-        <p className="mt-1 text-base font-bold">もっと正確にするなら、ver4で詳しく</p>
-        <p className="mt-1 text-[12px] leading-relaxed text-white/75">いま入れた内容はそのまま引き継ぎます。ver4で足せるもの:</p>
-        <ul className="mt-2 grid grid-cols-1 gap-1 text-[12px] text-white/85 sm:grid-cols-2">
-          {NEXT_INPUTS.map((x) => (
-            <li key={x}>・{x}</li>
-          ))}
-          <li>・もしものとき（遺族年金・必要な保障・相続税・家族に渡す引き継ぎ書）</li>
-        </ul>
-        <button
-          type="button"
-          onClick={goV4}
-          className="mt-3 w-full rounded-xl py-3 text-sm font-bold"
-          style={{ background: "#fff", color: INK }}
-        >
-          この内容でver4を開く →
-        </button>
-      </div>
+      {/* ver4 への入口（1行のバナー） */}
+      <button
+        type="button"
+        onClick={goV4}
+        className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 text-left"
+        style={{ background: INK, color: "#fff" }}
+      >
+        <span className="min-w-0">
+          <span className="block text-[14px] font-bold">ver4で、もっと詳しく</span>
+          <span className="block text-[11px] text-white/65">この入力のまま、保険・教育の進路・もしもの備えまで</span>
+        </span>
+        <span className="shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ background: "#fff", color: INK }}>
+          開く →
+        </span>
+      </button>
 
       <details className="rounded-2xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={{ border: `2px solid ${INK}18` }}>
         <summary className="cursor-pointer text-[12px] font-bold text-[#0a0a0a]">この計算で置いている前提</summary>
