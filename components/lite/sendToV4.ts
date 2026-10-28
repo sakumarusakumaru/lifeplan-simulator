@@ -20,7 +20,7 @@ function v4HasInput() {
 export function sendToV4(q: LiteInput): boolean {
   if (
     v4HasInput() &&
-    !confirm("ver4にはすでに入力があります。Liteの内容で置き換えますか？\n（引き継ぎ書と相続の設定は残ります。今のver4の入力を残したいときは、先にver4のメニューからJSONで保存してください）")
+    !confirm("詳細版にはすでに入力があります。Liteの内容で置き換えますか？\n（引き継ぎ書と相続の設定は残ります。今の詳細版の入力を残したいときは、先に詳細版のメニューからJSONで保存してください）")
   )
     return false;
   const st = usePlanStore.getState();

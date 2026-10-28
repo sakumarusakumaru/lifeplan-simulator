@@ -101,7 +101,7 @@ export function LiteResult() {
         <p className="mt-1.5 text-[11px] leading-relaxed text-[#0a0a0a]/60">
           {r.accuracy.next
             ? `次は「${r.accuracy.next}」を入れると、いちばん精度が上がります（カード05・06）`
-            : "Liteで入れられることは全部入っています。もっと細かくはver4で"}
+            : "Liteで入れられることは全部入っています。もっと細かくは詳細版で"}
         </p>
       </div>
 
@@ -135,7 +135,7 @@ export function LiteResult() {
         </div>
       ) : null}
 
-      {/* ver4 への入口（1行のバナー） */}
+      {/* 詳細版（ver4）への入口（1行のバナー） */}
       <button
         type="button"
         onClick={goV4}
@@ -143,7 +143,7 @@ export function LiteResult() {
         style={{ background: INK, color: "#fff" }}
       >
         <span className="min-w-0">
-          <span className="block text-[14px] font-bold">ver4で、もっと詳しく</span>
+          <span className="block text-[14px] font-bold">もっと詳しく調べたい方は「ライフプランシミュレーター 詳細版」へ</span>
           <span className="block text-[11px] text-white/65">この入力のまま、保険・教育の進路・もしもの備えまで</span>
         </span>
         <span className="shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ background: "#fff", color: INK }}>
@@ -164,7 +164,7 @@ export function LiteResult() {
           <li>・iDeCo・企業型DCは自分で出す掛金だけを入れ、65歳で一時金として受け取る</li>
           <li>・{A.endAge}歳まで生きる前提。病気・介護・相続などの大きな出来事は入れていない</li>
         </ul>
-        <p className="mt-2">計算は ver4 と同じエンジンです。結果は概算で、将来を保証するものではありません。</p>
+        <p className="mt-2">計算は詳細版と同じエンジンです。結果は概算で、将来を保証するものではありません。</p>
       </details>
     </div>
   );

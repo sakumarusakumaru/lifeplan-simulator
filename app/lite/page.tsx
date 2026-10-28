@@ -18,7 +18,7 @@ export default function LitePage() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b-2 border-[#0a0a0a] pb-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">LIFE PLAN SIMULATOR ver4 Lite</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">LIFE PLAN SIMULATOR Lite</p>
             <h1 className="text-2xl font-bold leading-tight text-[#0a0a0a] sm:text-3xl">3分で、100歳までのお金をざっくり</h1>
             <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/65">
               4つのカードを埋めるだけ。わからない数字は、だいたいで大丈夫です。
@@ -35,7 +35,7 @@ export default function LitePage() {
               最初から
             </button>
             <Link href="/v4/detail" className="underline">
-              詳しい ver4 →
+              詳細版 →
             </Link>
           </div>
         </header>
