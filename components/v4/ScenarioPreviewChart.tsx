@@ -47,6 +47,8 @@ export function ScenarioPreviewChart({
   base,
   preview,
   previewTitle,
+  previewKicker = null,
+  kept = false,
   envOn = false,
   crashAges = [],
   domainSeries,
@@ -55,6 +57,8 @@ export function ScenarioPreviewChart({
   base: SimulationSummary;
   preview: SimulationSummary | null;
   previewTitle: string | null;
+  previewKicker?: string | null; // 見出しの小さい文字（キープした打ち手を重ねているときなど）
+  kept?: boolean;                 // キープした打ち手がある
   envOn?: boolean;
   crashAges?: number[];
   domainSeries?: SimulationSummary[];
@@ -78,10 +82,10 @@ export function ScenarioPreviewChart({
       <div className="mb-1 flex min-h-[34px] items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/50">
-            {preview ? "この打ち手を試すと" : envOn ? "選んだ外的環境での純資産" : "いまのプランの純資産"}
+            {preview ? previewKicker ?? "この打ち手を試すと" : envOn ? "選んだ外的環境での純資産" : "いまのプランの純資産"}
           </p>
           <p className="truncate text-[12px] font-bold" style={{ color: preview ? color : INK }}>
-            {preview ? previewTitle : "下のカードを長押しすると、グラフがその打ち手に変わります"}
+            {preview ? previewTitle : "下のカードにマウスを乗せる（長押し）と変わり、クリックでキープします"}
           </p>
         </div>
         {preview ? (
@@ -128,7 +132,7 @@ export function ScenarioPreviewChart({
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-0.5 w-4" style={{ background: color }} />
-          {preview ? "打ち手を試した場合" : envOn ? "選んだ外的環境" : "（押すとここが変わる）"}
+          {preview ? (kept ? "打ち手を重ねた場合" : "打ち手を試した場合") : envOn ? "選んだ外的環境" : "（押すとここが変わる）"}
         </span>
         {crashAges.length ? (
           <span className="flex items-center gap-1">
