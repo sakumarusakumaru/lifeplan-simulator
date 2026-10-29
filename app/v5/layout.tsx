@@ -393,8 +393,8 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
         children
       )}
       <Footer />
-      {/* ver5: スマホの入力中は画面下に「いまの試算」が固定で出るので、その分フッターの下をあける */}
-      {unlocked === false && pathname?.startsWith("/v5/detail") ? <div aria-hidden className="h-24 lg:hidden" /> : null}
+      {/* ver5: スマホの入力画面は画面下に「いまの試算」が固定で出るので、その分フッターの下をあける */}
+      {pathname?.startsWith("/v5/detail") ? <div aria-hidden className="h-24 lg:hidden" /> : null}
       <ConsentDialog />
       {guideOpen ? (
         <GuideFlow mode="modal" onClose={() => setGuideOpen(false)} />

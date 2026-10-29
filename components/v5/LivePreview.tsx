@@ -160,16 +160,22 @@ export function LivePreview({
   plan,
   variant,
   onShowNow,
+  actionLabel = "この時点の結果を見る →",
+  showAccuracy = true,
+  requireBirth = true,
 }: {
   result: SimulationSummary;
   plan: PlanInput;
   variant: "side" | "bar";
   onShowNow: () => void;
+  actionLabel?: string; // 入力を終えた人には「詳しいレポートを見る」
+  showAccuracy?: boolean; // 入力を終えた人には精度メーターを出さない
+  requireBirth?: boolean; // はじめての人は生年月日が入るまで試算を出さない（サンプル等は生年月日なしでも出す）
 }) {
   const real = useUiStore((s) => s.realValue);
   const delta = useDelta(result);
   const [barOpen, setBarOpen] = useState(false);
-  const ready = !!plan.selfBirth;
+  const ready = !requireBirth || !!plan.selfBirth;
 
   const deltaEl = delta ? (
     <span className="text-[11px] font-bold" style={{ color: delta.good ? "#22863a" : RED }} aria-live="polite">
@@ -203,9 +209,11 @@ export function LivePreview({
             ここに試算が出ます
           </p>
         )}
-        <div className="border-t pt-4" style={{ borderColor: "#0a0a0a20" }}>
-          <Accuracy />
-        </div>
+        {showAccuracy ? (
+          <div className="border-t pt-4" style={{ borderColor: "#0a0a0a20" }}>
+            <Accuracy />
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={onShowNow}
@@ -213,7 +221,7 @@ export function LivePreview({
           className="rounded-lg px-3 py-2.5 text-[12px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
           style={{ border: "2px solid #0a0a0a" }}
         >
-          この時点の結果を見る →
+          {actionLabel}
         </button>
         <p className="text-[10px] leading-relaxed text-[#0a0a0a]/55">
           空欄は平均的な値で計算した概算です。将来を保証するものではありません。
@@ -231,14 +239,14 @@ export function LivePreview({
       {barOpen && ready ? (
         <div className="flex flex-col gap-3 pb-3">
           <MiniChart result={result} height={110} />
-          <Accuracy />
+          {showAccuracy ? <Accuracy /> : null}
           <button
             type="button"
             onClick={onShowNow}
             className="rounded-lg px-3 py-2.5 text-[12px] font-bold"
             style={{ border: "2px solid #0a0a0a" }}
           >
-            この時点の結果を見る →
+            {actionLabel}
           </button>
         </div>
       ) : null}

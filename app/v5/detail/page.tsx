@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { HealthHeader } from "@/components/v4/HealthHeader";
-import { ResultsPanel } from "@/components/v4/ResultsPanel";
 import { MonteCarloBadge } from "@/components/v4/MonteCarloPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
 import { InputProgress } from "@/components/v4/InputProgress";
@@ -19,6 +18,7 @@ import { usePlanStore } from "@/store/v4/plan-store";
 import { useSimResult } from "@/store/v4/useSimResult";
 
 export default function DetailPage() {
+  const router = useRouter();
   const hydrated = usePlanStore((s) => s.hydrated);
   const plan = usePlanStore((s) => s.plan);
   const result = useSimResult(plan);
@@ -126,8 +126,8 @@ export default function DetailPage() {
   }
 
   return (
-    <main className="px-4 py-6 pb-6 sm:px-8">
-      <div className="mx-auto max-w-7xl">
+    <main className="px-4 py-6 pb-36 sm:px-8 lg:pb-6">
+      <div className="mx-auto max-w-6xl">
         {justDone ? (
           <div
             className="mb-4 flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center"
@@ -137,12 +137,9 @@ export default function DetailPage() {
             <div className="flex-1">
               <p className="text-sm font-bold text-[#22863a]">あなたの結果が出ました</p>
               <p className="mt-0.5 text-[12px] leading-relaxed text-[#0a0a0a]/75">
-                <span className="hidden sm:inline">右側</span>
-                <span className="sm:hidden">下</span>
-                のグラフと診断が、いま入力した内容の結果です。
-                <span className="hidden sm:inline">左</span>
-                <span className="sm:hidden">上</span>
-                の入力を直すと、すぐに結果も変わります。
+                <span className="hidden lg:inline">右</span>
+                <span className="lg:hidden">画面下</span>
+                の「いまの試算」が、いま入力した内容の結果です。入力を直すと、すぐに変わります。
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -164,16 +161,33 @@ export default function DetailPage() {
             </div>
           </div>
         ) : null}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-[260px_1fr] md:grid-cols-[1fr_2fr]">
+        {/* ver5: 入力を終えた人も同じB案の配置。左に入力、右（スマホは下）に「いまの試算」。詳しいグラフはレポートへ */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           {sections}
 
-          <aside className="flex flex-col gap-4 sm:sticky sm:top-[calc(var(--lp-header-h,56px)+12px)] sm:max-h-[calc(100vh-var(--lp-header-h,56px)-20px)] sm:self-start sm:overflow-y-auto sm:pr-1">
-            <HealthHeader result={result} plan={plan} />
+          <aside className="hidden flex-col gap-4 lg:sticky lg:top-[calc(var(--lp-header-h,56px)+12px)] lg:flex lg:max-h-[calc(100vh-var(--lp-header-h,56px)-20px)] lg:self-start lg:overflow-y-auto lg:pr-1">
+            <LivePreview
+              result={result}
+              plan={plan}
+              variant="side"
+              onShowNow={() => router.push("/v5/result")}
+              actionLabel="詳しいレポートを見る →"
+              showAccuracy={false}
+          requireBirth={false}
+            />
             {mcOn ? <MonteCarloBadge /> : null}
             <WarningsPanel warnings={result.warnings} />
-            <ResultsPanel />
           </aside>
         </div>
+        <LivePreview
+          result={result}
+          plan={plan}
+          variant="bar"
+          onShowNow={() => router.push("/v5/result")}
+          actionLabel="詳しいレポートを見る →"
+          showAccuracy={false}
+          requireBirth={false}
+        />
       </div>
     </main>
   );
