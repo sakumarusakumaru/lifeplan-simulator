@@ -20,7 +20,7 @@ import { useSimResult } from "@/store/v4/useSimResult";
 type SectionId = (typeof SECTION_ORDER)[number];
 
 const BLOCKS: { id: SectionId; label: string; desc: string; Comp: ComponentType }[] = [
-  { id: "ch-settings", label: "基本設定", desc: "本人・配偶者・シミュレーションの条件・税金", Comp: SettingsMegaSection },
+  { id: "ch-settings", label: "基本設定", desc: "本人・配偶者（計算の条件と税金は「詳細設定」に）", Comp: SettingsMegaSection },
   { id: "ch-income", label: "収入", desc: "給与・副業・年金（働いている間〜老後）", Comp: IncomeMegaSection },
   { id: "ch-assets", label: "資産・運用", desc: "現金・NISA・特定口座・iDeCo/DC・暗号資産・金・不動産投資", Comp: AssetsMegaSection },
   { id: "ch-expense", label: "支出", desc: "生活費・住まい・教育・保険・ライフイベント・介護", Comp: ExpenseMegaSection },
@@ -183,7 +183,7 @@ export default function DetailPage() {
 
           <header className="flex flex-col gap-1.5">
             <p className="text-[11px] font-bold tracking-[0.14em] text-[#0a0a0a]/55">
-              {String(active + 1).padStart(2, "0")} / 04
+              入力 {active + 1} / {BLOCKS.length}
             </p>
             <h1 className="text-2xl font-bold leading-snug sm:text-3xl">{block.label}</h1>
             <p className="text-[13px] leading-relaxed text-[#0a0a0a]/70">{block.desc}</p>

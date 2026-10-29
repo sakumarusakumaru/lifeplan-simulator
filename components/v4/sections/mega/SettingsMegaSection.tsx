@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { Fragment, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { DateField } from "@/components/v4/inputs/DateField";
@@ -9,7 +9,7 @@ import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { DrawOrderEditor } from "@/components/v4/DrawOrderEditor";
-import { Section } from "@/components/v4/Section";
+import { Section, TabModeContext } from "@/components/v4/Section";
 import { ageOn } from "@/lib/v4/calc/age";
 import { calcHouseholdTax } from "@/lib/v4/calc/tax";
 import { usePlanStore } from "@/store/v4/plan-store";
@@ -40,6 +40,43 @@ function AgeDisplay({ birth }: { birth: string }) {
   );
 }
 
+// ver5: 配偶者の「いる／いない」。いないときは配偶者の欄を出さない（計算は生年月日が空なら配偶者なし）
+function SpouseToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="grid grid-cols-2 overflow-hidden" style={{ border: "2px solid #0a0a0a", borderRadius: 10 }} role="radiogroup" aria-label="配偶者">
+      {[
+        { v: false, label: "いない" },
+        { v: true, label: "いる" },
+      ].map((o, i) => (
+        <button
+          key={o.label}
+          type="button"
+          role="radio"
+          aria-checked={on === o.v}
+          onClick={() => onChange(o.v)}
+          className="min-h-11 text-[13px] font-bold"
+          style={{
+            background: on === o.v ? "#0a0a0a" : "#ffffff",
+            color: on === o.v ? "#ffffff" : "#0a0a0a",
+            borderLeft: i === 0 ? "none" : "2px solid #0a0a0a",
+          }}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ver5: シミュレーション設定と税金を「詳細設定」1つにまとめる（ver4 はそれぞれ別の開閉のまま）
+function DetailWrap({ children }: { children: ReactNode }) {
+  return (
+    <CollapsibleSubGroup title="詳細設定（初期値のままでOK）" defaultOpen={false}>
+      <div className="flex flex-col gap-5">{children}</div>
+    </CollapsibleSubGroup>
+  );
+}
+
 export function SettingsMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
@@ -51,6 +88,14 @@ export function SettingsMegaSection() {
   }, [plan.selfBirth, plan.curAge, patch]);
 
   const detailed = plan.taxMode === "detailed";
+  const tabMode = useContext(TabModeContext);
+  const [spouseOn, setSpouseOn] = useState(!!plan.spouseBirth);
+  const showSpouse = !tabMode || spouseOn || !!plan.spouseBirth;
+  const Detail = tabMode ? DetailWrap : Fragment;
+  const pickSpouse = (v: boolean) => {
+    setSpouseOn(v);
+    if (!v && plan.spouseBirth) patch({ spouseBirth: "" });
+  };
 
   const sample = useMemo(() => {
     const selfWageY = plan.jobs.reduce((acc, j) => {
@@ -125,6 +170,8 @@ export function SettingsMegaSection() {
         </CollapsibleSubGroup>
 
         <CollapsibleSubGroup title="配偶者">
+          {tabMode ? <SpouseToggle on={showSpouse} onChange={pickSpouse} /> : null}
+          {showSpouse ? (
           <div className="grid grid-cols-1 gap-2">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
               <DateField
@@ -161,9 +208,14 @@ export function SettingsMegaSection() {
               />
             </div>
           </div>
+          ) : null}
+          {tabMode && showSpouse && !plan.spouseBirth ? (
+            <p className="text-[11px] text-[#0a0a0a]/60">生年月日を入れると、配偶者の収入・年金も計算に入ります</p>
+          ) : null}
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="シミュレーション設定" defaultOpen={false}>
+        <Detail>
+        <CollapsibleSubGroup title="シミュレーション設定" defaultOpen={tabMode}>
           <div className="grid grid-cols-1 gap-2">
             <NumberField
               label="シミュレーション最終年齢"
@@ -196,7 +248,7 @@ export function SettingsMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="税金・社会保険" defaultOpen={false}>
+        <CollapsibleSubGroup title="税金・社会保険" defaultOpen={tabMode}>
           <div className="flex flex-col gap-3">
             <div
               className="grid grid-cols-2 gap-0 overflow-hidden"
@@ -302,6 +354,7 @@ export function SettingsMegaSection() {
             )}
           </div>
         </CollapsibleSubGroup>
+        </Detail>
       </div>
     </Section>
   );

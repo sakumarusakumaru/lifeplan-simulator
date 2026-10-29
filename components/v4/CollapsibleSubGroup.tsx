@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useContext, useState, type ReactNode } from "react";
+
+import { TabModeContext } from "@/components/v4/Section";
 
 export function CollapsibleSubGroup({
   title,
@@ -14,6 +16,20 @@ export function CollapsibleSubGroup({
   headerExtra?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const tabMode = useContext(TabModeContext);
+
+  // ver5: はじめから開いている組は開閉をやめて、見出しと中身をそのまま出す（開閉は「あれば入れる」組だけ）
+  if (tabMode && defaultOpen) {
+    return (
+      <div className="flex flex-col gap-2 pt-1">
+        <div className="flex items-center justify-between gap-2 border-b pb-1.5" style={{ borderColor: "#0a0a0a20" }}>
+          <span className="text-[13px] font-bold text-[#0a0a0a]">{title}</span>
+          {headerExtra ? <div className="flex shrink-0 items-center">{headerExtra}</div> : null}
+        </div>
+        <div className="flex flex-col gap-2">{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div

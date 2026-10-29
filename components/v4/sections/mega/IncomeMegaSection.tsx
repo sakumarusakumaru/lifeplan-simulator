@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
@@ -9,7 +9,7 @@ import { SelectField } from "@/components/v4/inputs/SelectField";
 import { TextField } from "@/components/v4/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
-import { Section } from "@/components/v4/Section";
+import { Section, TabModeContext } from "@/components/v4/Section";
 import { calcPension } from "@/lib/v4/calc/pension";
 import { sevPlanOf, simulate } from "@/lib/v4/calc/simulate";
 import { taishokuShotokuKojo } from "@/lib/v4/calc/tax";
@@ -293,6 +293,8 @@ function SeverancePicker({ plan, index, update }: { plan: PlanInput; index: numb
 export function IncomeMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
+  // ver5: 配偶者が「いない」ときは配偶者の年金欄を出さない（ver4 はこれまでどおり出す）
+  const hasSpouse = !useContext(TabModeContext) || !!plan.spouseBirth;
 
   const updateJob = (i: number, patch: Partial<Job>) =>
     setField("jobs", plan.jobs.map((j, idx) => (idx === i ? { ...j, ...patch } : j)));
@@ -381,11 +383,13 @@ export function IncomeMegaSection() {
 
         <CollapsibleSubGroup title="年金">
           <div className="flex flex-col gap-3">
-            <CheckboxField
-              label="配偶者分も年金収入に含める"
-              value={plan.useSpousePen}
-              onChange={(v) => setField("useSpousePen", v)}
-            />
+            {hasSpouse ? (
+              <CheckboxField
+                label="配偶者分も年金収入に含める"
+                value={plan.useSpousePen}
+                onChange={(v) => setField("useSpousePen", v)}
+              />
+            ) : null}
             <PercentField
               label="年金額の改定率（年）"
               value={plan.penIndex ?? 0}
@@ -401,7 +405,7 @@ export function IncomeMegaSection() {
               setPension={(p) => setField("selfPension", p)}
               isSelf
             />
-            {plan.useSpousePen ? (
+            {plan.useSpousePen && hasSpouse ? (
               <PensionEditor
                 kicker="配偶者"
                 startAge={plan.penStartB}

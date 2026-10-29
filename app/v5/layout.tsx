@@ -180,79 +180,33 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
             className="flex flex-col items-center justify-center rounded-lg py-1 transition-colors"
             style={{ background: active ? "#0a0a0a" : "transparent", color: active ? "#ffffff" : "#0a0a0a" }}
           >
-            <span className="text-[9px] font-bold tabular-nums leading-none" style={{ opacity: active ? 0.6 : 0.45 }}>
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <span className="mt-0.5 whitespace-nowrap text-[11px] font-bold leading-none">{SHORT[i]}</span>
+            <span className="whitespace-nowrap py-1 text-[12px] font-bold leading-none">{SHORT[i]}</span>
           </Link>
         );
       })}
     </nav>
   );
 
+  // ver5: 上のタブは画面の切り替えだけ（番号・矢印なし）。入力の進み具合は入力画面の4ブロックのタブで見せる
   const renderTabs = (className: string) => (
-    <nav className={className}>
+    <nav className={className} aria-label="画面">
       {TABS.map((tab, i) => {
         const active = i === activeIdx;
-        const passed = activeIdx >= 0 && i < activeIdx;
-        const upcoming = activeIdx >= 0 && i > activeIdx;
-
-        const stepBg = active ? "#0a0a0a" : passed ? "#0a0a0a25" : "#ffffff";
-        const stepText = active ? "#ffffff" : passed ? "#0a0a0a55" : "#0a0a0a";
-        const labelColor = active
-          ? "#ffffff"
-          : passed
-            ? "#0a0a0a55"
-            : upcoming
-              ? "#0a0a0a"
-              : "#0a0a0a";
-        const tabBg = active ? "#0a0a0a" : "transparent";
-        const tabBorder = active
-          ? "2px solid #0a0a0a"
-          : passed
-            ? "2px solid #0a0a0a20"
-            : "2px solid #0a0a0a";
-
         return (
-          <span key={tab.href} className="flex shrink-0 items-center gap-0.5">
-            <Link
-              href={tab.href}
-              className="flex shrink-0 items-center gap-1.5 px-2.5 py-1 text-xs font-bold tracking-wide transition-all hover:opacity-80"
-              style={{
-                color: labelColor,
-                background: tabBg,
-                border: tabBorder,
-                borderRadius: 8,
-              }}
-            >
-              <span
-                className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-[9px] font-bold tabular-nums"
-                style={{
-                  background: stepBg,
-                  color: stepText,
-                  borderRadius: 4,
-                  border: active ? "1px solid #ffffff40" : "none",
-                }}
-              >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              {tab.label}
-            </Link>
-            {i < TABS.length - 1 ? (
-              <span
-                className="shrink-0 text-sm font-bold"
-                style={{
-                  color:
-                    passed || (active && i + 1 <= activeIdx)
-                      ? "#0a0a0a30"
-                      : "#0a0a0a55",
-                }}
-                aria-hidden
-              >
-                →
-              </span>
-            ) : null}
-          </span>
+          <Link
+            key={tab.href}
+            href={tab.href}
+            aria-current={active ? "page" : undefined}
+            className="shrink-0 px-3 py-1 text-xs font-bold tracking-wide transition-opacity hover:opacity-80"
+            style={{
+              color: active ? "#ffffff" : "#0a0a0a",
+              background: active ? "#0a0a0a" : "transparent",
+              border: `1.5px solid ${active ? "#0a0a0a" : "#0a0a0a40"}`,
+              borderRadius: 8,
+            }}
+          >
+            {tab.label}
+          </Link>
         );
       })}
     </nav>
@@ -286,7 +240,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
           <span className="hidden text-[#0a0a0a]/30 sm:inline">|</span>
 
           {renderTabs(
-            "hidden min-w-0 items-center gap-0.5 overflow-x-auto sm:flex",
+            "hidden min-w-0 items-center gap-1.5 overflow-x-auto sm:flex",
           )}
 
           {/* ページ別アクション（VER 3 バッジは廃止） */}
