@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { SECTION_ORDER } from "@/components/v4/Section";
+import { useVBase } from "@/components/v4/useVBase";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
@@ -24,6 +25,7 @@ export function InputProgress({
   onShowNow?: () => void; // 入力画面で「途中でも結果を見る」を押したとき
 }) {
   const router = useRouter();
+  const base = useVBase();
   const confirmed = useUiStore((s) => s.confirmed);
   const setOpen = useUiStore((s) => s.setOpen);
   const closeAll = useUiStore((s) => s.closeAll);
@@ -37,7 +39,7 @@ export function InputProgress({
   const jump = (id: string) => {
     closeAll();
     setOpen(id, true);
-    if (mode === "gate") router.push("/v4/detail");
+    if (mode === "gate") router.push(`${base}/detail`);
     window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   };
 
@@ -50,13 +52,13 @@ export function InputProgress({
     if (hasBirth && !confirm("サンプル（35歳・会社員・持ち家）を読み込みます。\n今の入力内容は上書きされます。よろしいですか？")) return;
     loadSample();
     setUnlocked(true);
-    router.push("/v4/result");
+    router.push(`${base}/result`);
   };
 
   return (
     <div className="rounded-xl bg-white p-4 sm:p-5" style={{ border: "2.5px solid #0a0a0a" }}>
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0a0a0a]/50">
-        {mode === "gate" ? "まだ結果は出ていません" : `STEP ${Math.min(done + 1, 4)} / 4`}
+        {mode === "gate" ? "まだ結果は出ていません" : base === "/v5" ? `入力　${done} / 4 ブロック完了` : `STEP ${Math.min(done + 1, 4)} / 4`}
       </p>
       <h1 className="mt-0.5 text-lg font-bold leading-snug text-[#0a0a0a] sm:text-xl">
         {mode === "gate"
@@ -65,10 +67,17 @@ export function InputProgress({
             ? "まずは、あなたのことを教えてください"
             : "その調子です。続きを入力しましょう"}
       </h1>
-      <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/65">
-        4つのブロックを上から順に入れて「OK・次へ」を押すと、最後に資産の推移グラフや診断が表示されます。
-        わからない所は空欄のままで大丈夫です。
-      </p>
+      {base === "/v5" && mode === "input" ? (
+        <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/75">
+          必須は<strong className="text-[#c8383a]">本人の生年月日だけ</strong>。ほかは空欄でも、平均的な値で計算します。
+          入れるたびに<span className="hidden lg:inline">右</span><span className="lg:hidden">下</span>の試算が動きます。
+        </p>
+      ) : (
+        <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/65">
+          4つのブロックを上から順に入れて「OK・次へ」を押すと、最後に資産の推移グラフや診断が表示されます。
+          わからない所は空欄のままで大丈夫です。
+        </p>
+      )}
 
       <ol className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         {SECTION_ORDER.map((id, i) => {
@@ -105,7 +114,7 @@ export function InputProgress({
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
         {mode === "gate" ? (
           <Link
-            href="/v4/detail"
+            href={`${base}/detail`}
             className="rounded-lg px-3 py-2 font-bold text-white"
             style={{ background: "#0a0a0a" }}
           >

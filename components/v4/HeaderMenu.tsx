@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { useVBase } from "@/components/v4/useVBase";
+
 // ヘッダー右端の「メニュー」。保存・読込・PDF・旧バージョン・初期化をひとまとめにする
 function Seg({
   label,
@@ -72,6 +74,7 @@ export function HeaderMenu({
   onPdf: () => void;
   onReset: () => void;
 }) {
+  const base = useVBase();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -226,7 +229,7 @@ export function HeaderMenu({
           <p className="px-3 pt-1 pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/45">
             その他
           </p>
-          <Link href="/v4/handover" role="menuitem" className={item} onClick={() => setOpen(false)}>
+          <Link href={`${base}/handover`} role="menuitem" className={item} onClick={() => setOpen(false)}>
             <span aria-hidden>✉</span>
             <span className="flex flex-col">
               <span className="font-bold">家族に渡す引き継ぎ書</span>

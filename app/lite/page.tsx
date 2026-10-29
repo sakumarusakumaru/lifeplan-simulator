@@ -34,7 +34,7 @@ export default function LitePage() {
             >
               最初から
             </button>
-            <Link href="/v4/detail" className="underline">
+            <Link href="/v5/detail" className="underline">
               詳細版 →
             </Link>
           </div>

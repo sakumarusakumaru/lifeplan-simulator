@@ -32,7 +32,7 @@ export function LiteResult() {
   const ok = r.shortfallAge === null;
   const data = r.rows.map((row) => ({ age: row.age, fin: Math.round(finOf(row)) }));
   const goV4 = () => {
-    if (sendToV4(useLiteStore.getState().q)) router.push("/v4/detail");
+    if (sendToV4(useLiteStore.getState().q)) router.push("/v5/detail");
   };
 
   return (

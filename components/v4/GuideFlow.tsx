@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useVBase } from "@/components/v4/useVBase";
+
 // 初回訪問者向けのインタラクティブな使い方ガイド。
 // 最後のステップで免責に同意すると ver4 の入力へ進む。
 
@@ -665,6 +667,7 @@ function StepStart({ onStart }: { onStart: () => void }) {
 // mode="modal": シミュレーターの上に重ねて開く。閉じれば元の画面にそのまま戻る（同意ステップなし）
 export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?: () => void }) {
   const router = useRouter();
+  const base = useVBase();
   const [step, setStep] = useState(0);
   const [returning, setReturning] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -715,7 +718,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
     } catch {
       // localStorage が使えなくても遷移する
     }
-    router.push("/v4/detail");
+    router.push(`${base}/detail`);
   };
 
   const last = step === lastIdx;
@@ -744,7 +747,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
           ) : returning ? (
             <button
               type="button"
-              onClick={() => (window.history.length > 1 ? router.back() : router.push("/v4/detail"))}
+              onClick={() => (window.history.length > 1 ? router.back() : router.push(`${base}/detail`))}
               className="text-[11px] font-bold text-[#0a0a0a] underline hover:text-[#c8383a]"
             >
               ← シミュレーターに戻る

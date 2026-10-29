@@ -63,7 +63,7 @@ const KEY_TO_FILL: Record<string, "income" | "expense" | "invest"> = {
 
 export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   const pathname = usePathname();
-  const isV3 = pathname?.startsWith("/v4") ?? false;
+  const isV3 = (pathname?.startsWith("/v4") || pathname?.startsWith("/v5")) ?? false;
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）

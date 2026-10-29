@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 
+import { useVBase } from "@/components/v4/useVBase";
 import { useUiStore } from "@/store/v4/ui-store";
 
 export type SectionStatus = "default" | "entered";
@@ -48,6 +49,8 @@ export function Section({
   const unlocked = useUiStore((s) => s.unlocked);
   // ステップ入力中は「OK」したかどうかで DONE/TODO を出す
   const pill: SectionStatus = confirmed ? "entered" : unlocked ? status : "default";
+  // ver5: 状態を日本語で（完了／入力中／未入力）
+  const jp = useVBase() === "/v5";
   const idx = SECTION_ORDER.indexOf(id as (typeof SECTION_ORDER)[number]);
   const isLast = idx === SECTION_ORDER.length - 1;
   const blocked = flow.enabled ? flow.canProceed(id) : null;
@@ -116,7 +119,7 @@ export function Section({
               <span className="text-sm font-bold text-[#0a0a0a]">
                 {title}
               </span>
-              <StatusPill status={pill} />
+              <StatusPill status={pill} jp={jp} active={open && flow.enabled} />
             </span>
             {description ? (
               <span className="truncate text-[10px] font-medium text-[#0a0a0a]/65">
@@ -177,7 +180,24 @@ export function Section({
   );
 }
 
-function StatusPill({ status }: { status: SectionStatus }) {
+function StatusPill({ status, jp = false, active = false }: { status: SectionStatus; jp?: boolean; active?: boolean }) {
+  if (jp && status !== "entered") {
+    return (
+      <span
+        className="inline-flex items-center text-[10px] font-bold"
+        style={{
+          height: 20,
+          padding: "0 8px",
+          background: active ? "#0a0a0a" : "#ffffff",
+          color: active ? "#ffffff" : "#55555a",
+          border: `2px solid ${active ? "#0a0a0a" : "#8a8a8e"}`,
+          borderRadius: 12,
+        }}
+      >
+        {active ? "入力中" : "未入力"}
+      </span>
+    );
+  }
   if (status === "entered") {
     return (
       <span
@@ -190,7 +210,7 @@ function StatusPill({ status }: { status: SectionStatus }) {
           borderRadius: 12,
         }}
       >
-        DONE
+        {jp ? "完了" : "DONE"}
       </span>
     );
   }

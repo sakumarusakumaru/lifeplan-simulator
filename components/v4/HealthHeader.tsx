@@ -126,8 +126,8 @@ export function HealthHeader({
   plan: PlanInput;
 }) {
   const pathname = usePathname();
-  const isV3 = pathname?.startsWith("/v4") ?? false;
-  const isV3Detail = pathname?.startsWith("/v4/detail") ?? false;
+  const isV3 = (pathname?.startsWith("/v4") || pathname?.startsWith("/v5")) ?? false;
+  const isV3Detail = (pathname?.startsWith("/v4/detail") || pathname?.startsWith("/v5/detail")) ?? false;
   const real = useUiStore((s) => s.realValue);
   const health = computeHealth(result, plan, real);
   const c = ALERT_COLORS[health.alert];

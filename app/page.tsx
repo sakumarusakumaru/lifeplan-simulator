@@ -38,7 +38,7 @@ export default function LandingPage() {
     } catch {
       // 失敗しても遷移する
     }
-    router.push("/v4/detail");
+    router.push("/v5/detail");
   };
 
   return (

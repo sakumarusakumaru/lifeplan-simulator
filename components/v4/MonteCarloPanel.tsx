@@ -18,6 +18,7 @@ import { MC_RISK, MC_RUNS, runMonteCarlo, type McRisk, type MonteCarloResult } f
 import { deflator } from "@/lib/v4/calc/realValue";
 import type { PlanInput } from "@/lib/v4/calc/types";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
+import { useVBase } from "@/components/v4/useVBase";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
@@ -57,9 +58,10 @@ export function MonteCarloBadge() {
   const plan = usePlanStore((s) => s.plan);
   const mc = useMonteCarlo(plan);
   const risk = MC_RISK[plan.mcRisk ?? "balanced"];
+  const base = useVBase();
   return (
     <Link
-      href="/v4/result#montecarlo"
+      href={`${base}/result#montecarlo`}
       className="flex items-center gap-3 rounded-xl bg-white px-4 py-2.5 transition-colors hover:bg-[#eef6fc]"
       style={{ border: `2px solid ${BLUE}60` }}
     >
