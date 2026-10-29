@@ -80,6 +80,8 @@ const KEY_TO_FILL: Record<string, keyof typeof FILLS> = {
 export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
   const pathname = usePathname();
   const isV3 = (pathname?.startsWith("/v4") || pathname?.startsWith("/v5")) ?? false;
+  // ver5 は見出しを日本語にして、何のグラフか一言添える（ver4 は英語の見出しのまま）
+  const jp = pathname?.startsWith("/v5") ?? false;
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）
@@ -112,15 +114,20 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
       }}
     >
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">
-          ASSET TRAJECTORY
+        <span className={jp ? "text-[13px] font-bold text-[#0a0a0a]" : "text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]"}>
+          {jp ? "資産の推移" : "ASSET TRAJECTORY"}
         </span>
         {rows.length ? (
           <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-            {rows[0].age} → {rows[rows.length - 1].age}
+            {rows[0].age}{jp ? "歳" : ""} → {rows[rows.length - 1].age}{jp ? "歳" : ""}
           </span>
         ) : null}
       </div>
+      {jp ? (
+        <p className="-mt-1.5 mb-3 text-[11px] leading-relaxed text-[#0a0a0a]/70">
+          色の面は、その年に持っている資産の内訳（現金・NISAなど）。赤い線は純資産（資産からローンの残りを引いた額。家の価値は入れない）。0の線より下は、借りている額のほうが多い状態です。
+        </p>
+      ) : null}
       <div className="h-[320px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 4 }}>
@@ -376,7 +383,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
         style={{ background: "#ffffff", border: "1.5px solid #0a0a0a30" }}
       >
         <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
-          このグラフの読み方 ／ HOW TO READ
+          {jp ? "このグラフの読み方" : "このグラフの読み方 ／ HOW TO READ"}
         </p>
 
         <p className="mb-1.5 text-[10px] font-bold text-[#0a0a0a]">■ 積み上げ面 ＝ その年の資産内訳</p>

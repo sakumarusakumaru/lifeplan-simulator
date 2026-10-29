@@ -64,6 +64,8 @@ const KEY_TO_FILL: Record<string, "income" | "expense" | "invest"> = {
 export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   const pathname = usePathname();
   const isV3 = (pathname?.startsWith("/v4") || pathname?.startsWith("/v5")) ?? false;
+  // ver5 は見出しを日本語にして、何のグラフか一言添える（ver4 は英語の見出しのまま）
+  const jp = pathname?.startsWith("/v5") ?? false;
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）
@@ -92,13 +94,18 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
       }}
     >
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">
-          ANNUAL CASHFLOW
+        <span className={jp ? "text-[13px] font-bold text-[#0a0a0a]" : "text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]"}>
+          {jp ? "1年ごとの収支" : "ANNUAL CASHFLOW"}
         </span>
         <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-          INCOME · EXPENSE · NET
+          {jp ? "収入・支出・差し引き" : "INCOME · EXPENSE · NET"}
         </span>
       </div>
+      {jp ? (
+        <p className="-mt-1.5 mb-3 text-[11px] leading-relaxed text-[#0a0a0a]/70">
+          0の線より上の棒はその年の収入（手取り）、下の棒は支出と投資の積立。赤い線は差し引きで、0より上なら貯まる年、下なら貯金や投資を取り崩す年です。
+        </p>
+      ) : null}
 
       <div className="h-[260px] w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -315,7 +322,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
         {/* ゾーン構造図 */}
         <div style={{ background: "#ffffff", padding: "10px 14px", borderBottom: "1px solid #0a0a0a10" }}>
           <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/55">
-            グラフの構造 ／ CHART STRUCTURE
+            {jp ? "グラフの見方" : "グラフの構造 ／ CHART STRUCTURE"}
           </p>
           <div className="overflow-hidden rounded-lg" style={{ border: "1.5px solid #0a0a0a20" }}>
             {/* 収入ゾーン（上） */}
