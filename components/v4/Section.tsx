@@ -14,6 +14,9 @@ export const StickyHeaderContext = createContext<{ enabled: boolean; topPx: numb
   topPx: 56,
 });
 
+// ver5: 4ブロックをタブで1つずつ見せる。見出し（開閉ボタン）と「OK・次へ」はページ側で出すので、ここでは中身だけ
+export const TabModeContext = createContext(false);
+
 // 入力ステップ（はじめての人向け）。各ブロックの最後に「OK・次へ」を出し、順番に進めてもらう
 export const SECTION_ORDER = ["ch-settings", "ch-income", "ch-assets", "ch-expense"] as const;
 
@@ -45,6 +48,7 @@ export function Section({
   const toggle = useUiStore((s) => s.toggle);
   const { enabled: stickyEnabled, topPx } = useContext(StickyHeaderContext);
   const flow = useContext(StepFlowContext);
+  const tabMode = useContext(TabModeContext);
   const confirmed = useUiStore((s) => !!s.confirmed[id]);
   const unlocked = useUiStore((s) => s.unlocked);
   // ステップ入力中は「OK」したかどうかで DONE/TODO を出す
@@ -55,6 +59,14 @@ export function Section({
   const isLast = idx === SECTION_ORDER.length - 1;
   const blocked = flow.enabled ? flow.canProceed(id) : null;
   const note = flow.enabled ? flow.note(id) : null;
+
+  if (tabMode) {
+    return (
+      <section id={id} aria-label={title} style={{ scrollMarginTop: 24 }}>
+        {children}
+      </section>
+    );
+  }
 
   return (
     <section

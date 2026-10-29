@@ -188,7 +188,7 @@ export function LivePreview({
       <aside
         aria-label="いまの試算"
         className="no-print flex flex-col gap-4 rounded-xl bg-white p-5"
-        style={{ border: "2.5px solid #0a0a0a" }}
+        style={{ border: "1.5px solid #0a0a0a" }}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold">いまの試算</h2>
@@ -234,7 +234,7 @@ export function LivePreview({
   return (
     <div
       className="no-print fixed inset-x-0 bottom-0 z-40 bg-white px-3 pt-2 pb-[calc(env(safe-area-inset-bottom)+8px)] lg:hidden"
-      style={{ borderTop: "2.5px solid #0a0a0a" }}
+      style={{ borderTop: "1.5px solid #0a0a0a" }}
     >
       {barOpen && ready ? (
         <div className="flex flex-col gap-3 pb-3">

@@ -259,11 +259,11 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="lp-root min-h-screen" style={{ background: "#f0f0ee" }}>
+    <div className="lp-root min-h-screen" style={{ background: "#ffffff" }}>
       <header
         ref={headerRef}
         className="fixed inset-x-0 top-0 z-50 print:static"
-        style={{ background: "#f0f0ee", borderBottom: "2.5px solid #0a0a0a" }}
+        style={{ background: "#ffffff", borderBottom: "2.5px solid #0a0a0a" }}
       >
         <div className="flex items-center gap-3 px-4 py-2 sm:px-8">
           <Link
