@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState, type ComponentType } from "react";
 
 import { MonteCarloBadge } from "@/components/v4/MonteCarloPanel";
+import { ResultsPanel } from "@/components/v4/ResultsPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
 import { LivePreview } from "@/components/v5/LivePreview";
 import { useUiStore } from "@/store/v4/ui-store";
@@ -15,7 +16,7 @@ import { SettingsMegaSection } from "@/components/v4/sections/mega/SettingsMegaS
 import { usePlanStore } from "@/store/v4/plan-store";
 import { useSimResult } from "@/store/v4/useSimResult";
 
-// ver5（B案 ライブプレビュー型）: 4ブロックをタブで1つずつ。左に入力、右（スマホは画面下）に「いまの試算」
+// ver5（B案 ライブプレビュー型）: 4ブロックをタブで1つずつ。左に入力、右に「いまの試算」とグラフ・年次サマリー（スマホは画面下のバーと、入力の下）
 
 type SectionId = (typeof SECTION_ORDER)[number];
 
@@ -56,6 +57,8 @@ export default function DetailPage() {
   const [justDone, setJustDone] = useState(false);
 
   const stepping = hydrated && unlocked === false;
+  // はじめての人は生年月日が入るまでグラフを出さない
+  const ready = !stepping || !!plan.selfBirth;
 
   const go = useCallback((i: number) => {
     setPicked(i);
@@ -121,7 +124,7 @@ export default function DetailPage() {
 
   return (
     <main className="px-4 py-6 pb-36 sm:px-8 lg:py-10 lg:pb-16" style={{ background: "#ffffff" }}>
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
+      <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 lg:grid-cols-[minmax(0,9fr)_minmax(0,11fr)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-6">
           {justDone ? (
             <div
@@ -249,10 +252,19 @@ export default function DetailPage() {
           </div>
         </div>
 
+        {/* スマホ: グラフと年次サマリーは入力の下に */}
+        {ready ? (
+          <div className="flex flex-col gap-3 border-t pt-6 lg:hidden" style={{ borderTop: LINE }}>
+            <h2 className="text-base font-bold">いまの試算のグラフ</h2>
+            <ResultsPanel />
+          </div>
+        ) : null}
+
         <aside className="hidden flex-col gap-4 lg:sticky lg:top-[calc(var(--lp-header-h,56px)+16px)] lg:flex lg:max-h-[calc(100vh-var(--lp-header-h,56px)-24px)] lg:self-start lg:overflow-y-auto">
-          <LivePreview result={result} plan={plan} variant="side" {...previewProps} />
+          <LivePreview result={result} plan={plan} variant="side" chart={false} {...previewProps} />
           {!stepping && mcOn ? <MonteCarloBadge /> : null}
           {!stepping ? <WarningsPanel warnings={result.warnings} /> : null}
+          {ready ? <ResultsPanel /> : null}
         </aside>
       </div>
       <LivePreview result={result} plan={plan} variant="bar" {...previewProps} />

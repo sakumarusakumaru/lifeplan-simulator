@@ -55,6 +55,7 @@ function useDelta(result: SimulationSummary) {
   return null;
 }
 
+// スマホの下のバーで開く小さなグラフ。縦軸（金額）と0の線に目盛りを付ける
 function MiniChart({ result, height }: { result: SimulationSummary; height: number }) {
   const rows = result.rows;
   if (rows.length < 2) return null;
@@ -67,37 +68,63 @@ function MiniChart({ result, height }: { result: SimulationSummary; height: numb
   const x = (i: number) => (i / (rows.length - 1)) * W;
   const y = (v: number) => H - 4 - ((v - min) / span) * (H - 8);
   const d = vals.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+  // 0より下は赤く塗る
+  const area = `${d} L${W} ${y(0).toFixed(1)} L0 ${y(0).toFixed(1)} Z`;
   const sIdx = result.shortfallAge ? rows.findIndex((r) => r.age === result.shortfallAge) : -1;
   const first = rows[0].age;
   const last = rows[rows.length - 1].age;
+  const pct = (v: number) => `${(y(v) / H) * 100}%`;
+  const ticks = [
+    { v: max, show: max > 0 },
+    { v: 0, show: true },
+    { v: min, show: min < 0 },
+  ].filter((t) => t.show);
   return (
     <figure className="m-0 flex flex-col gap-1">
-      <svg
-        role="img"
-        aria-label={`純資産の推移（${first}歳〜${last}歳）`}
-        width="100%"
-        height={height}
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-      >
-        <line x1={0} x2={W} y1={y(0)} y2={y(0)} stroke="#0a0a0a40" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-        {sIdx >= 0 ? (
-          <line
-            x1={x(sIdx)}
-            x2={x(sIdx)}
-            y1={0}
-            y2={H}
-            stroke={RED}
-            strokeWidth={1.5}
-            strokeDasharray="4 3"
-            vectorEffect="non-scaling-stroke"
-          />
-        ) : null}
-        <path d={d} fill="none" stroke={INK} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-      </svg>
-      <figcaption className="flex justify-between text-[10px] font-bold tabular-nums text-[#0a0a0a]/60">
+      <p className="text-[10px] font-bold text-[#0a0a0a]/60">純資産（預金と投資から、ローンの残りを引いた額。家の価値は入れない）</p>
+      <div className="relative pl-16" style={{ height }}>
+        {ticks.map((t) => (
+          <span
+            key={t.v}
+            className="absolute left-0 w-[60px] -translate-y-1/2 whitespace-nowrap text-right text-[10px] font-bold tabular-nums"
+            style={{ top: pct(t.v), color: t.v < 0 ? RED : "#0a0a0a99" }}
+          >
+            {t.v === 0 ? "0円" : `${man(t.v)}円`}
+          </span>
+        ))}
+        <svg
+          role="img"
+          aria-label={`純資産の推移（${first}歳〜${last}歳）`}
+          width="100%"
+          height={height}
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <clipPath id="lp-mini-neg">
+              <rect x={0} y={y(0)} width={W} height={H - y(0)} />
+            </clipPath>
+          </defs>
+          <path d={area} fill={RED} fillOpacity={0.15} clipPath="url(#lp-mini-neg)" />
+          <line x1={0} x2={W} y1={y(0)} y2={y(0)} stroke={INK} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
+          {sIdx >= 0 ? (
+            <line
+              x1={x(sIdx)}
+              x2={x(sIdx)}
+              y1={0}
+              y2={H}
+              stroke={RED}
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+              vectorEffect="non-scaling-stroke"
+            />
+          ) : null}
+          <path d={d} fill="none" stroke={INK} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <figcaption className="flex justify-between pl-16 text-[10px] font-bold tabular-nums text-[#0a0a0a]/60">
         <span>{first}歳</span>
-        <span>純資産の推移</span>
+        {sIdx >= 0 ? <span style={{ color: RED }}>{result.shortfallAge}歳でお金が足りなくなる</span> : null}
         <span>{last}歳</span>
       </figcaption>
     </figure>
@@ -163,6 +190,7 @@ export function LivePreview({
   actionLabel = "この時点の結果を見る →",
   showAccuracy = true,
   requireBirth = true,
+  chart = true,
 }: {
   result: SimulationSummary;
   plan: PlanInput;
@@ -171,6 +199,7 @@ export function LivePreview({
   actionLabel?: string; // 入力を終えた人には「詳しいレポートを見る」
   showAccuracy?: boolean; // 入力を終えた人には精度メーターを出さない
   requireBirth?: boolean; // はじめての人は生年月日が入るまで試算を出さない（サンプル等は生年月日なしでも出す）
+  chart?: boolean; // PCの右側は下に詳しいグラフを並べるので、小さなグラフは出さない
 }) {
   const real = useUiStore((s) => s.realValue);
   const delta = useDelta(result);
@@ -200,7 +229,7 @@ export function LivePreview({
           <>
             <Headline result={result} plan={plan} />
             {deltaEl}
-            <MiniChart result={result} height={140} />
+            {chart ? <MiniChart result={result} height={140} /> : null}
           </>
         ) : (
           <p className="rounded-lg px-3 py-6 text-center text-[12px] font-bold leading-relaxed text-[#0a0a0a]/65" style={{ background: "#f0f0ee" }}>
