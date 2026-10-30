@@ -124,7 +124,7 @@ export default function DetailPage() {
 
   return (
     <main className="px-4 py-6 pb-36 sm:px-8 lg:py-10 lg:pb-16" style={{ background: "#ffffff" }}>
-      <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 lg:grid-cols-[minmax(0,9fr)_minmax(0,11fr)] lg:gap-8">
+      <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 lg:grid-cols-[minmax(0,9fr)_minmax(0,11fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-6">
           {justDone ? (
             <div
