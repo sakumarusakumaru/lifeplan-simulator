@@ -250,20 +250,6 @@ export function HeaderMenu({
               </span>
             </span>
           </button>
-          <Link
-            href="/v3/detail"
-            role="menuitem"
-            className={item}
-            onClick={() => setOpen(false)}
-          >
-            <span aria-hidden>↺</span>
-            <span className="flex flex-col">
-              <span className="font-bold">旧バージョン（ver3）を開く</span>
-              <span className="text-[10px] text-[#0a0a0a]/55">
-                2026年10月以前の計算方法。入力データは別保存
-              </span>
-            </span>
-          </Link>
           <button
             type="button"
             role="menuitem"

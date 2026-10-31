@@ -105,17 +105,33 @@ export function liteToPlan(q: LiteInput): PlanInput {
     spouseIncEnd: q.spouseRetireAge,
     useSpousePen: q.hasSpouse,
     penStartA: Math.min(75, Math.max(60, q.penStart)),
-    jobs: [
-      {
-        name: employee ? "勤務先" : "事業",
-        start: Math.min(q.age, WORK_START),
-        end: retire,
-        inc: income,
-        raise: A.raise,
-        sev: Math.max(0, q.severance) * MAN,
-        sevAge: retire,
-      },
-    ],
+    // 会社員で60歳より後も働く場合は、60歳からの年収を「60歳のときの年収×割合」に分ける（再雇用などで下がる分）。
+    // 60歳からの年収はその後は上がらない計算。退職金は60歳までの勤務の分として、働き終わる年に受け取る
+    jobs:
+      employee && q.age < 60 && retire > 60 && q.after60Pct < 100
+        ? [
+            { name: "勤務先", start: Math.min(q.age, WORK_START), end: 60, inc: income, raise: A.raise, sev: Math.max(0, q.severance) * MAN, sevAge: retire },
+            {
+              name: "60歳から",
+              start: 60,
+              end: retire,
+              inc: Math.round(income * Math.pow(1 + A.raise / 100, 60 - q.age) * (Math.max(0, q.after60Pct) / 100)),
+              raise: 0,
+              sev: 0,
+              sevAge: retire,
+            },
+          ]
+        : [
+            {
+              name: employee ? "勤務先" : "事業",
+              start: Math.min(q.age, WORK_START),
+              end: retire,
+              inc: income,
+              raise: A.raise,
+              sev: Math.max(0, q.severance) * MAN,
+              sevAge: retire,
+            },
+          ],
     selfPension,
     spousePension,
     kids,
@@ -151,13 +167,23 @@ export function liteToPlan(q: LiteInput): PlanInput {
     nisaSplit: { on: true, fundBal: invest, fundR: A.investR, stockBal: 0, stockR: 6.0, oldBal: 0, oldR: A.investR },
     nisaTsumitateM: Math.min(investM, 100_000),
     nisaGrowthM: Math.min(Math.max(0, investM - 100_000), 200_000),
+    // NISAの月の上限（つみたて10万＋成長20万＝30万）を超えた積立は、特定口座で続ける（画面の説明どおり）
+    saveTokuM: Math.max(0, investM - 300_000),
+    saveTokuEndAge: retire,
+    tokuR: A.investR,
     nisaEndAge: retire,
     nisaOverflowToToku: true,
     dcType: employee ? "employee-none" : "self-employed",
     dcBal: Math.max(0, q.dcBal) * MAN,
     dcR: A.investR,
     saveDcM: Math.max(0, q.dcM) * MAN,
-    dcJoinAge: q.age,
+    // 入った年齢がわからなければ、残高÷(掛金×12) 年前に入ったとみなす（運用益を無視するので長めに出る）
+    dcJoinAge:
+      q.dcJoinAge > 0
+        ? Math.min(q.age, q.dcJoinAge)
+        : q.dcM > 0
+          ? Math.max(20, Math.round(q.age - q.dcBal / (q.dcM * 12)))
+          : q.age,
     saveDcEndAge: Math.min(retire, 65),
     dcStartAge: 65,
     risk: { ...EMPTY_PLAN.risk, deathAge: q.age, spouseSex: q.spouseSex },

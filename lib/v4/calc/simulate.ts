@@ -1,6 +1,6 @@
 import { ageOn, parseYMD, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
-import { EDU, pmt } from "./finance";
+import { EDU, amortizeYear, pmt } from "./finance";
 import { createInsuranceState, insuranceDeduction, insuranceYear, normalizeInsurance } from "./insurance";
 import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable, zaishokuTeishiAnnual } from "./pension";
 import {
@@ -161,7 +161,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     if (baseYear + (deathAge - input.curAge) >= 2028 && survivorAtDeath < 60 && kidsAtDeath === 0) {
       warn(
         "survivor-2028",
-        "2028年4月以降の死亡では、子のない60歳未満の配偶者の遺族厚生年金は原則5年の有期給付に変わります（女性は20年かけて段階的に移行）。ここでは現行制度で計算しています。",
+        "2028年4月以降の死亡では、子のない60歳未満の配偶者の遺族厚生年金は原則5年の有期給付に変わり、中高齢寡婦加算も段階的に縮みます（女性は20年かけて移行。60歳未満の夫は逆に5年の給付が出るようになります）。ここでは現行制度で計算しているため、遺族厚生年金が実際より多く（夫の場合は少なく）出ることがあります。例: 2030年に35歳で子のない妻の場合、現行の計算では一生で約1,480万円、見直し後は約320万円（推計）。",
         "info",
       );
     }
@@ -200,6 +200,22 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
 
   // 働き終わる年齢（「働き終わったあとの生活費」の切り替え年齢を入れていないときに使う）
   const lastWorkEnd = input.jobs.length ? Math.max(...input.jobs.map((j) => j.end)) : input.penStartA;
+
+  // 入れていない計算・概算の注意（結果の画面の「制度チェック」に出す）
+  if (input.selfPension.category === "kokumin" || lastWorkEnd < 75) {
+    warn(
+      "kokuho-approx",
+      "国民健康保険料は全国平均的な料率の概算です。自治体によって年に数万〜数十万円違います（例: 大阪市の令和8年度の料率では、事業所得665万円・40歳単身で約24%（約24万円）多い）。",
+      "info",
+    );
+  }
+  if (input.selfPension.category !== "kokumin" && input.jobs.some((j) => j.inc > 0) && lastWorkEnd < 75) {
+    warn(
+      "retire-kokuho",
+      `${lastWorkEnd}歳で働き終えた翌年の国民健康保険料は、前年の給与で決まるため高くなります（例: 年収600万円なら翌年に約70万円）。この計算には入れていません（任意継続を選ぶ場合も別です）。`,
+      "info",
+    );
+  }
 
   // 子どもを年上から並べる（児童手当の「第何子」判定用）
   const kidsByAge = [...input.kids].sort((a, b) => a.offset - b.offset);
@@ -446,11 +462,11 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       let intr = 0;
       let pay = 0;
       if (r.bal > 0 && active) {
-        intr = r.bal * (r.rate / 100);
-        let p = r.payY;
-        if (r.bal < p) p = r.bal + intr;
-        pay = p;
-        r.bal = Math.max(0, r.bal - (p - intr));
+        // 毎月払いの元利均等。利息は月ごとに残高×年利÷12
+        const y = amortizeYear(r.bal, r.rate, r.payY / 12);
+        intr = y.interest;
+        pay = y.paid;
+        r.bal = y.bal;
       }
       reProfitTot += rent - costY - propTax - intr;
       reRentTot += rent;
@@ -462,11 +478,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     // ── 住宅ローン（返済は後で計上。控除は年末残高で）──
     let homePay = 0;
     if (input.useHomeLoan && hlBal > 0 && age >= input.hlStart) {
-      const i = hlBal * (input.hlRate / 100);
-      let p = hlPayY;
-      if (hlBal < p) p = hlBal + i;
-      homePay = p;
-      hlBal = Math.max(0, hlBal - (p - i));
+      // 毎月払いの元利均等。利息は月ごとに残高×年利÷12（以前は年1回・年初残高×年利で、完済が1年延びていた）
+      const y = amortizeYear(hlBal, input.hlRate, hlPayY / 12);
+      homePay = y.paid;
+      hlBal = y.bal;
     }
     const hlCredit =
       input.hlDeduct && input.useHomeLoan && age >= input.hlStart && age < input.hlDeductEndAge && !selfGone
@@ -866,7 +881,10 @@ function deceasedRecord(
     const first = starts.length ? Math.min(...starts) : deathAge;
     const last = ends.length ? Math.max(...ends) : deathAge;
     const elapsed = Math.max(0, (Math.min(deathAge, last) - first) * 12);
-    const months = p.koseiYears > 0 ? Math.min(elapsed, p.koseiYears * 12) : elapsed;
+    // 加入月数 = 厚生年金の加入年数（年金の欄。前の勤め先も含めた一生の見込み）から、亡くなったあとに働く予定だった月数を引く。
+    // 以前は入力した最初の勤務先の入社から数えていたので、それより前の勤め先の期間が抜けていた
+    const futureMonths = input.jobs.reduce((a, j) => a + Math.max(0, j.end - Math.max(deathAge, j.start)) * 12, 0);
+    const months = p.koseiYears > 0 ? Math.max(0, p.koseiYears * 12 - futureMonths) : elapsed;
     const curJob = input.jobs.find((j) => deathAge >= j.start && deathAge < j.end);
     return {
       isKosei: p.category === "kosei",

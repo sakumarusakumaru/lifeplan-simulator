@@ -85,3 +85,20 @@ export const EDU: Record<"k" | "e" | "j" | "h" | "u" | "g" | "r", Record<SchoolT
 export function ownsHomeAt(plan: { homeOwned: boolean; homeBuyAge?: number }, age: number): boolean {
   return plan.homeOwned && !((plan.homeBuyAge ?? 0) > 0 && age < (plan.homeBuyAge ?? 0));
 }
+
+// 元利均等・毎月払いのローンを1年分（12回）進める。月ごとに「残高×年利÷12」の利息を取る
+//   返すのは その年の返済額の合計・利息の合計・年末の残高（残高が尽きた月で返済も終わる）
+export function amortizeYear(bal: number, annualRatePct: number, monthlyPay: number) {
+  const r = annualRatePct / 100 / 12;
+  let b = Math.max(0, bal);
+  let paid = 0;
+  let interest = 0;
+  for (let m = 0; m < 12 && b > 0; m++) {
+    const i = b * r;
+    const p = Math.min(monthlyPay, b + i);
+    interest += i;
+    paid += p;
+    b = b + i - p;
+  }
+  return { paid, interest, bal: Math.max(0, b) };
+}

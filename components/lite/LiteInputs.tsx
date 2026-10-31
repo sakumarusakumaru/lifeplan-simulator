@@ -95,11 +95,15 @@ export function LiteInputs() {
           onChange={(v) => set({ work: v })}
         />
         <NumField
-          label="年収（税金や社会保険料を引く前）"
+          label={q.work === "employee" ? "年収（税金や社会保険料を引く前）" : "事業の所得（売上 − 必要経費）"}
           value={q.income}
           onChange={(v) => set({ income: v })}
           unit="万円"
-          hint={q.work === "employee" ? "源泉徴収票の「支払金額」。ボーナスも含めた額" : "売上から経費を引いた額（確定申告書の事業所得の金額）"}
+          hint={
+            q.work === "employee"
+              ? "源泉徴収票の「支払金額」。ボーナスも含めた額"
+              : "売上から必要経費を引いた額。青色申告特別控除（65万円）を引く前の額を入れてください（計算で65万円を引きます。白色申告の人は、その分だけ税金が少なめに出ます）"
+          }
         />
         <div className="grid grid-cols-2 gap-3">
           <NumField label="何歳まで働くか" value={q.retireAge} onChange={(v) => set({ retireAge: v })} unit="歳" min={q.age} max={80} />
@@ -111,6 +115,20 @@ export function LiteInputs() {
             hint="わからなければ0（少なめに見る）"
           />
         </div>
+        {q.work === "employee" && q.age < 60 && q.retireAge > 60 ? (
+          <Choice<string>
+            label="60歳から働き終わるまでの年収"
+            value={String(q.after60Pct)}
+            options={[
+              { value: "100", label: "今と同じ" },
+              { value: "70", label: "7割" },
+              { value: "60", label: "6割" },
+              { value: "50", label: "5割" },
+            ]}
+            onChange={(v) => set({ after60Pct: Number(v) })}
+            hint="60歳を過ぎると、再雇用などで年収が下がることが多いため。60歳のときの年収に対する割合で、その後は上がらない計算です"
+          />
+        ) : null}
         {q.hasSpouse ? (
           <>
             <Choice<LiteSpouseWork>
@@ -345,6 +363,15 @@ export function LiteInputs() {
           <div className="grid grid-cols-2 gap-3">
             <NumField label="いまの残高" value={q.dcBal} onChange={(v) => set({ dcBal: v })} unit="万円" />
             <NumField label="毎月の掛金（自分で出す分）" value={q.dcM} onChange={(v) => set({ dcM: v })} unit="万円/月" max={7} hint="会社が出す分は入れない（少なめに見る）" />
+            <NumField
+              label="入った年齢"
+              value={q.dcJoinAge}
+              onChange={(v) => set({ dcJoinAge: v })}
+              unit="歳"
+              max={q.age}
+              placeholder="推定"
+              hint="受け取るときの税金（退職所得控除）は、入っていた年数で決まります。空欄なら残高と掛金から推定します"
+            />
           </div>
         ) : null}
       </Card>

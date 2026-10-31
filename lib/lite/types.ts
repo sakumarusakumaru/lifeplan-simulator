@@ -15,6 +15,7 @@ export interface LiteInput {
   work: LiteWork;
   income: number;        // 年収（額面・万円）
   retireAge: number;     // 何歳まで働くか
+  after60Pct: number;    // 60歳から働き終わるまでの年収（60歳のときの年収に対する%。再雇用などで下がる分）
   severance: number;     // 退職金の見込み（万円。わからなければ0）
   spouseWork: LiteSpouseWork;
   spouseIncome: number;  // 配偶者の年収（額面・万円）
@@ -47,6 +48,7 @@ export interface LiteInput {
   retireLivingM: number; // 働き終わったあとの生活費（万円/月。0＝いまと同じ）
   dcBal: number;         // iDeCo・企業型DCの残高（万円）
   dcM: number;           // iDeCo・企業型DCの掛金（自分で出す分・万円/月）
+  dcJoinAge: number;     // iDeCo・DCに入った年齢（0 = わからない。残高と掛金から推定）
 
   // 任意の項目に答えたか（「ない」と答えたのも含む）。精度メーターに使う
   ans: Partial<Record<LiteAnswerKey, boolean>>;
@@ -70,6 +72,7 @@ export const LITE_DEFAULT: LiteInput = {
   work: "employee",
   income: 0,
   retireAge: 65,
+  after60Pct: 70,
   severance: 0,
   spouseWork: "employee",
   spouseIncome: 0,
@@ -96,6 +99,7 @@ export const LITE_DEFAULT: LiteInput = {
   retireLivingM: 0,
   dcBal: 0,
   dcM: 0,
+  dcJoinAge: 0,
   ans: {},
 };
 

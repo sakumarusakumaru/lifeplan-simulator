@@ -191,9 +191,6 @@ export default function LandingPage() {
           <Link href="/guide" className="font-bold text-[#0a0a0a] underline hover:text-[#c8383a]">
             → 使い方ガイドを見る
           </Link>
-          <Link href="/v3/detail" className="font-bold text-[#0a0a0a]/60 underline hover:text-[#c8383a]">
-            → 以前のver3を使う
-          </Link>
         </div>
 
         <p className="mt-6 text-[11px] leading-relaxed text-[#0a0a0a]/45">

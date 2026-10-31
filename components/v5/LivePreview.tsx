@@ -35,6 +35,10 @@ const man = (yen: number) => {
   return `${sign}${abs.toLocaleString()}万`;
 };
 
+// 金融資産 = 預金と投資（現金・NISA・特定口座・暗号資産・金・DC）。家とローンは入れない（Lite の「お金」と同じ定義）
+const finOf = (r: SimulationSummary["rows"][number]) => r.ass.c + r.ass.nisa + r.ass.toku + r.ass.k + r.ass.g + r.ass.dc;
+const finalFin = (s: SimulationSummary) => (s.rows.length ? finOf(s.rows[s.rows.length - 1]) : 0);
+
 // 直前の入力からの変化。前の結果を state に持ち、結果が変わったら1つずらす（React 推奨の「前の値」パターン）
 function useDelta(result: SimulationSummary) {
   const [hist, setHist] = useState<{ cur: SimulationSummary; prev: SimulationSummary | null }>({
@@ -50,7 +54,7 @@ function useDelta(result: SimulationSummary) {
   }
   if (prev.shortfallAge && !result.shortfallAge) return { text: "直前の入力で、最後まで足りるようになりました", good: true };
   if (!prev.shortfallAge && result.shortfallAge) return { text: "直前の入力で、途中で足りなくなりました", good: false };
-  const d = result.finalNetWorth - prev.finalNetWorth;
+  const d = finalFin(result) - finalFin(prev);
   if (Math.abs(d) >= 10000) return { text: `直前の入力で ${d > 0 ? "+" : ""}${man(d)}円`, good: d > 0 };
   return null;
 }
@@ -61,7 +65,7 @@ function MiniChart({ result, height }: { result: SimulationSummary; height: numb
   if (rows.length < 2) return null;
   const W = 300;
   const H = 120;
-  const vals = rows.map((r) => r.nw);
+  const vals = rows.map(finOf);
   const max = Math.max(0, ...vals);
   const min = Math.min(0, ...vals);
   const span = max - min || 1;
@@ -81,7 +85,7 @@ function MiniChart({ result, height }: { result: SimulationSummary; height: numb
   ].filter((t) => t.show);
   return (
     <figure className="m-0 flex flex-col gap-1">
-      <p className="text-[10px] font-bold text-[#0a0a0a]/60">金融純資産（預金と投資から、ローンの残りを引いた額。家の価値は入れない）</p>
+      <p className="text-[10px] font-bold text-[#0a0a0a]/60">金融資産（預金と投資。家とローンは入れない）</p>
       <div className="relative pl-16" style={{ height }}>
         {ticks.map((t) => (
           <span
@@ -94,7 +98,7 @@ function MiniChart({ result, height }: { result: SimulationSummary; height: numb
         ))}
         <svg
           role="img"
-          aria-label={`金融純資産の推移（${first}歳〜${last}歳）`}
+          aria-label={`金融資産の推移（${first}歳〜${last}歳）`}
           width="100%"
           height={height}
           viewBox={`0 0 ${W} ${H}`}
@@ -131,27 +135,18 @@ function MiniChart({ result, height }: { result: SimulationSummary; height: numb
   );
 }
 
+// 判定の見出し。大きな一語で言い切らず、「入力した条件での計算」であることと根拠の数字を一緒に出す
 function Headline({ result, plan, compact }: { result: SimulationSummary; plan: PlanInput; compact?: boolean }) {
   const sa = result.shortfallAge;
-  const big = compact ? "text-2xl" : "text-5xl";
-  if (sa) {
-    return (
-      <div className="flex flex-col">
-        <span className="text-[11px] font-bold text-[#0a0a0a]/65">お金が足りなくなる年齢</span>
-        <span className={`${big} font-bold leading-tight tabular-nums`} style={{ color: RED }}>
-          {sa}
-          <span className="ml-1 text-sm">歳</span>
-        </span>
-      </div>
-    );
-  }
+  const size = compact ? "text-[15px]" : "text-2xl";
   return (
-    <div className="flex flex-col">
-      <span className="text-[11px] font-bold text-[#0a0a0a]/65">{plan.endAge}歳まで</span>
-      <span className={`${big} font-bold leading-tight`}>足ります</span>
+    <div className="flex flex-col gap-0.5">
+      <span className={`${size} font-bold leading-snug`} style={{ color: sa ? RED : INK }}>
+        {sa ? `${sa}歳で、お金が足りなくなる計算` : `${plan.endAge}歳まで、お金は足りる計算`}
+      </span>
       {compact ? null : (
         <span className="text-[11px] font-bold tabular-nums text-[#0a0a0a]/65">
-          {plan.endAge}歳時点の金融純資産 {man(result.finalNetWorth)}円
+          {plan.endAge}歳時点の金融資産（預金と投資） {man(finalFin(result))}円
         </span>
       )}
     </div>
@@ -204,7 +199,11 @@ export function LivePreview({
   const real = useUiStore((s) => s.realValue);
   const delta = useDelta(result);
   const [barOpen, setBarOpen] = useState(false);
-  const ready = !requireBirth || !!plan.selfBirth;
+  const hasBirth = !requireBirth || !!plan.selfBirth;
+  // 生活費が0円のままだと、収入がそのまま貯まる計算になり「足りる」と出てしまう。生活費が入るまで判定を出さない
+  const hasLiving = plan.livingM > 0;
+  const ready = hasBirth && hasLiving;
+  const waitText = !hasBirth ? "本人の生年月日を入れると、ここに試算が出ます" : "毎月の生活費（4 支出）を入れると、判定が出ます";
 
   const deltaEl = delta ? (
     <span className="text-[11px] font-bold" style={{ color: delta.good ? "#22863a" : RED }} aria-live="polite">
@@ -233,9 +232,10 @@ export function LivePreview({
           </>
         ) : (
           <p className="rounded-lg px-3 py-6 text-center text-[12px] font-bold leading-relaxed text-[#0a0a0a]/65" style={{ background: "#f0f0ee" }}>
-            本人の生年月日を入れると、
-            <br />
-            ここに試算が出ます
+            {waitText}
+            {hasBirth ? (
+              <span className="mt-1 block text-[11px] font-normal">生活費が0円のままだと、収入がそのまま貯まる計算になるためです</span>
+            ) : null}
           </p>
         )}
         {showAccuracy ? (
@@ -253,7 +253,7 @@ export function LivePreview({
           {actionLabel}
         </button>
         <p className="text-[10px] leading-relaxed text-[#0a0a0a]/55">
-          空欄は平均的な値で計算した概算です。将来を保証するものではありません。
+          空欄の金額は0円として計算します（物価・利回り・年金の改定率などは初期値）。概算で、将来を保証するものではありません。
         </p>
       </aside>
     );
@@ -296,7 +296,7 @@ export function LivePreview({
             </span>
           </>
         ) : (
-          <span className="text-[12px] font-bold text-[#0a0a0a]/65">本人の生年月日を入れると、ここに試算が出ます</span>
+          <span className="text-[12px] font-bold text-[#0a0a0a]/65">{waitText}</span>
         )}
       </button>
     </div>

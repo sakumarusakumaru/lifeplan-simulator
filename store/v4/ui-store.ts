@@ -38,7 +38,7 @@ export const useUiStore = create<UiStore>()(
     (set) => ({
       open: DEFAULT_OPEN,
       hydrated: false,
-      realValue: false,
+      realValue: true, // 金額は「今の価値」で見せるのが既定（Lite と同じ）
       setRealValue: (v) => set({ realValue: v }),
       mcOn: false,
       setMcOn: (v) => set({ mcOn: v }),

@@ -328,11 +328,17 @@ export function IncomeMegaSection() {
                   <TextField label="名称" value={j.name} onChange={(v) => updateJob(i, { name: v })} />
                   <div className="grid grid-cols-2 gap-2">
                     <NumberField
-                      label="年収（額面）"
+                      label={plan.selfPension.category === "kokumin" ? "事業の所得（売上 − 必要経費）" : "年収（額面）"}
                       value={j.inc}
                       onChange={(v) => updateJob(i, { inc: v })}
                       unit="円"
-                      hint={j.start <= plan.curAge ? "今の勤務先は今年の年収" : "入社した年の年収"}
+                      hint={
+                        plan.selfPension.category === "kokumin"
+                          ? "自営業（年金が国民年金）の人は、青色申告特別控除（65万円）を引く前の額。計算で65万円を引きます"
+                          : j.start <= plan.curAge
+                            ? "今の勤務先は今年の年収"
+                            : "入社した年の年収"
+                      }
                     />
                     <PercentField
                       label="昇給率（年・複利）"

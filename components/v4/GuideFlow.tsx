@@ -665,7 +665,7 @@ function StepStart({ onStart }: { onStart: () => void }) {
         同意してシミュレーターを開始 →
       </button>
       <p className="text-[11px] leading-relaxed text-[#0a0a0a]/50">
-        以前のバージョンを使いたい方は <Link href="/v3/detail" className="font-bold underline">ver3</Link> もそのまま使えます（入力データは別々に保存されます。今の版は、初回に ver3 の入力を引き継ぎます）。
+        以前の版（ver3）で入力したデータがあれば、初回に引き継ぎます。
       </p>
     </div>
   );

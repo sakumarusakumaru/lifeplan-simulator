@@ -23,7 +23,17 @@ test("LITE-01 年齢は1月1日生まれとみなし、年収（万円）は円�
   assert.equal(p.infl, 1.5);
   assert.equal(p.jobs[0].inc, 6_000_000);
   assert.equal(p.jobs[0].raise, 1.5);
-  assert.equal(p.jobs[0].end, 65);
+  // ver5.11: 60歳からの年収は既定で「60歳のときの年収×7割」の別の勤務に分ける（再雇用などで下がる分）
+  //   60歳のときの年収 600万×1.015^20 = 8,081,130 → ×0.7 = 5,656,791、その後は昇給なし
+  assert.equal(p.jobs[0].end, 60);
+  assert.equal(p.jobs[1].start, 60);
+  assert.equal(p.jobs[1].end, 65);
+  assert.equal(p.jobs[1].inc, 5_656_791);
+  assert.equal(p.jobs[1].raise, 0);
+  // 「今と同じ」を選ぶと、65歳まで1つの勤務のまま
+  const same = liteToPlan(q({ age: 40, income: 600, retireAge: 65, after60Pct: 100 }));
+  assert.equal(same.jobs.length, 1);
+  assert.equal(same.jobs[0].end, 65);
   assert.equal(p.spouseIncY, 3_000_000);
   assert.equal(p.selfPension.category, "kosei");
   assert.equal(p.selfPension.koseiYears, 43);

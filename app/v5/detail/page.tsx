@@ -59,7 +59,8 @@ export default function DetailPage() {
 
   const stepping = hydrated && unlocked === false;
   // はじめての人は生年月日が入るまでグラフを出さない
-  const ready = !stepping || !!plan.selfBirth;
+  // 生活費が0円のままだとグラフも「貯まる一方」になるので、生活費が入るまで出さない（いまの試算の判定と同じ）
+  const ready = (!stepping || !!plan.selfBirth) && plan.livingM > 0;
 
   const go = useCallback((i: number) => {
     setPicked(i);
@@ -201,7 +202,7 @@ export default function DetailPage() {
             <p className="text-[13px] leading-relaxed text-[#0a0a0a]/70">{block.desc}</p>
             {active === 0 && stepping ? (
               <p className="mt-1 text-[13px] leading-relaxed">
-                必須は<strong className="text-[#c8383a]">本人の生年月日だけ</strong>。ほかは空欄でも、平均的な値で計算します。
+                必須は<strong className="text-[#c8383a]">本人の生年月日</strong>。判定には<strong className="text-[#c8383a]">毎月の生活費</strong>も要ります。ほかの金額は、空欄なら0円として計算します。
                 入れるたびに<span className="hidden lg:inline">右</span>
                 <span className="lg:hidden">画面下</span>の試算が動きます。
               </p>

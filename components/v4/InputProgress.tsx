@@ -69,7 +69,7 @@ export function InputProgress({
       </h1>
       {base === "/v5" && mode === "input" ? (
         <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/75">
-          必須は<strong className="text-[#c8383a]">本人の生年月日だけ</strong>。ほかは空欄でも、平均的な値で計算します。
+          必須は<strong className="text-[#c8383a]">本人の生年月日</strong>。判定には<strong className="text-[#c8383a]">毎月の生活費</strong>も要ります。ほかの金額は、空欄なら0円として計算します。
           入れるたびに<span className="hidden lg:inline">右</span><span className="lg:hidden">下</span>の試算が動きます。
         </p>
       ) : (

@@ -343,6 +343,7 @@ export interface TaxBreakdown {
   juminSelf: number;
   juminSpouse: number;
   hlDeduct: number;        // 実際に減税された住宅ローン控除
+  jigyozei: number;        // 個人事業税（自営業）。(事業所得 − 事業主控除290万) × 5%（業種で3〜5%・対象外もある）
   total: number;           // 税＋社会保険の合計（住宅ローン控除後）
   taxableSelf: number;     // 本人の課税所得（参考）
   marginalSelf: number;    // 本人の限界税率（参考）
@@ -470,8 +471,12 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
     jmSp = Math.floor(Math.max(0, tjr * 0.1 - chouseiKojo(tjr, sp.goukei, spJinteki)) / 100) * 100 + (sp.goukei > 45 * MAN ? 5000 : 0);
   }
 
+  // 個人事業税（自営業）: (事業所得 − 事業主控除290万) × 5%。青色申告特別控除は引かない。業種で3〜5%・対象外もあるので、法定業種の多くに当たる5%で計算
+  const jigyo = (p: PersonIncome | null | undefined) =>
+    p && p.workStyle === "self-employed" ? Math.floor(Math.max(0, p.wageY - 290 * MAN) * 0.05 / 100) * 100 : 0;
+  const jigyozei = jigyo(inp.self) + jigyo(inp.spouse);
   const total = Math.round(
-    s.shaho + (sp?.shaho ?? 0) + itSelf + itSp + jmSelf + jmSp,
+    s.shaho + (sp?.shaho ?? 0) + itSelf + itSp + jmSelf + jmSp + jigyozei,
   );
 
   return {
@@ -482,6 +487,7 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
     juminSelf: Math.round(jmSelf),
     juminSpouse: Math.round(jmSp),
     hlDeduct: Math.round(hl),
+    jigyozei,
     total,
     taxableSelf: Math.round(selfTaxable),
     marginalSelf: marginalRate(selfTaxable),
