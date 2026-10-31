@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+import { AssumptionTiers } from "@/components/v5/AssumptionTiers";
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
 import { MonteCarloPanel } from "@/components/v4/MonteCarloPanel";
@@ -109,7 +110,7 @@ function buildVerdict(
       level: "bad",
       headline: `${endAge}歳時点で純資産マイナス（${nwLabel(nw)}）`,
       body:
-        `【現状診断】\n${endAge}歳時点で資産より負債が${fmtMan(Math.abs(nw))}多い状態となる見込みです。住宅ローンや不動産ローンの残債が老後の資産を圧迫しています。\n\n` +
+        `【現状診断】\n${endAge}歳時点で、ローンの残りが預金と投資より${fmtMan(Math.abs(nw))}多い計算です（家・不動産の評価額は入れていません）。\n\n` +
         `【課題分析】\nローン残高が長期化し、低金利で借りた負債を相続・売却で清算する必要が生じる可能性があります。流動性資産（現金・投信）が不足しているため、不動産売却以外の選択肢が狭まります。\n\n` +
         `【考えられる選択肢】\n・繰上返済の優先度評価: 金利の高いローン（住宅ローン1%超、不動産2%超）から優先返済を検討。\n・不動産の見直し: 売却・賃貸転換・住み替え（ダウンサイズ）で含み益の現金化。\n・生活費水準の調整: 月-1万円の継続改善で30年で360万円＋運用益。\n・収入の補完: 副業・配偶者就労・退職金の早期受取りなど、キャッシュインフローの多角化。\n\n` +
         `【次のステップ】\n抜本的な家計再構築が論点となります。具体的なローン整理プランの策定にあたっては、登録のあるFP等の専門家へのご相談をご検討ください。`,
@@ -125,7 +126,7 @@ function buildVerdict(
       level: "warn",
       headline: `${endAge}歳まで完走するも余裕わずか（${nwLabel(nw)}）`,
       body:
-        `【現状診断】\n${endAge}歳時点での純資産は${fmtMan(nw)}と、想定外の支出への耐性が限定的です。預金は生活費の${livingDefenseMonths}か月分です（生活防衛資金の目安は6〜12か月分）${livingDefenseMonths >= 6 ? "。当面の備えはある水準です" : "。やや心もとない水準です"}。\n\n` +
+        `【現状診断】\n${endAge}歳時点の金融純資産（預金と投資からローンを引いた額）は${fmtMan(nw)}です。預金は生活費の${livingDefenseMonths}か月分です（生活防衛資金の目安は6〜12か月分）。\n\n` +
         `【課題分析】\n医療費（70歳以降の高額療養費は月8〜25万円自己負担）、介護費（在宅で月8〜10万円・施設で月13〜25万円が5〜10年）、物価上昇（年1〜2%継続で30年で35〜80%減価）など、想定外リスクへのバッファが薄い状態です。\n\n` +
         `【考えられる選択肢】\n${livingDefenseMonths < 6 ? `・生活防衛資金: 生活費の6〜12か月分（現在${livingDefenseMonths}か月分）を、運用とは別に預金で持っておく考え方があります。\n` : ""}・NISAの生涯枠（1,800万円）を早めに埋める: 年360万円なら最短5年。埋まった後は特定口座で続けるのが一般的です。\n・iDeCo の節税効果: 月2.3万円の掛金なら年27.6万円が所得控除され、税率30%（所得税20%・住民税10%）の人で年約8.3万円の節税。\n・医療保険の見直し: 高額療養費制度を踏まえ、過剰な保障を整理して可処分所得を確保。\n\n` +
         `【次のステップ】\n月+1〜2万円の積立増による老後余裕度への影響は「比較」タブで試算できます。`,
@@ -141,7 +142,7 @@ function buildVerdict(
       level: "good",
       headline: `老後資金は概ね安定（最終純資産 ${nwLabel(nw)}）`,
       body:
-        `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産が見込まれ、想定通りに推移すれば安心して老後を過ごせる水準です。65歳時点の純資産は${fmtMan(result.rows.find((r) => r.age === 65)?.nw ?? 0)}で、年金開始時のスタート資金として十分です。\n\n` +
+        `【現状診断】\n${endAge}歳時点の金融純資産（預金と投資からローンを引いた額）は${fmtMan(nw)}の計算です。65歳時点では${fmtMan(result.rows.find((r) => r.age === 65)?.nw ?? 0)}です。\n\n` +
         `【課題分析】\n基本設計に大きな問題はありません。今後の主要リスクは、(1) インフレ進行による実質購買力の低下、(2) 90歳超の長寿化による資産寿命、(3) 高齢期の医療・介護費の不確実性、の3点です。\n\n` +
         `【一般に整理される論点】\n・分散運用の継続: 65歳時点でも株式・投信比率30〜40%を維持し、実質購買力を保つ。\n・受取の順番: DC一時金と退職金は受取間隔で税額が変わります（DC一時金→退職金は10年、退職金→DC一時金は20年空けると控除の重複調整なし）。取り崩しは特定口座→NISAの順が基本。\n・医療・介護の補完: 公的制度（高額療養費・介護保険）を踏まえ、不足分のみ民間保険で補完。\n・贈与の検討: 子・孫への暦年贈与（年110万円非課税）。ただし亡くなる前7年以内の贈与は相続財産に加算されるため（2024年以降の贈与から段階的に延長）、早めの開始が前提です。\n\n` +
         `【次のステップ】\n年1回の見直しで十分です。家族構成や税制改正に応じて運用配分・贈与戦略を微調整してください。`,
@@ -157,7 +158,7 @@ function buildVerdict(
       level: "good",
       headline: `余裕ある資産形成（最終純資産 ${nwLabel(nw)}）`,
       body:
-        `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれ、現役期の収支構造は健全です。想定外支出にも十分対応可能なバッファがあります。\n\n` +
+        `【現状診断】\n${endAge}歳時点の金融純資産（預金と投資からローンを引いた額）は${fmtMan(nw)}の計算です。\n\n` +
         `【課題分析】\n相続税の課税ライン（基礎控除3,000万円＋600万円×法定相続人数）に近づきつつあります。例えば配偶者＋子2人なら基礎控除は4,800万円。${nw > 48_000_000 ? "現状ですでに課税対象の可能性があり、" : ""}対策の検討時期に入っています。\n\n` +
         `【一般に整理される論点】\n・暦年贈与の活用: 配偶者・子・孫への年110万円贈与を継続。例えば子2人に20年贈与で4,400万円を移せる（ただし亡くなる前7年以内に相続人へ贈った分は相続財産に足し戻し）。\n・教育資金一括贈与の特例は2026年3月末で終了（それまでに拠出した分は引き続き教育費に使える）。\n・生命保険の非課税枠: 死亡保険金は500万円×法定相続人数まで非課税。配偶者＋子2人なら1,500万円分。\n・iDeCo・NISAは継続: 退職所得控除（勤続年数×40〜70万円）と公的年金等控除をどう使うかで、受け取り方の手取りが変わる。\n\n` +
         `【次のステップ】\n「守りから攻めへ」の移行論点が発生する時期です。FP・税理士等の専門家との連携による相続シミュレーション（特に節税効果の試算）をご検討ください。`,
@@ -173,7 +174,7 @@ function buildVerdict(
       level: "good",
       headline: `資産計画は非常に良好（最終純資産 ${nwLabel(nw)}）`,
       body:
-        `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれます。相続税の課税対象（10〜30%の税率帯）になりうる規模です。\n\n` +
+        `【現状診断】\n${endAge}歳時点の金融純資産（預金と投資からローンを引いた額）は${fmtMan(nw)}の計算です。相続税がかかりうる規模です（目安は「もしも」の「相続の備え」）。\n\n` +
         `【課題分析】\n無対策のままでは相続時に数千万円規模の納税が発生する可能性があります。法定相続人別の基礎控除を超える分が累進課税の対象になります（1億円超50%、2億円超55%）。\n\n` +
         `【一般に整理される論点】\n・暦年贈与: 年110万円×複数人×複数年で大規模な計画移転。例: 子2人＋孫4人に20年で6,600万円の非課税移転。\n・相続時精算課税制度: 60歳以上の親→18歳以上の子・孫に2,500万円まで贈与時非課税（相続時精算）。2024年から年110万の基礎控除追加。\n・教育資金一括贈与は2026年3月末で終了（新しい贈与には使えない）。\n・結婚・子育て資金贈与: 1,000万円非課税枠（2027年3月末まで）。\n・生命保険活用: 死亡保険金500万円×法定相続人数の非課税枠＋納税資金確保。\n・不動産活用: 評価額が時価より低い特性を活かして相続税評価額を圧縮（過度のタワマン節税は規制強化に注意）。\n\n` +
         `【次のステップ】\nFP・税理士・弁護士等による包括的な相続戦略の構築が論点となる規模です。シミュレーションでの効果検証は年1回程度行われるのが一般的です。`,
@@ -188,7 +189,7 @@ function buildVerdict(
     level: "good",
     headline: `相続まで見据えたい資産規模（最終純資産 ${nwLabel(nw)}）`,
     body:
-      `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれます。相続税の最高税率55%（6億円超部分）の対象となり、無対策では資産の半分以上が納税により失われる可能性があります。\n\n` +
+      `【現状診断】\n${endAge}歳時点の金融純資産（預金と投資からローンを引いた額）は${fmtMan(nw)}の計算です。相続税の税率が高くなる規模です（目安は「もしも」の「相続の備え」）。\n\n` +
       `【課題分析】\n単純な暦年贈与・生命保険活用では対応しきれない規模のため、法人活用・信託・国際分散などを組み合わせた高度な相続戦略が必要です。\n\n` +
       `【一般に整理される論点】\n・資産管理会社（同族会社）の設立: 個人資産を法人化し、株式贈与で計画的に世代移転。事業承継税制（特例措置）も検討余地。\n・家族信託: 認知症リスク対応＋柔軟な資産承継設計。受託者を子に設定し、生前から資産管理を委譲。\n・不動産活用: 賃貸用不動産で評価減（路線価ベース＋小規模宅地等の特例で最大80%減）。\n・生命保険の高額活用: 終身保険で死亡保険金非課税枠＋納税資金確保。一時払終身は5,000万円〜数億円規模。\n・国際分散: 海外資産・海外法人による多角化（ただし租税条約・出国税・相続税の国際課税ルールに留意）。\n・社団・財団法人: 公益寄付による資産圧縮＋社会貢献。\n\n` +
       `【次のステップ】\n専門家チーム（プライベートバンカー・税理士法人・弁護士・行政書士等）による包括的な戦略構築が論点となる規模です。年1回以上の戦略レビューが一般的に行われます。`,
@@ -213,8 +214,6 @@ export default function ResultPage() {
     plan.jobs.length > 0
       ? Math.max(...plan.jobs.map((j) => j.end))
       : plan.penStartA;
-  const retireRow = result.rows.find((r) => r.age === lastJobEndAge);
-  const nwAt65 = result.rows.find((r) => r.age === 65)?.nw ?? 0;
 
   // 現状サマリー（curAge時点の年次データ）
   const cur = result.rows[0];
@@ -253,6 +252,19 @@ export default function ResultPage() {
     0,
   );
 
+  // 結果のまとめの数字（金融資産＝預金と投資。家・不動産・ローンは入れない）
+  const finOfRow = (r: (typeof result.rows)[number]) => r.ass.c + r.ass.nisa + r.ass.toku + r.ass.k + r.ass.g + r.ass.dc;
+  const lowest = result.rows.reduce(
+    (m, r) => (finOfRow(r) < m.value ? { age: r.age, value: finOfRow(r) } : m),
+    { age: result.rows[0]?.age ?? plan.curAge, value: result.rows[0] ? finOfRow(result.rows[0]) : 0 },
+  );
+  const finalFin = result.rows.length ? finOfRow(result.rows[result.rows.length - 1]) : 0;
+  // 退職後の1年の収支: 働き終えて年金も始まった翌年（退職金・DC一時金を受け取る年を避ける）
+  const pensionLifeAge = Math.max(lastJobEndAge, plan.penStartA) + 1;
+  const retireCf = result.rows.find((r) => r.age === pensionLifeAge)?.cf ?? null;
+  // 所見は「現状」の段落だけ（選択肢の一般論は出さない）
+  const summaryText = v.body.split("\n\n").filter((p) => p.startsWith("【現状診断】")).join("\n\n").replace("【現状診断】\n", "");
+
   // 年金月額の試算
   const selfPenY =
     result.rows.find((r) => r.age === plan.penStartA)?.penNet ?? 0;
@@ -274,87 +286,57 @@ export default function ResultPage() {
         </p>
       </div>
 
-      {/* 1. 診断結果 */}
-      <ReportSection no="01" title="診断結果">
-        {(() => {
-          const colors =
-            v.level === "good"
-              ? { main: "#22863a", light: "#f0fff4", text: "#22863a" }
-              : v.level === "warn"
-                ? { main: "#d4a017", light: "#fff8e7", text: "#a07900" }
-                : { main: "#c8383a", light: "#fff0f0", text: "#c8383a" };
-          return (
-            <div
-              className="overflow-hidden rounded-2xl"
-              style={{
-                background: "#ffffff",
-                border: `2.5px solid ${colors.main}`,
-              }}
-            >
-              {/* スコア + 見出し */}
-              <div
-                className="flex items-center gap-4 px-5 py-4"
-                style={{ background: colors.light, borderBottom: `2px solid ${colors.main}` }}
-              >
-                <div className="flex shrink-0 flex-col items-center">
-                  <div
-                    className="flex items-center justify-center"
-                    style={{
-                      background: colors.main,
-                      borderRadius: "50%",
-                      width: 72,
-                      height: 72,
-                    }}
-                  >
-                    <span className="text-2xl font-bold text-white tabular-nums">
-                      {v.score}
-                    </span>
-                  </div>
-                  <span
-                    className="mt-1 text-[9px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: colors.text }}
-                  >
-                    /100点
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p
-                    className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                    style={{ color: colors.text }}
-                  >
-                    診断スコア
-                  </p>
-                  <p className="mt-1 text-xl font-bold leading-tight text-[#0a0a0a]">
-                    {v.headline}
-                  </p>
-                  <p
-                    className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: colors.text }}
-                  >
-                    {v.level === "good"
-                      ? "良好"
-                      : v.level === "warn"
-                        ? "要注意"
-                        : "要改善"}
-                  </p>
-                </div>
-              </div>
-
-              {/* FPコメント（4段構成） */}
-              <div className="px-5 py-4">
-                <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
-                  参考情報
-                </p>
-                <p className="mb-3 rounded-md px-2.5 py-1.5 text-[10px] leading-relaxed text-[#0a0a0a]/55" style={{ background: "#fff8e7", border: "1px solid #c8383a30" }}>
-                  ※ 以下は一般的な制度情報・選択肢の整理です。個別の助言・推奨ではありません。意思決定の前に専門家にご相談ください。
-                </p>
-                <div className="whitespace-pre-line text-[12px] leading-[1.85] text-[#0a0a0a]/85" style={{ fontFeatureSettings: "'palt'" }}>
-                  {v.body}
-                </div>
-              </div>
+      {/* 1. 結果のまとめ（点数はつけず、判断の材料になる数字だけを並べる） */}
+      <ReportSection no="01" title="結果のまとめ">
+        <div className="overflow-hidden rounded-2xl bg-white" style={{ border: `2.5px solid ${result.shortfallAge ? "#c8383a" : "#22863a"}` }}>
+          <div className="px-5 py-4" style={{ background: result.shortfallAge ? "#fff0f0" : "#f0fff4" }}>
+            <p className="text-xl font-bold leading-snug" style={{ color: result.shortfallAge ? "#c8383a" : "#22863a" }}>
+              {result.shortfallAge ? `${result.shortfallAge}歳で、お金が足りなくなる計算です` : `${plan.endAge}歳まで、お金は足りる計算です`}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/60">
+              入力した条件のまま進んだ場合の試算です。金額は{realValue ? "今の価値" : "名目（その年の金額）"}。金融資産は預金と投資の合計で、家・不動産は入れていません。
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+            <KpiCard
+              label="お金が足りなくなる年齢"
+              value={result.shortfallAge ? `${result.shortfallAge}歳` : "なし"}
+              alert={!!result.shortfallAge}
+              sub={result.shortfallAge ? "預金も投資もなくなる年齢" : `${plan.endAge}歳まで`}
+            />
+            <KpiCard
+              label="金融資産がいちばん少ない年"
+              value={fmt(lowest.value)}
+              alert={lowest.value <= 0}
+              sub={`${lowest.age}歳`}
+            />
+            <KpiCard
+              label="退職後の1年の収支"
+              value={retireCf === null ? "-" : `${retireCf >= 0 ? "+" : ""}${fmt(retireCf)}`}
+              alert={retireCf !== null && retireCf < 0}
+              sub={retireCf === null ? "" : `${pensionLifeAge}歳（年金が始まった後）の収入−支出`}
+            />
+            <KpiCard
+              label="最後の年の金融資産"
+              value={fmt(finalFin)}
+              alert={finalFin <= 0}
+              sub={`${plan.endAge}歳`}
+            />
+          </div>
+          {selfPenY > 0 ? (
+            <p className="px-5 pb-3 text-[10px] leading-relaxed text-[#0a0a0a]/55">
+              ※年金を受け取り始める年（{plan.penStartA}歳）の年金の手取り: 約 {fmtMan(selfPenY)}／年
+            </p>
+          ) : null}
+          <div className="border-t px-5 py-4" style={{ borderColor: "#0a0a0a15" }}>
+            <div className="whitespace-pre-line text-[12px] leading-[1.85] text-[#0a0a0a]/85" style={{ fontFeatureSettings: "'palt'" }}>
+              {summaryText}
             </div>
-          );
-        })()}
+            <p className="mt-2 text-[11px] leading-relaxed text-[#0a0a0a]/60">
+              条件を変えたときにどう変わるかは「比較」で試せます。どの選び方がよいかは、暮らし方や考え方によって変わります。
+            </p>
+          </div>
+        </div>
       </ReportSection>
 
       {/* 2. プロフィール */}
@@ -449,44 +431,8 @@ export default function ResultPage() {
         />
       </ReportSection>
 
-      {/* 4. 主要指標 */}
-      <ReportSection no="04" title="主な数字">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <KpiCard
-            label="最終純資産"
-            value={fmt(result.finalNetWorth)}
-            alert={result.finalNetWorth < 0}
-            sub={`${plan.endAge}歳時点`}
-          />
-          <KpiCard
-            label="資金ショート"
-            value={
-              result.shortfallAge ? `${result.shortfallAge}歳` : "なし"
-            }
-            alert={!!result.shortfallAge}
-            sub={result.shortfallAge ? "現金が枯渇する年齢" : "完走見込み"}
-          />
-          <KpiCard
-            label="退職時の純資産"
-            value={retireRow ? fmt(retireRow.nw) : "-"}
-            sub={`${lastJobEndAge}歳時点`}
-          />
-          <KpiCard
-            label="65歳の純資産"
-            value={fmt(nwAt65)}
-            alert={nwAt65 < 0}
-            sub="老後資金の出発点"
-          />
-        </div>
-        {selfPenY > 0 && (
-          <p className="mt-3 text-[10px] leading-relaxed text-[#0a0a0a]/55">
-            ※年金開始（{plan.penStartA}歳）の年間受給額（手取り換算）: 約 {fmtMan(selfPenY)}
-          </p>
-        )}
-      </ReportSection>
-
       {/* 5. 資産推移 */}
-      <ReportSection no="05" title="資産の推移">
+      <ReportSection no="04" title="資産の推移">
         <div className="flex flex-col gap-3">
           <WarningsPanel warnings={result.warnings} />
           <AssetsChart rows={result.rows} />
@@ -495,18 +441,18 @@ export default function ResultPage() {
 
       {/* 運用の振れ幅（メニューで「振れ幅」を選んだときだけ。以降の章番号を1つずらす） */}
       {mcOn ? (
-        <ReportSection no="06" title="運用の振れ幅（1,000通りの試算）">
+        <ReportSection no="05" title="運用の振れ幅（1,000通りの試算）">
           <MonteCarloPanel />
         </ReportSection>
       ) : null}
 
       {/* キャッシュフロー */}
-      <ReportSection no={mcOn ? "07" : "06"} title="1年ごとの収支">
+      <ReportSection no={mcOn ? "06" : "05"} title="1年ごとの収支">
         <CashflowChart rows={result.rows} />
       </ReportSection>
 
       {/* 7. リスク・留意事項 */}
-      <ReportSection no={mcOn ? "08" : "07"} title="計算の前提と留意事項">
+      <ReportSection no={mcOn ? "07" : "06"} title="計算の前提と留意事項">
         <div
           className="rounded-xl p-4"
           style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
@@ -541,6 +487,7 @@ export default function ResultPage() {
             </li>
           </ul>
         </div>
+        <AssumptionTiers />
       </ReportSection>
 
       {/* Actions */}
@@ -898,7 +845,7 @@ function BalanceSheetVis({
     ? { label: "債務超過（純資産マイナス）", value: Math.abs(netWorth), color: "#c8383a", category: "current" }
     : null;
   const liabilitiesExtraDef: BSItem | null = !isAlert && netWorth > 0
-    ? { label: "純資産（NET）", value: netWorth, color: "#22863a", category: "current" }
+    ? { label: "純資産（家・不動産を含む）", value: netWorth, color: "#22863a", category: "current" }
     : null;
 
   // 1側全体（通常項目+extra）を一括レイアウト：

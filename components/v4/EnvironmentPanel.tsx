@@ -137,7 +137,7 @@ export function EnvironmentPanel({
             className="text-[12px] font-bold"
             style={{ color: delta < 0 ? RED : GREEN }}
           >
-            この環境だと、最終純資産は {fmt(delta)}（{fmt(normal.finalNetWorth)}{" "}
+            この環境だと、{jp ? "最後の年の金融純資産" : "最終純資産"}は {fmt(delta)}（{fmt(normal.finalNetWorth)}{" "}
             → {fmt(current.finalNetWorth)}）
           </p>
           <p className="text-[11px] text-[#0a0a0a]/70">

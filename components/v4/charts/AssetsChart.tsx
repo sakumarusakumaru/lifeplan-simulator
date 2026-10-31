@@ -125,7 +125,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
       </div>
       {jp ? (
         <p className="-mt-1.5 mb-3 text-[11px] leading-relaxed text-[#0a0a0a]/70">
-          色の面は、その年に持っている資産の内訳（現金・NISAなど）。赤い線は純資産（資産からローンの残りを引いた額。家の価値は入れない）。0の線より下は、借りている額のほうが多い状態です。
+          色の面は、その年に持っている資産の内訳（現金・NISAなど）。赤い線は金融純資産（預金と投資から、ローンの残りを引いた額。家の価値は入れない）。0の線より下は、借りている額のほうが多い状態です。
         </p>
       ) : null}
       <div className="h-[320px] w-full">
@@ -241,7 +241,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                     >
                       {nw < 0
                         ? "⚠ 負債が資産を上回っています"
-                        : "全資産 − 全負債 = 純資産（赤線）"}
+                        : jp ? "預金と投資 − ローン = 金融純資産（赤線）" : "全資産 − 全負債 = 純資産（赤線）"}
                     </p>
                   </div>
                 );
@@ -321,6 +321,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
             <Line
               type="linear"
               dataKey="純資産"
+              name={jp ? "金融純資産" : "純資産"}
               stroke={FILLS.nw}
               strokeWidth={hoveredKey === "純資産" ? 4 : 3}
               dot={false}
@@ -417,7 +418,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
           ))}
         </ul>
 
-        <p className="mb-1.5 text-[10px] font-bold text-[#0a0a0a]">━━ 線 ＝ 純資産</p>
+        <p className="mb-1.5 text-[10px] font-bold text-[#0a0a0a]">━━ 線 ＝ {jp ? "金融純資産" : "純資産"}</p>
         <p className="pl-1 text-[10px] leading-relaxed text-[#0a0a0a]/60">
           <span
             className="mr-1.5 inline-block h-[3px] w-4 align-middle"

@@ -81,7 +81,7 @@ function MiniChart({ result, height }: { result: SimulationSummary; height: numb
   ].filter((t) => t.show);
   return (
     <figure className="m-0 flex flex-col gap-1">
-      <p className="text-[10px] font-bold text-[#0a0a0a]/60">純資産（預金と投資から、ローンの残りを引いた額。家の価値は入れない）</p>
+      <p className="text-[10px] font-bold text-[#0a0a0a]/60">金融純資産（預金と投資から、ローンの残りを引いた額。家の価値は入れない）</p>
       <div className="relative pl-16" style={{ height }}>
         {ticks.map((t) => (
           <span
@@ -94,7 +94,7 @@ function MiniChart({ result, height }: { result: SimulationSummary; height: numb
         ))}
         <svg
           role="img"
-          aria-label={`純資産の推移（${first}歳〜${last}歳）`}
+          aria-label={`金融純資産の推移（${first}歳〜${last}歳）`}
           width="100%"
           height={height}
           viewBox={`0 0 ${W} ${H}`}
@@ -151,7 +151,7 @@ function Headline({ result, plan, compact }: { result: SimulationSummary; plan: 
       <span className={`${big} font-bold leading-tight`}>足ります</span>
       {compact ? null : (
         <span className="text-[11px] font-bold tabular-nums text-[#0a0a0a]/65">
-          {plan.endAge}歳時点の純資産 {man(result.finalNetWorth)}円
+          {plan.endAge}歳時点の金融純資産 {man(result.finalNetWorth)}円
         </span>
       )}
     </div>

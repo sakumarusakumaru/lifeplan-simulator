@@ -6,6 +6,7 @@ import { useCallback, useState, type ComponentType } from "react";
 import { MonteCarloBadge } from "@/components/v4/MonteCarloPanel";
 import { ResultsPanel } from "@/components/v4/ResultsPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
+import { LiteHandoffNote } from "@/components/v5/LiteHandoffNote";
 import { LivePreview } from "@/components/v5/LivePreview";
 import { useUiStore } from "@/store/v4/ui-store";
 import { SECTION_ORDER, TabModeContext } from "@/components/v4/Section";
@@ -148,6 +149,8 @@ export default function DetailPage() {
               </button>
             </div>
           ) : null}
+
+          <LiteHandoffNote />
 
           {/* 4ブロックのタブ（状態つき） */}
           <nav aria-label="入力ブロック" className="grid grid-cols-4 overflow-hidden rounded-xl" style={{ border: LINE }}>

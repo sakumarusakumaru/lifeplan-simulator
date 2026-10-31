@@ -69,7 +69,7 @@ export function MonteCarloBadge() {
         {Math.round(mc.successRate * 100)}%
       </span>
       <span className="flex flex-col text-[11px] leading-snug">
-        <span className="font-bold text-[#0a0a0a]">最後まで資金がもつ確率（振れ幅あり）</span>
+        <span className="font-bold text-[#0a0a0a]">{base === "/v5" ? `${MC_RUNS.toLocaleString()}通りのうち、最後まで足りた割合` : "最後まで資金がもつ確率（振れ幅あり）"}</span>
         <span className="text-[#0a0a0a]/60">
           {risk.label}・{MC_RUNS.toLocaleString()}回試算
           {mc.worstDepletionAge !== null ? ` ／ 悪いケースで${mc.worstDepletionAge}歳に枯渇` : " ／ 悪いケースでも枯渇なし"}
@@ -86,6 +86,7 @@ export function MonteCarloPanel() {
   const setField = usePlanStore((s) => s.setField);
   const real = useUiStore((s) => s.realValue);
   const mc = useMonteCarlo(plan);
+  const jp = useVBase() === "/v5"; // ver5 は「確率」と言い切らず「〜通りのうち足りた割合」と書く
   const compact = useIsNarrow();
   const riskKey: McRisk = plan.mcRisk ?? "balanced";
 
@@ -147,7 +148,7 @@ export function MonteCarloPanel() {
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="rounded-xl p-4 sm:col-span-1" style={{ background: "#eef6fc", border: `2.5px solid ${BLUE}` }}>
           <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: BLUE }}>
-            最後まで資金がもつ確率
+            {jp ? "最後まで足りた割合" : "最後まで資金がもつ確率"}
           </p>
           <p className="text-4xl font-bold tabular-nums" style={{ color: rateColor(mc.successRate) }}>
             {pct}%
@@ -218,10 +219,10 @@ export function MonteCarloPanel() {
       </div>
 
       <ul className="flex flex-col gap-1 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={{ border: `2px solid ${INK}18` }}>
-        <li>毎年の利回りを「入力した想定利回り＋その年の値動き」にして{MC_RUNS.toLocaleString()}通り計算。乱数の種を固定しているので、同じ入力なら毎回同じ結果です。</li>
+        <li>毎年の利回りを「入力した想定利回り＋その年の値動き」にして{MC_RUNS.toLocaleString()}通り計算。値動きの大きさは「{MC_RISK[riskKey].label}」で年±{Math.round(MC_RISK[riskKey].sigma * 100)}%前後（対数正規分布）。乱数の種を固定しているので、同じ入力なら毎回同じ結果です。</li>
         <li>平均は入力した利回りどおりですが、値動きがあると複利が目減りするため、中央値は固定計算より少し下に出ます。</li>
         <li>NISA・特定口座・DCは同じ市場の値動き、金・暗号資産は別の値動きで計算。物価・金利・給与は固定のままです。</li>
-        <li>確率はモデルの仮定にもとづく目安で、将来を保証するものではありません。大暴落は現実の方が起こりやすい点に注意してください。</li>
+        <li>割合はこのモデルの仮定（値動きの大きさ・分布・資産どうしの連動）にもとづく目安で、起こる確率そのものではなく、将来を保証するものでもありません。大暴落は現実の方が起こりやすい点に注意してください。</li>
       </ul>
     </div>
   );

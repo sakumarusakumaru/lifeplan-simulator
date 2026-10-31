@@ -15,9 +15,9 @@ export default function LandingPage() {
   useEffect(() => {
     // SSRハイドレーション整合のため、localStorage参照はマウント後の同期が必須
     try {
-      // はじめての人（ver4 の使い方ガイドを見ていない人）はガイドへ
-      if (!localStorage.getItem(GUIDE_KEY)) {
-        router.replace("/guide");
+      // はじめての人（ガイドも同意もまだの人）は、まず3分で答えが出る Lite へ
+      if (!localStorage.getItem(GUIDE_KEY) && !localStorage.getItem(CONSENT_KEY)) {
+        router.replace("/lite");
         return;
       }
       const stored = localStorage.getItem(CONSENT_KEY);

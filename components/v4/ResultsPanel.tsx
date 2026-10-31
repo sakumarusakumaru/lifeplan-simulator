@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
+import { useVBase } from "@/components/v4/useVBase";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
 import { generateLifeEvents } from "@/lib/v4/calc/generateLifeEvents";
 import type { YearlyResult } from "@/lib/v4/calc/types";
@@ -104,6 +105,7 @@ export function ResultsPanel() {
 }
 
 function YearlyTable({ rows }: { rows: YearlyResult[] }) {
+  const jp = useVBase() === "/v5"; // ver5 は「金融純資産」
   // デザイントークン（サイト統一）
   const BG_H1  = "#0a0a0a";
   const BG_INC = "#2a2a2a";
@@ -138,7 +140,7 @@ function YearlyTable({ rows }: { rows: YearlyResult[] }) {
             <th rowSpan={2} style={hTop(BG_H1, { borderRight: SEP_G, padding: "4px 3px", fontSize: 8 })}>積立</th>
             <th rowSpan={2} style={hTop(BG_H1, { borderRight: SEP_G, padding: "4px 3px", fontSize: 8 })}>CF</th>
             <th rowSpan={2} style={hTop(BG_H1, { borderRight: SEP_G, padding: "4px 3px", fontSize: 8 })}>取崩</th>
-            <th rowSpan={2} style={hTop(BG_H1, { padding: "4px 3px", fontSize: 8 })}>純資産</th>
+            <th rowSpan={2} style={hTop(BG_H1, { padding: "4px 3px", fontSize: 8 })}>{jp ? "金融純資産" : "純資産"}</th>
           </tr>
           {/* 2段目: 詳細ヘッダー */}
           <tr>

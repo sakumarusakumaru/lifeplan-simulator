@@ -66,7 +66,7 @@ export function DrawOrderEditor() {
       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]">取り崩し順序（お金が足りない年に、何から売るか）</p>
       <div className="grid grid-cols-2 gap-1.5">
         {[
-          { v: "auto" as const, label: "おすすめ", sub: "税金が少ない順・自動" },
+          { v: "auto" as const, label: "税金が少ない順", sub: "自動で決める・NISAは最後" },
           { v: "custom" as const, label: "自分で決める", sub: "順番を指定" },
         ].map((o) => {
           const active = (o.v === "auto") === auto;
@@ -145,7 +145,7 @@ export function DrawOrderEditor() {
           {Math.abs(cmp.diff) < 100_000
             ? "このプランでは、順番による差はほとんどありません"
             : cmp.diff > 0
-              ? `このプランの条件では、おすすめの順番の方が、NISAを先に使う場合より税引き後の最終純資産が ${man(cmp.diff)} 多くなります`
+              ? `このプランの条件では、税金が少ない順の方が、NISAを先に使う場合より税引き後の最終純資産が ${man(cmp.diff)} 多くなります`
               : `このプランの条件では、NISAを先に使う方が税引き後の最終純資産が ${man(-cmp.diff)} 多くなります`}
         </p>
         {Math.abs(cmp.diff) >= 100_000 ? (
@@ -155,7 +155,7 @@ export function DrawOrderEditor() {
         ) : null}
         {Math.abs(cmp.diff) >= 100_000 ? (
           <div className="mt-1.5 rounded-md bg-white px-2.5 py-2" style={{ border: "1px solid #0a0a0a15" }}>
-            <p className="mb-1 text-[10px] font-bold text-[#0a0a0a]/70">差の内訳（おすすめ順 − NISA先）</p>
+            <p className="mb-1 text-[10px] font-bold text-[#0a0a0a]/70">差の内訳（税金が少ない順 − NISA先）</p>
             <ul className="flex flex-col gap-0.5 tabular-nums">
               <li className="flex justify-between gap-2">
                 <span>① 途中で売ったときに払う税金の差</span>
@@ -180,7 +180,7 @@ export function DrawOrderEditor() {
         ) : null}
         {!auto ? (
           <p className="mt-1 text-[#0a0a0a]/70">
-            いまの順番（自分で決める）: 税引き後 {man(cmp.mine)}／おすすめ: {man(cmp.rec)}
+            いまの順番（自分で決める）: 税引き後 {man(cmp.mine)}／税金が少ない順: {man(cmp.rec)}
           </p>
         ) : null}
         <p className="mt-1 text-[10px] text-[#0a0a0a]/55">

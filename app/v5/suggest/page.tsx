@@ -33,7 +33,7 @@ const fmtDelta = (delta: number) => {
 };
 
 const DRAW_ORDER_LABEL: Record<DrawOrderMode, string> = {
-  auto: "おすすめ（税金が少ない順・NISAは最後）",
+  auto: "税金が少ない順（NISAは最後）",
   custom: "カスタム順序",
 };
 
@@ -57,11 +57,11 @@ const penFactor = (age: number) => (age < 65 ? 1 - 0.004 * (65 - age) * 12 : 1 +
 const penUpPct = (from: number, to: number) => Math.round((penFactor(to) / penFactor(from) - 1) * 1000) / 10;
 
 const CAT_LABEL: Record<Cat, string> = {
-  income: "01 ／ 収入を増やす",
-  saving: "02 ／ 積立・投資を増やす",
-  spending: "03 ／ 支出を減らす",
-  return: "04 ／ 運用利回りを改善する",
-  drawdown: "05 ／ 取り崩し戦略を変える",
+  income: "01 ／ 収入の条件",
+  saving: "02 ／ 積立・投資の条件",
+  spending: "03 ／ 支出の条件",
+  return: "04 ／ 運用利回りの条件",
+  drawdown: "05 ／ 取り崩し方の条件",
 };
 
 export default function SuggestPage() {
@@ -109,7 +109,7 @@ export default function SuggestPage() {
       list.push({
         id: "work2",
         group: "work",
-        title: "就労を2年延長する",
+        title: "2年長く働いた場合",
         detail: `${plan.jobs[0].name || "主勤務先"} の退職を ${plan.jobs[0].end}歳 → ${plan.jobs[0].end + 2}歳 に延長`,
         mod: ((p) => ({
           ...p,
@@ -120,7 +120,7 @@ export default function SuggestPage() {
       list.push({
         id: "work5",
         group: "work",
-        title: "就労を5年延長する（70歳目安）",
+        title: "5年長く働いた場合",
         detail: `${plan.jobs[0].name || "主勤務先"} の退職を ${plan.jobs[0].end}歳 → ${plan.jobs[0].end + 5}歳 に延長。健康・体力次第だが厚生年金加入年数も伸びる`,
         mod: ((p) => ({
           ...p,
@@ -139,7 +139,7 @@ export default function SuggestPage() {
         list.push({
           id: `pen${to === 70 || to === 75 ? to : "2"}`,
           group: "pension",
-          title: to === 75 ? "年金受給を75歳まで繰り下げる（最大増額）" : `年金受給を${from}歳→${to}歳に繰り下げる`,
+          title: `年金を${to}歳から受け取る場合（いまは${from}歳から）`,
           detail:
             from < 65
               ? `月額が${from}歳開始より約${pct}%増える（65歳より前は1か月0.4%減、65歳より後は1か月0.7%増）。受給期間は短くなる`
@@ -152,7 +152,7 @@ export default function SuggestPage() {
 
     list.push({
       id: "side",
-      title: "副業で月+3万円稼ぐ（年36万）",
+      title: "副業で月3万円（年36万円）の収入がある場合",
       detail: `現在から退職予定（${last}歳）まで月3万円の副業収入を加算`,
       mod: ((p) => ({
         ...p,
@@ -172,7 +172,7 @@ export default function SuggestPage() {
     // 配偶者がいる人だけ
     if (plan.spouseBirth) list.push({
       id: "spouse",
-      title: "配偶者の就労収入を年+100万円増やす",
+      title: "配偶者の収入が年100万円多い場合",
       detail:
         plan.spouseWork === "work"
           ? `配偶者収入 ${(plan.spouseIncY / 10000).toFixed(0)}万円/年 → ${((plan.spouseIncY + 1_000_000) / 10000).toFixed(0)}万円/年`
@@ -194,7 +194,7 @@ export default function SuggestPage() {
     list.push({
       id: "nisa2",
       group: "nisa",
-      title: "NISAの積立を月+2万増やす",
+      title: "NISAの積立が月2万円多い場合",
       detail: `NISA積立 ${(nisaM / 10000).toFixed(1)}万 → ${((nisaM + 20000) / 10000).toFixed(1)}万円/月。つみたて投資枠（月10万まで）から埋める`,
       mod: ((p) => ({ ...p, nisaTsumitateM: p.nisaTsumitateM + 20000 })),
       category: "saving",
@@ -202,7 +202,7 @@ export default function SuggestPage() {
     list.push({
       id: "nisa5",
       group: "nisa",
-      title: "NISAの積立を月+5万増やす（成長投資枠も活用）",
+      title: "NISAの積立が月5万円多い場合",
       detail: `NISA積立 ${(nisaM / 10000).toFixed(1)}万 → ${((nisaM + 50000) / 10000).toFixed(1)}万円/月。年60万円の追加で非課税の複利が働く`,
       mod: ((p) => ({ ...p, nisaGrowthM: p.nisaGrowthM + 50000 })),
       category: "saving",
@@ -212,7 +212,7 @@ export default function SuggestPage() {
       list.push({
         id: "toku2nisa",
         group: "nisa",
-        title: "特定口座の積立をNISAに付け替える",
+        title: "特定口座の積立をNISAで行った場合",
         detail: `特定口座の積立 月${(move / 10000).toFixed(1)}万をNISAへ。同じ商品・同じ金額でも、売却時の20.315%がかからない`,
         mod: ((p) => ({
           ...p,
@@ -230,7 +230,7 @@ export default function SuggestPage() {
       if (plan.saveDcM < lim) {
         list.push({
           id: "dcmax",
-          title: `iDeCo等の掛金を上限（月${(lim / 10000).toFixed(1)}万）まで増やす`,
+          title: `iDeCo等の掛金を上限（月${(lim / 10000).toFixed(1)}万円）にした場合`,
           detail: `本人掛金 ${(plan.saveDcM / 10000).toFixed(1)}万 → ${(lim / 10000).toFixed(1)}万/月（2027年〜の上限）。全額所得控除で毎年の税金が減る。60歳まで引き出せない点に注意`,
           mod: ((p) => ({ ...p, saveDcM: lim })),
           category: "saving",
@@ -242,8 +242,8 @@ export default function SuggestPage() {
         id: "dcmethod",
         title:
           plan.dcMethod === "lump"
-            ? "DCを年金（10年）で受け取る"
-            : "DCを一時金で受け取る",
+            ? "DCを年金（10年）で受け取る場合"
+            : "DCを一時金で受け取る場合",
         detail:
           plan.dcMethod === "lump"
             ? "退職金と受取時期が近く退職所得控除が足りない場合は、年金受取の方が有利になることがある"
@@ -264,7 +264,7 @@ export default function SuggestPage() {
       list.push({
         id: "living1",
         group: "living",
-        title: "毎月の生活費を1万円削減",
+        title: "毎月の生活費が1万円少ない場合",
         detail: `生活費 ${(plan.livingM / 10000).toFixed(0)}万 → ${(Math.max(0, plan.livingM - 10000) / 10000).toFixed(0)}万円/月`,
         mod: ((p) => ({ ...p, livingM: Math.max(0, p.livingM - 10000) })),
         category: "spending",
@@ -274,7 +274,7 @@ export default function SuggestPage() {
       list.push({
         id: "living2",
         group: "living",
-        title: "毎月の生活費を2万円削減",
+        title: "毎月の生活費が2万円少ない場合",
         detail: `生活費 ${(plan.livingM / 10000).toFixed(0)}万 → ${(Math.max(0, plan.livingM - 20000) / 10000).toFixed(0)}万円/月。固定費（通信・サブスク・保険）見直しの目安`,
         mod: ((p) => ({ ...p, livingM: Math.max(0, p.livingM - 20000) })),
         category: "spending",
@@ -284,7 +284,7 @@ export default function SuggestPage() {
       list.push({
         id: "special50",
         group: "special",
-        title: "年間特別費を50万円削減",
+        title: "年間の特別費が50万円少ない場合",
         detail: `特別費 ${(plan.specialY / 10000).toFixed(0)}万 → ${(Math.max(0, plan.specialY - 500000) / 10000).toFixed(0)}万円/年`,
         mod: ((p) => ({
           ...p,
@@ -297,7 +297,7 @@ export default function SuggestPage() {
       list.push({
         id: "special100",
         group: "special",
-        title: "年間特別費を100万円削減",
+        title: "年間の特別費が100万円少ない場合",
         detail: `特別費 ${(plan.specialY / 10000).toFixed(0)}万 → ${(Math.max(0, plan.specialY - 1_000_000) / 10000).toFixed(0)}万円/年`,
         mod: ((p) => ({
           ...p,
@@ -309,7 +309,7 @@ export default function SuggestPage() {
     if (plan.useHomeLoan && plan.hlBal > 5_000_000) {
       list.push({
         id: "prepay",
-        title: "住宅ローンを500万円繰上返済",
+        title: "住宅ローンを500万円繰上返済した場合",
         detail: `残債 ${(plan.hlBal / 10000).toFixed(0)}万 → ${((plan.hlBal - 5_000_000) / 10000).toFixed(0)}万。利息圧縮効果（金利${plan.hlRate}%）`,
         mod: ((p) => ({ ...p, hlBal: Math.max(0, p.hlBal - 5_000_000) })),
         category: "spending",
@@ -322,7 +322,7 @@ export default function SuggestPage() {
     list.push({
       id: "nisaR",
       group: "return",
-      title: "NISAの利回りを+1%改善する（低コストインデックスへ）",
+      title: "NISAの利回りが年1%高い場合",
       detail: `NISA ${plan.nisaR.toFixed(1)}% → ${(plan.nisaR + 1).toFixed(1)}%。信託報酬の安い全世界株型などへの切替を想定`,
       mod: ((p) => ({ ...p, nisaR: p.nisaR + 1 })),
       category: "return",
@@ -330,7 +330,7 @@ export default function SuggestPage() {
     list.push({
       id: "allR",
       group: "return",
-      title: "全運用資産の利回りを+0.5%改善する",
+      title: "すべての運用の利回りが年0.5%高い場合",
       detail: `NISA・特定口座・DCすべての年率を+0.5%。リバランス・コスト見直しの統合効果`,
       mod: ((p) => ({
         ...p,
@@ -346,7 +346,7 @@ export default function SuggestPage() {
     if (plan.drawOrder !== "auto") {
       list.push({
         id: "draw",
-        title: "取り崩し順序をおすすめに変更",
+        title: "取り崩しを税金の少ない順にした場合",
         detail: `現在: ${DRAW_ORDER_LABEL[plan.drawOrder]} → 税金が少ないものから売り、非課税のNISAを最後まで残す`,
         mod: ((p) => ({ ...p, drawOrder: "auto" as DrawOrderMode })),
         category: "drawdown",
@@ -426,10 +426,10 @@ export default function SuggestPage() {
       : null;
   const shownKicker = hover
     ? keptList.length
-      ? "キープ中の打ち手に重ねると"
-      : "この打ち手を試すと"
+      ? "キープ中の条件に重ねると"
+      : "この条件で試算すると"
     : keptList.length
-      ? `キープした打ち手${keptList.length}件を合わせると`
+      ? `キープした条件${keptList.length}件を合わせると`
       : null;
 
   // マウスを乗せている間（PC）／押している間（タッチ）だけ、その打ち手をグラフに映す。
@@ -465,9 +465,9 @@ export default function SuggestPage() {
           こうしたら、どう変わる？
         </h1>
         <p className="mt-2 text-xs leading-relaxed text-[#0a0a0a]/60">
-          現状のプランを起点に、各種「打ち手」を適用したときの効果を試算します。プラスになる方向の選択肢のみを大きい順に表示しています。
+          いまのプランから条件を1つだけ変えたときの試算です。結果がよくなるものを、差の大きい順に並べています。どれかをすすめるものではありません（暮らし方・リスクの取り方・健康などで、合う選び方は変わります）。
           <b className="text-[#0a0a0a]">
-            PCはマウスを乗せる（スマホは長押し）と、上のグラフがその打ち手に変わります。クリック（タップ）するとその打ち手をキープし、もう一度でキープを外します。キープした打ち手は重ねて試算できます。
+            PCはマウスを乗せる（スマホは長押し）と、上のグラフがその条件に変わります。クリック（タップ）するとその条件をキープし、もう一度でキープを外します。キープした条件は重ねて試算できます。
           </b>
         </p>
       </div>
@@ -509,7 +509,7 @@ export default function SuggestPage() {
             </div>
             {keptResult ? (
               <p className="mt-2 text-[11px] font-bold">
-                合わせると最終純資産 {fmt(keptResult.finalNetWorth)}
+                合わせると最後の年の金融純資産 {fmt(keptResult.finalNetWorth)}
                 <span className="ml-1" style={{ color: keptResult.finalNetWorth - base.finalNetWorth >= 0 ? "#22863a" : "#c8383a" }}>
                   （{fmtDelta(keptResult.finalNetWorth - base.finalNetWorth)}）
                 </span>
@@ -522,7 +522,7 @@ export default function SuggestPage() {
                     : ""}
               </p>
             ) : null}
-            <p className="mt-1 text-[9px] text-[#0a0a0a]/50">それぞれのカードの金額は、その打ち手だけを試したときの変化です。同じ種類の打ち手（就労の延長・年金の繰下げ・NISAの積立・生活費・特別費）は、どれか1つだけキープできます。</p>
+            <p className="mt-1 text-[9px] text-[#0a0a0a]/50">それぞれのカードの金額は、その条件だけを変えたときの変化です。同じ種類の条件（働く年数・年金の受け取り開始・NISAの積立・生活費・特別費・利回り）は、どれか1つだけキープできます。</p>
           </div>
         ) : null}
 
@@ -537,7 +537,7 @@ export default function SuggestPage() {
                 ? "現在のプラン（選んだ外的環境）"
                 : "現在のプラン（ベースライン）"}
             </p>
-            <p className="mt-0.5 text-sm font-bold text-white">最終純資産</p>
+            <p className="mt-0.5 text-sm font-bold text-white">最後の年の金融純資産</p>
             {base.shortfallAge && (
               <p className="mt-0.5 text-[10px] text-[#f87171]">
                 ⚠ {base.shortfallAge}歳で資金ショート
@@ -554,42 +554,6 @@ export default function SuggestPage() {
             {fmt(base.finalNetWorth)}
           </p>
         </div>
-
-        {/* TOP 3 まとめ表示 */}
-        {visible.length >= 3 && (
-          <div
-            className="mb-6 rounded-xl p-4"
-            style={{ background: "#f0fff4", border: "2px solid #22863a" }}
-          >
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
-              TOP 3 ／ 効果の大きい打ち手
-            </p>
-            <ol className="flex flex-col gap-1.5">
-              {visible.slice(0, 3).map((sc, i) => {
-                const delta = sc.result.finalNetWorth - base.finalNetWorth;
-                return (
-                  <li
-                    key={sc.id}
-                    className="flex items-start gap-2 text-[11px]"
-                  >
-                    <span
-                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[10px] font-bold text-white"
-                      style={{ background: "#22863a", borderRadius: 4 }}
-                    >
-                      {i + 1}
-                    </span>
-                    <span className="flex-1 font-bold text-[#0a0a0a]">
-                      {sc.title}
-                    </span>
-                    <span className="shrink-0 font-bold tabular-nums text-[#22863a]">
-                      {fmtDelta(delta)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-        )}
 
         {/* Category groups */}
         {(["income", "saving", "spending", "return", "drawdown"] as Cat[]).map(
@@ -691,7 +655,7 @@ export default function SuggestPage() {
                                   {fmtDelta(delta)}
                                 </p>
                                 <p className="text-[9px] text-[#0a0a0a]/40">
-                                  最終純資産の変化
+                                  最後の年の金融純資産の変化
                                 </p>
                               </div>
                             </div>
@@ -716,7 +680,7 @@ export default function SuggestPage() {
 
                             <div className="mt-3 flex items-center justify-between text-[10px] text-[#0a0a0a]/40">
                               <span>
-                                最終純資産:{" "}
+                                最後の年の金融純資産:{" "}
                                 <span
                                   className="font-bold"
                                   style={{
@@ -753,7 +717,7 @@ export default function SuggestPage() {
             style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
           >
             <p className="text-sm text-[#0a0a0a]/50">
-              今の入力では、結果がよくなる打ち手が見つかりませんでした。入力を変えると、ここに表示されます。
+              今の入力では、結果がよくなる条件が見つかりませんでした。入力を変えると、ここに表示されます。
             </p>
           </div>
         )}

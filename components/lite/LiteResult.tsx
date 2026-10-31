@@ -78,13 +78,13 @@ export function LiteResult() {
             </p>
           ) : r.needMonthly !== null ? (
             <p className="text-[13px] font-bold leading-snug">
-              {A.endAge}歳まで足りるには、毎月の積立をあと <span style={{ color: RED }}>{r.needMonthly}万円</span>（働き終わるまで）
+              毎月の積立が働き終わるまで <span style={{ color: RED }}>{r.needMonthly}万円</span> 多い場合に、{A.endAge}歳まで足りる計算です
             </p>
           ) : (
-            <p className="text-[13px] font-bold leading-snug">積立をふやすだけでは届きません。生活費・働く年数・住まいを見直す必要があります</p>
+            <p className="text-[13px] font-bold leading-snug">積立の額を変えるだけでは、{A.endAge}歳まで足りる計算になりません。生活費・働く年数・住まいの条件でも変わります</p>
           )}
           <p className="mt-0.5 text-[10px] text-[#0a0a0a]/55">
-            {ok ? "急な出費や、物価・運用が思ったより悪いときの余裕の目安です" : "積立は利回り年4%の計算。生活費を減らす・長く働くと、必要な額は下がります"}
+            {ok ? "急な出費や、物価・運用が思ったより悪いときの余裕の目安です" : "積立は利回り年4%の計算。生活費や働く年数の条件によっても、この額は変わります。どうするのがよいかをすすめるものではありません"}
           </p>
         </div>
       </div>

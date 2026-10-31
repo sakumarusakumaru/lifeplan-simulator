@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { useVBase } from "@/components/v4/useVBase";
 import type { SimulationSummary } from "@/lib/v4/calc/types";
 
 const INK = "#0a0a0a";
@@ -63,6 +64,7 @@ export function ScenarioPreviewChart({
   crashAges?: number[];
   domainSeries?: SimulationSummary[];
 }) {
+  const jp = useVBase() === "/v5"; // ver5 は「金融純資産」「条件」の言葉で
   const ref = normal ?? base;
   const shown = preview ?? base;
   const delta = preview ? preview.finalNetWorth - base.finalNetWorth : 0;
@@ -82,7 +84,7 @@ export function ScenarioPreviewChart({
       <div className="mb-1 flex min-h-[34px] items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/50">
-            {preview ? previewKicker ?? "この打ち手を試すと" : envOn ? "選んだ外的環境での純資産" : "いまのプランの純資産"}
+            {preview ? previewKicker ?? (jp ? "この条件で試算すると" : "この打ち手を試すと") : envOn ? `選んだ外的環境での${jp ? "金融純資産" : "純資産"}` : `いまのプランの${jp ? "金融純資産" : "純資産"}`}
           </p>
           <p className="truncate text-[12px] font-bold" style={{ color: preview ? color : INK }}>
             {preview ? previewTitle : "下のカードにマウスを乗せる（長押し）と変わり、クリックでキープします"}
