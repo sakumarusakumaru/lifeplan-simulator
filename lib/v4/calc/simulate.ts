@@ -1,6 +1,6 @@
 import { ageOn, parseYMD, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
-import { EDU, amortizeYear, pmt } from "./finance";
+import { EDU, pmt } from "./finance";
 import { schedulePart, scheduleLoans } from "./homeLoan";
 import { createInsuranceState, insuranceDeduction, insuranceYear, normalizeInsurance } from "./insurance";
 import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable, zaishokuTeishiAnnual } from "./pension";
