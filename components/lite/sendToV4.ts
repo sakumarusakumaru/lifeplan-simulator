@@ -43,9 +43,9 @@ const man = (yen: number) => `${Math.round(yen / 10000).toLocaleString()}万円`
 function handoffLines(p: PlanInput): string[] {
   const job = p.jobs[0];
   const lines = [
-    `1 基本設定 ＞ 本人の生年月日: ${p.selfBirth}（Liteは年齢だけなので1月1日生まれとして）`,
-    p.spouseBirth ? `1 基本設定 ＞ 配偶者の生年月日: ${p.spouseBirth}（同じく1月1日として）` : "1 基本設定 ＞ 配偶者: いない",
-    p.kids.length ? `1 基本設定 ＞ 子ども: ${p.kids.length}人（進学プランは学校の答えから。塾代は目安）` : "",
+    `1 基本 ＞ 本人の生年月日: ${p.selfBirth}（Liteは年齢だけなので1月1日生まれとして）`,
+    p.spouseBirth ? `1 基本 ＞ 配偶者の生年月日: ${p.spouseBirth}（同じく1月1日として）` : "1 基本 ＞ 配偶者: いない",
+    p.kids.length ? `1 基本 ＞ 子ども: ${p.kids.length}人（進学プランは学校の答えから。塾代は目安）` : "",
     job ? `2 収入 ＞ ${job.name}: 年収${man(job.inc)}、${job.end}歳まで、退職金${man(job.sev)}（昇給は年${job.raise}%）` : "",
     p.jobs[1] ? `2 収入 ＞ ${p.jobs[1].name}: 年収${man(p.jobs[1].inc)}（60歳のときの年収×割合）、${p.jobs[1].end}歳まで、昇給なし` : "",
     p.dcBal || p.saveDcM ? `3 資産 ＞ iDeCo・DCに入った年齢: ${p.dcJoinAge}歳（受け取るときの税金の計算に使う）` : "",

@@ -240,7 +240,7 @@ export function SettingsMegaSection() {
         {tabMode ? (
           <CollapsibleSubGroup title="子ども">
             {plan.kids.map((k, i) => (
-              <ListItemCard key={i} kicker={`KID ${String(i + 1).padStart(2, "0")}`} onRemove={() => setField("kids", plan.kids.filter((_, idx) => idx !== i))}>
+              <ListItemCard key={i} kicker={`KID ${String(i + 1).padStart(2, "0")}`} summary={`${k.name || "子ども"}・${k.birth || "生年月日未入力"}`} onRemove={() => setField("kids", plan.kids.filter((_, idx) => idx !== i))}>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto] md:items-end">
                   <TextField label="名前（呼び名）" value={k.name} onChange={(v) => updateKid(i, { name: v })} />
                   <DateField label="生年月日（予定日でも可）" value={k.birth} onChange={(v) => updateKid(i, { birth: v })} />

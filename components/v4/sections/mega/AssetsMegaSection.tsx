@@ -5,7 +5,7 @@ import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { TextField } from "@/components/v4/inputs/TextField";
-import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
+import { AddButton, ListItemCard, manYen } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { LoanDetailFields } from "@/components/v4/LoanDetailFields";
 import { LoanPartsEditor, mixParts } from "@/components/v4/LoanPartsEditor";
@@ -621,6 +621,7 @@ export function AssetsMegaSection() {
                 <ListItemCard
                   key={i}
                   kicker={`PROPERTY ${String(i + 1).padStart(2, "0")}`}
+                  summary={`${r.name || "物件"}・家賃 月${manYen(r.rent)}`}
                   onRemove={() => removeRe(i)}
                 >
                   <div className="flex flex-col gap-2">

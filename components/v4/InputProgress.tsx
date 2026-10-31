@@ -9,9 +9,9 @@ import { usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
 const LABELS: Record<(typeof SECTION_ORDER)[number], string> = {
-  "ch-settings": "基本設定",
+  "ch-settings": "基本",
   "ch-income": "収入",
-  "ch-assets": "資産・運用",
+  "ch-assets": "資産",
   "ch-expense": "支出",
 };
 

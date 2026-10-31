@@ -8,13 +8,14 @@ import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { TextField } from "@/components/v4/inputs/TextField";
-import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
+import { AddButton, ListItemCard, manYen } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { Section, TabModeContext } from "@/components/v4/Section";
 import { calcPension } from "@/lib/v4/calc/pension";
 import { sevPlanOf, simulate } from "@/lib/v4/calc/simulate";
 import { taishokuShotokuKojo } from "@/lib/v4/calc/tax";
 import type {
+  InheritanceEvent,
   Job,
   PlanInput,
   PensionCategory,
@@ -23,6 +24,13 @@ import type {
   SideJob,
 } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
+
+// 臨時収入の追加ボタン（押すと目安の金額で1件入る。あとで直す）
+const WINDFALL_PRESETS = (curAge: number): InheritanceEvent[] => [
+  { label: "親からの相続", age: Math.max(curAge + 1, 60), amount: 10_000_000 },
+  { label: "親からの援助（贈与）", age: curAge + 1, amount: 3_000_000 },
+  { label: "その他の臨時収入", age: curAge + 1, amount: 1_000_000 },
+];
 
 const PEN_MODE_OPTIONS: { value: PensionMode; label: string }[] = [
   { value: "auto", label: "自動計算（推奨）" },
@@ -308,6 +316,10 @@ export function IncomeMegaSection() {
   const addSide = () => setField("sideJobs", [...plan.sideJobs, NEW_SIDE_JOB()]);
   const removeSide = (i: number) => setField("sideJobs", plan.sideJobs.filter((_, idx) => idx !== i));
 
+  const updateWindfall = (i: number, patch: Partial<InheritanceEvent>) =>
+    setField("inheritances", plan.inheritances.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)));
+  const removeWindfall = (i: number) => setField("inheritances", plan.inheritances.filter((_, idx) => idx !== i));
+
   return (
     <Section
       id="ch-income"
@@ -323,6 +335,7 @@ export function IncomeMegaSection() {
               <ListItemCard
                 key={i}
                 kicker={`JOB ${String(i + 1).padStart(2, "0")}`}
+                summary={`${j.name || "勤務先"}・年収${manYen(j.inc)}・${j.start}〜${j.end}歳`}
                 onRemove={() => removeJob(i)}
               >
                 <div className="grid grid-cols-1 gap-2">
@@ -373,6 +386,7 @@ export function IncomeMegaSection() {
               <ListItemCard
                 key={i}
                 kicker={`SIDE ${String(i + 1).padStart(2, "0")}`}
+                summary={`${j.name || "副業"}・年${manYen(j.inc)}・${j.start}〜${j.end}歳`}
                 onRemove={() => removeSide(i)}
               >
                 <div className="grid grid-cols-1 gap-2">
@@ -450,9 +464,37 @@ export function IncomeMegaSection() {
             ) : null}
           </div>
         </CollapsibleSubGroup>
-        {tabMode ? (
-          <p className="text-[11px] text-[#0a0a0a]/60">相続・贈与などの一時的な収入は「4 支出 ＞ ライフイベント」で入れます</p>
-        ) : null}
+
+        {/* ver5.20: 相続・贈与などのまとまった入金は、収入のブロックで入れる（前は支出のライフイベントの中にあって見つけにくかった） */}
+        <CollapsibleSubGroup title={`臨時収入（相続・贈与など）${plan.inheritances.length ? `${plan.inheritances.length}件` : ""}`} defaultOpen={plan.inheritances.length > 0}>
+          <div className="flex flex-col gap-3">
+            <p className="text-[11px] leading-relaxed text-[#0a0a0a]/65">
+              親からの相続や住宅資金の援助など、ある年にまとめて入るお金。金額は、相続税・贈与税を払ったあとの手取りで入れてください。
+              生命保険の保険金・満期金は「4 支出 ＞ 保険」から自動で入るので、ここには入れません。
+            </p>
+            {plan.inheritances.map((ev, i) => (
+              <ListItemCard
+                key={i}
+                kicker={`INCOME ${String(i + 1).padStart(2, "0")}`}
+                summary={`${ev.label || "臨時収入"}・${ev.age}歳・${manYen(ev.amount)}`}
+                onRemove={() => removeWindfall(i)}
+              >
+                <div className="grid grid-cols-1 gap-2">
+                  <TextField label="名前" value={ev.label} onChange={(v) => updateWindfall(i, { label: v })} />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                    <NumberField label="受け取る年齢（本人）" value={ev.age} onChange={(v) => updateWindfall(i, { age: v })} unit="歳" />
+                    <NumberField label="金額（手取り）" value={ev.amount} onChange={(v) => updateWindfall(i, { amount: v })} unit="円" />
+                  </div>
+                </div>
+              </ListItemCard>
+            ))}
+            <div className="flex flex-wrap gap-2">
+              {WINDFALL_PRESETS(plan.curAge).map((w) => (
+                <AddButton key={w.label} label={w.label} onClick={() => setField("inheritances", [...plan.inheritances, w])} />
+              ))}
+            </div>
+          </div>
+        </CollapsibleSubGroup>
       </div>
     </Section>
   );

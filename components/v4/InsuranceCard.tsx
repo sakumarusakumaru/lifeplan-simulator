@@ -193,7 +193,7 @@ export function InsuranceCard({
   const premLabel = p.payMode === "monthly" ? "保険料（月額）" : p.payMode === "yearly" ? "保険料（年額）" : "保険料（一時払の金額）";
 
   return (
-    <ListItemCard kicker={`POLICY ${String(index + 1).padStart(2, "0")}${p.enabled ? "" : " · OFF"}`} onRemove={onRemove}>
+    <ListItemCard kicker={`POLICY ${String(index + 1).padStart(2, "0")}${p.enabled ? "" : " · OFF"}`} summary={`${p.name || p.type}・${p.insured}`} onRemove={onRemove}>
       <div className="mb-3">
         <CheckboxField label="この保険を計算に含める" value={p.enabled} onChange={(v) => onChange({ enabled: v })} />
       </div>

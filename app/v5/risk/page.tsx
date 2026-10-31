@@ -268,7 +268,7 @@ export default function RiskPage() {
             {noSurvivor ? (
               <div className="mb-6 rounded-xl bg-white p-4 text-[12px] leading-relaxed" style={CARD}>
                 配偶者・子どもが入力されていないため、遺族年金や死亡保障を考える対象の家族がいません。
-                「入力」の基本設定で配偶者の生年月日、支出の教育費で子どもを登録すると試算できます。
+                「入力」の基本で配偶者の生年月日、支出の教育費で子どもを登録すると試算できます。
               </div>
             ) : (
               <>

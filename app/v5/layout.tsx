@@ -21,7 +21,7 @@ const TABS = [
   { href: "/v5/result", label: "レポート" },
   { href: "/v5/suggest", label: "比較" },
   { href: "/v5/risk", label: "もしも" },
-  { href: "/v5/handover", label: "引き継ぎ" },
+  { href: "/v5/handover", label: "のこす" },
 ];
 
 export default function V5Layout({ children }: { children: React.ReactNode }) {
@@ -181,7 +181,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
 
   // ステップのタブ。PCではヘッダー1段目に、スマホでは独立した行に出す
   // スマホ用のタブ: 4等分のセグメント。短い名前でスクロールせずに全部見える
-  const SHORT = ["入力", "レポート", "比較", "もしも", "引き継ぎ"];
+  const SHORT = ["入力", "レポート", "比較", "もしも", "のこす"];
   const renderMobileTabs = () => (
     <nav className="grid grid-cols-5 gap-0.5 rounded-xl bg-white p-1" style={{ border: "1.5px solid #0a0a0a30" }}>
       {TABS.map((tab, i) => {
@@ -201,7 +201,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
     </nav>
   );
 
-  // ver5: 上のタブは5つの画面を「›」でつないだ流れ（入力 › レポート › 比較 › もしも › 引き継ぎ）。
+  // ver5: 上のタブは5つの画面を「›」でつないだ流れ（入力 › レポート › 比較 › もしも › のこす）。
   // 入力の進み具合は入力画面の4ブロックのタブで見せる
   const renderTabs = (className: string) => (
     <nav className={className} aria-label="画面">

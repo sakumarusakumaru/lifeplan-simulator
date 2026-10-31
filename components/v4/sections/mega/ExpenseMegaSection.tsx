@@ -8,7 +8,7 @@ import { DateField } from "@/components/v4/inputs/DateField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { TextField } from "@/components/v4/inputs/TextField";
-import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
+import { AddButton, ListItemCard, manYen } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { HomeLoanEditor } from "@/components/v4/HomeLoanEditor";
 import { InsuranceCard } from "@/components/v4/InsuranceCard";
@@ -19,7 +19,6 @@ import { computeRealEstateValue } from "@/lib/v4/calc/finance";
 import type {
   BuildingStructure,
   CareEvent,
-  InheritanceEvent,
   JukuMonthly,
   Kid,
   LifeExpenseEvent,
@@ -128,12 +127,6 @@ const NEW_LOAN = (): OtherLoan => ({
   remainMonths: 60,
 });
 
-const NEW_INCOME = (): InheritanceEvent => ({
-  age: 70,
-  amount: 10_000_000,
-  label: "親からの相続",
-});
-
 const NEW_EXPENSE = (): LifeExpenseEvent => ({
   age: 50,
   amount: 2_000_000,
@@ -228,11 +221,6 @@ export function ExpenseMegaSection() {
   const coverSpouse = deathCoverAt(insList, "配偶者", plan.curAge);
   const removeIns = (i: number) => removeLinked("ins", i);
 
-  const updateIncome = (i: number, patch: Partial<InheritanceEvent>) =>
-    setField("inheritances", plan.inheritances.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)));
-  const addIncome = () => setField("inheritances", [...plan.inheritances, NEW_INCOME()]);
-  const removeIncome = (i: number) =>
-    setField("inheritances", plan.inheritances.filter((_, idx) => idx !== i));
 
   const updateExpense = (i: number, patch: Partial<LifeExpenseEvent>) =>
     setField("lifeExpenses", plan.lifeExpenses.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)));
@@ -303,9 +291,9 @@ export function ExpenseMegaSection() {
                     <li>・家賃・住宅ローン → 住居</li>
                     <li>・保険料 → 保険（Lite版から引き継いだ生活費には保険料が入っています。保険を別に入れるときは、その分を生活費から引いてください）</li>
                     <li>・教育費・塾代 → 教育費</li>
-                    <li>・投信/株/NISA積立 → 資産・運用</li>
+                    <li>・投信/株/NISA積立 → 資産</li>
                     <li>・介護費用 → 介護費用</li>
-                    <li>・ライフイベント → ライフイベント</li>
+                    <li>・リフォーム・車の買い替えなど → ライフイベント</li>
                     <li>・自動車/奨学金返済 → その他ローン</li>
                   </ul>
                 </div>
@@ -582,6 +570,7 @@ export function ExpenseMegaSection() {
                   <ListItemCard
                     key={i}
                     kicker={`LOAN ${String(i + 1).padStart(2, "0")}`}
+                    summary={`${ln.label || "ローン"}・月${manYen(ln.monthlyPay)}・残り${ln.remainMonths}か月`}
                     onRemove={() => removeLoan(i)}
                   >
                     <div className="grid grid-cols-1 gap-2">
@@ -692,6 +681,7 @@ export function ExpenseMegaSection() {
                     <ListItemCard
                       key={i}
                       kicker={`KID ${String(i + 1).padStart(2, "0")}`}
+                      summary={`${k.name || "子ども"}・${k.birth || "生年月日未入力"}`}
                       onRemove={() => removeKid(i)}
                     >
                       <div className="grid grid-cols-1 gap-2">
@@ -840,45 +830,9 @@ export function ExpenseMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="ライフイベント（一時収支）" defaultOpen={false}>
+        <CollapsibleSubGroup title={`ライフイベント（一時的な出費）${plan.lifeExpenses.length ? `${plan.lifeExpenses.length}件` : ""}`} defaultOpen={false}>
           <div className="flex flex-col gap-5">
-            <div>
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-                — 一時収入（相続・贈与・保険金）
-              </div>
-              <div className="flex flex-col gap-3">
-                {plan.inheritances.map((ev, i) => (
-                  <ListItemCard
-                    key={i}
-                    kicker={`INCOME ${String(i + 1).padStart(2, "0")}`}
-                    onRemove={() => removeIncome(i)}
-                  >
-                    <div className="grid grid-cols-1 gap-2">
-                      <TextField
-                        label="名称"
-                        value={ev.label}
-                        onChange={(v) => updateIncome(i, { label: v })}
-                      />
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
-                        <NumberField
-                          label="受け取る年齢"
-                          value={ev.age}
-                          onChange={(v) => updateIncome(i, { age: v })}
-                          unit="歳"
-                        />
-                        <NumberField
-                          label="金額"
-                          value={ev.amount}
-                          onChange={(v) => updateIncome(i, { amount: v })}
-                          unit="円"
-                        />
-                      </div>
-                    </div>
-                  </ListItemCard>
-                ))}
-                <AddButton label="一時収入を追加" onClick={addIncome} />
-              </div>
-            </div>
+            <p className="text-[11px] leading-relaxed text-[#0a0a0a]/60">相続・贈与などのまとまった入金は「2 収入 ＞ 臨時収入」で入れます。</p>
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
                 — 一時支出（リフォーム・車・慶弔など）
@@ -891,6 +845,7 @@ export function ExpenseMegaSection() {
                   <ListItemCard
                     key={i}
                     kicker={`EXPENSE ${String(i + 1).padStart(2, "0")}`}
+                    summary={`${ev.label || "一時支出"}・${ev.age}歳・${manYen(ev.amount)}`}
                     onRemove={() => removeExpense(i)}
                   >
                     <div className="grid grid-cols-1 gap-2">
@@ -933,6 +888,7 @@ export function ExpenseMegaSection() {
               <ListItemCard
                 key={i}
                 kicker={`CARE ${String(i + 1).padStart(2, "0")}`}
+                summary={`${ev.label || "介護"}・${ev.startAge}歳から${ev.durationYears}年・月${manYen(ev.monthlyCost)}`}
                 onRemove={() => removeCare(i)}
               >
                 <div className="grid grid-cols-1 gap-2">

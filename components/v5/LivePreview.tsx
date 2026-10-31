@@ -13,17 +13,17 @@ import { useUiStore } from "@/store/v4/ui-store";
 type SectionId = (typeof SECTION_ORDER)[number];
 
 const LABELS: Record<SectionId, string> = {
-  "ch-settings": "基本設定",
+  "ch-settings": "基本",
   "ch-income": "収入",
-  "ch-assets": "資産・運用",
+  "ch-assets": "資産",
   "ch-expense": "支出",
 };
 
 // 次に入れると試算がどう良くなるか
 const NEXT_HINT: Record<SectionId, string> = {
-  "ch-settings": "基本設定をOKすると、収入の入力に進めます",
+  "ch-settings": "基本をOKすると、収入の入力に進めます",
   "ch-income": "収入を入れると、老後までの貯まり方が見えてきます",
-  "ch-assets": "資産・運用を入れると、結果のブレが大きく減ります",
+  "ch-assets": "資産を入れると、結果のブレが大きく減ります",
   "ch-expense": "支出を入れると、結果が実際の暮らしに近づきます",
 };
 

@@ -23,9 +23,9 @@ import { useSimResult } from "@/store/v4/useSimResult";
 type SectionId = (typeof SECTION_ORDER)[number];
 
 const BLOCKS: { id: SectionId; label: string; desc: string; Comp: ComponentType }[] = [
-  { id: "ch-settings", label: "基本設定", desc: "本人・配偶者（計算の条件と税金は「詳細設定」に）", Comp: SettingsMegaSection },
-  { id: "ch-income", label: "収入", desc: "給与・副業・年金（働いている間〜老後）", Comp: IncomeMegaSection },
-  { id: "ch-assets", label: "資産・運用", desc: "現金・NISA・特定口座・iDeCo/DC・暗号資産・金・不動産投資", Comp: AssetsMegaSection },
+  { id: "ch-settings", label: "基本", desc: "本人・配偶者（計算の条件と税金は「詳細設定」に）", Comp: SettingsMegaSection },
+  { id: "ch-income", label: "収入", desc: "給与・副業・年金・臨時収入（相続・贈与など）", Comp: IncomeMegaSection },
+  { id: "ch-assets", label: "資産", desc: "現金・NISA・特定口座・iDeCo/DC・暗号資産・金・不動産投資", Comp: AssetsMegaSection },
   { id: "ch-expense", label: "支出", desc: "生活費・住まい・教育・保険・ライフイベント・介護", Comp: ExpenseMegaSection },
 ];
 
@@ -113,7 +113,7 @@ export default function DetailPage() {
     stepping && !plan.selfBirth && (block.id === "ch-settings" || isLast)
       ? block.id === "ch-settings"
         ? "本人の生年月日を入れると次へ進めます"
-        : "本人の生年月日（1 基本設定）を入れると、結果を見られます"
+        : "本人の生年月日（1 基本）を入れると、結果を見られます"
       : null;
   const note =
     block.id === "ch-income" && plan.jobs.every((j) => !j.inc) && plan.sideJobs.every((j) => !j.inc)
