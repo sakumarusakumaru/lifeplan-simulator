@@ -423,7 +423,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       const totalTax = calcTaishokuTaxWithKojo(amount, kojo, year, years <= 5);
       sevTax = amount > 0 ? (totalTax * sevGross) / amount : 0;
       dcTax = totalTax - sevTax;
-      lumps.push({ age, hasDc: dcLump > 0, from, to });
+      // 受け取った額が控除額に満たないときは、次の重複調整では勤続期間を金額から読み替える（所得税法施行令70条2項）
+      //   800万以下: 金額÷40万、800万超: (金額−800万)÷70万＋20（1年未満切り捨て）年だけ、勤め始めから数える
+      const convYears = amount < kojo ? (amount <= 800 * MAN ? Math.floor(amount / (40 * MAN)) : Math.floor((amount - 800 * MAN) / (70 * MAN)) + 20) : Infinity;
+      lumps.push({ age, hasDc: dcLump > 0, from, to: Math.min(to, from + convYears) });
     }
 
     // ── 不動産投資（家賃・ローン）──

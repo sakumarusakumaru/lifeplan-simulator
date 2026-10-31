@@ -214,6 +214,27 @@ function fuyoKojoForKid(kidAge: number, kind: "income" | "jumin"): number {
   return kind === "income" ? 38 * MAN : 33 * MAN;
 }
 
+// 住民税の調整控除（地方税法37条・314条の6）。所得税と住民税の人的控除の差による負担増を戻す
+//   合計所得2,500万超は0。課税総所得200万以下: min(人的控除の差, 課税総所得)×5%
+//   200万超: (人的控除の差 − (課税総所得 − 200万))×5%、最低2,500円
+export function chouseiKojo(taxableJ: number, goukei: number, jintekiDiff: number): number {
+  if (goukei > 2500 * MAN || taxableJ <= 0) return 0;
+  if (taxableJ <= 200 * MAN) return Math.min(jintekiDiff, taxableJ) * 0.05;
+  return Math.max(2500, (jintekiDiff - (taxableJ - 200 * MAN)) * 0.05);
+}
+
+// 人的控除の差（所得税と住民税）。近似: 基礎5万、配偶者控除5万（70歳以上10万。納税者の所得900万超は4万・6万／950万超は2万・3万）、
+// 扶養 16〜18歳5万・19〜22歳18万。配偶者特別控除・ひとり親控除などの差は入れていない
+function jintekiDiffOf(goukei: number, haigusha: { on: boolean; old: boolean; earnerG: number }, kidAges: number[]): number {
+  let d = goukei <= 2500 * MAN ? 5 * MAN : 0;
+  if (haigusha.on) {
+    const g = haigusha.earnerG;
+    d += haigusha.old ? (g <= 900 * MAN ? 10 : g <= 950 * MAN ? 6 : 3) * MAN : (g <= 900 * MAN ? 5 : g <= 950 * MAN ? 4 : 2) * MAN;
+  }
+  for (const a of kidAges) d += a >= 19 && a < 23 ? 18 * MAN : a >= 16 && a < 23 ? 5 * MAN : 0;
+  return d;
+}
+
 // 所得税の累進計算（速算表）
 export function calcShotokuzei(taxableY: number): number {
   const t = Math.max(0, Math.floor(taxableY / 1000) * 1000);
@@ -395,6 +416,13 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
   }
   const familyI = haiI + fuyoI;
   const familyJ = haiJ + fuyoJ;
+  // 調整控除に使う人的控除の差（家族の控除を受ける側だけ家族の分を足す）
+  const spouseG = sp ? (selfIsEarner ? sp.goukei : s.goukei) : 0;
+  const haiInfo = {
+    on: !!sp && !!inp.spouse && spouseG <= 62 * MAN && haiI > 0,
+    old: !!inp.spouse && (selfIsEarner ? inp.spouse.age : inp.self.age) >= 70,
+    earnerG: selfIsEarner ? s.goukei : sp?.goukei ?? 0,
+  };
 
   // ── 本人 ──
   const extra = inp.extraDeduction ?? { income: 0, jumin: 0 };
@@ -406,7 +434,10 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
 
   // 基準所得税額（付加税をかける前の所得税）
   let itBaseSelf = calcShotokuzei(selfTaxable);
-  let jmShotokuwari = selfTaxableJ * 0.1;
+  // 住民税: 課税総所得は1,000円未満切り捨て、所得割から調整控除を引く
+  const selfTaxableJr = Math.floor(selfTaxableJ / 1000) * 1000;
+  const selfJinteki = jintekiDiffOf(s.goukei, selfIsEarner ? haiInfo : { ...haiInfo, on: false }, selfIsEarner ? inp.kidAges : []);
+  let jmShotokuwari = Math.max(0, selfTaxableJr * 0.1 - chouseiKojo(selfTaxableJr, s.goukei, selfJinteki));
   const kintoSelf = s.goukei > 45 * MAN ? 5000 : 0;
 
   // 住宅ローン控除: 基準所得税額から引き（付加税も減る）、残りは住民税から（課税総所得×5%・上限9.75万）
@@ -419,8 +450,9 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
     jmShotokuwari -= fromJm;
     hl = fromIt * sur + fromJm;
   }
-  const itSelf = itBaseSelf * sur;
-  const jmSelf = jmShotokuwari + kintoSelf;
+  // 年税額は100円未満切り捨て（所得税は付加税を足したあと、住民税は所得割）
+  const itSelf = Math.floor((itBaseSelf * sur) / 100) * 100;
+  const jmSelf = Math.floor(jmShotokuwari / 100) * 100 + kintoSelf;
 
   // ── 配偶者 ──
   let itSp = 0;
@@ -432,8 +464,10 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
     const spFamJ = selfIsEarner ? 0 : familyJ;
     const t = Math.max(0, sp.goukei - kisoKojoIncomeTax(sp.goukei, year) - ded - spFamI - spExtra.income);
     const tj = Math.max(0, sp.goukei - kisoKojoJumin(sp.goukei) - ded - spFamJ - spExtra.jumin);
-    itSp = calcShotokuzei(t) * sur;
-    jmSp = tj * 0.1 + (sp.goukei > 45 * MAN ? 5000 : 0);
+    itSp = Math.floor((calcShotokuzei(t) * sur) / 100) * 100;
+    const tjr = Math.floor(tj / 1000) * 1000;
+    const spJinteki = jintekiDiffOf(sp.goukei, selfIsEarner ? { ...haiInfo, on: false } : haiInfo, selfIsEarner ? [] : inp.kidAges);
+    jmSp = Math.floor(Math.max(0, tjr * 0.1 - chouseiKojo(tjr, sp.goukei, spJinteki)) / 100) * 100 + (sp.goukei > 45 * MAN ? 5000 : 0);
   }
 
   const total = Math.round(
