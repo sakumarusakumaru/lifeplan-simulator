@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
-import { niceDomain, useLaggedDomain } from "@/components/v4/charts/useLaggedDomain";
+import { niceDomain, useAnimatedChart } from "@/components/v4/charts/useLaggedDomain";
 import { INNER, strong } from "@/components/v4/frame";
 import { SECTION_ORDER } from "@/components/v4/Section";
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
@@ -27,7 +27,7 @@ const NEXT_HINT: Record<SectionId, string> = {
   "ch-expense": "支出を入れると、結果が実際の暮らしに近づきます",
 };
 
-const RED = "#d55e00";
+const RED = "#cf7a4a";
 const INK = "#0a0a0a";
 
 const man = (yen: number) => {
@@ -64,11 +64,13 @@ function useDelta(result: SimulationSummary) {
 // スマホの下のバーで開く小さなグラフ。縦軸（金額）と0の線に目盛りを付ける
 function MiniChart({ result, height }: { result: SimulationSummary; height: number }) {
   const rows = result.rows;
-  const vals = rows.map(finOf);
-  const rawMax = Math.max(0, ...vals);
-  const rawMin = Math.min(0, ...vals);
-  // 縦軸は一拍おいて動かす（線は先に動き、そのあと目盛りが追いつく）
-  const [min, max] = useLaggedDomain(niceDomain(rawMin, rawMax));
+  const raw = useMemo(() => rows.map((r) => ({ age: r.age, v: finOf(r) })), [rows]);
+  const rawMax = Math.max(0, ...raw.map((x) => x.v));
+  const rawMin = Math.min(0, ...raw.map((x) => x.v));
+  // 線が先に動き、そのあと目盛りと線が一緒に伸び縮みする
+  const { data: shown, domain } = useAnimatedChart(raw, niceDomain(rawMin, rawMax));
+  const [min, max] = domain;
+  const vals = shown.map((x) => x.v);
   if (rows.length < 2) return null;
   const W = 300;
   const H = 120;
@@ -210,7 +212,7 @@ export function LivePreview({
   const waitText = !hasBirth ? "本人の生年月日を入れると、ここに試算が出ます" : "毎月の生活費（4 支出）を入れると、判定が出ます";
 
   const deltaEl = delta ? (
-    <span className="text-[11px] font-bold" style={{ color: delta.good ? "#0072b2" : RED }} aria-live="polite">
+    <span className="text-[11px] font-bold" style={{ color: delta.good ? "#4f86b8" : RED }} aria-live="polite">
       {delta.text}
     </span>
   ) : null;

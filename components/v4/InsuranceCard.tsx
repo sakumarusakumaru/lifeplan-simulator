@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { INNER2 } from "@/components/v4/frame";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
@@ -15,6 +17,7 @@ import {
   policySummary,
 } from "@/lib/v4/calc/insurance";
 import type { Insurance, InsuranceType, Insured, Kid } from "@/lib/v4/calc/types";
+import { usePlanStore } from "@/store/v4/plan-store";
 
 const INK = "#0a0a0a";
 
@@ -54,6 +57,79 @@ const DEDUCT_LABEL: Record<string, string> = {
 };
 
 const man = (yen: number) => `${Math.round(yen / 10000).toLocaleString()}万円`;
+
+// 受取人のプルダウンで「その他（自分で入力）」を表す値。保存はしない（保存するのは入力した文字そのもの）
+const BENEFICIARY_OTHER = "__other__";
+
+// 受取人の選択肢を家族構成から作る。value はそのまま p.beneficiary に保存する文字
+//   被保険者（その保険で亡くなる人）自身は外す。死亡保険金の受取人に被保険者はなれないため。
+//   ただし満期金・年金・学資の祝い金がある保険は、受け取るのが契約者（被保険者と同じ人のことが多い）なので残す。
+//   引き継ぎ書には「誰が受け取るか」を書いておきたく、本人がもらう満期金・年金も迷ったら選べた方がよいと判断した
+function beneficiaryOptions(p: Insurance, kids: Kid[], hasSpouse: boolean): { value: string; label: string }[] {
+  const t = p.type;
+  const livingBenefit = HAS.maturity(t) || HAS.annuity(t) || HAS.edu(t);
+  const opts: { value: string; label: string }[] = [{ value: "", label: "（未選択）" }];
+  const add = (value: string, label = value) => {
+    if (!opts.some((o) => o.value === value)) opts.push({ value, label }); // 同じ名前の子などで重ならないように
+  };
+  if (p.insured !== "本人" || livingBenefit) add("本人", p.insured === "本人" ? "本人（満期金・年金の受取）" : "本人");
+  if (hasSpouse && (p.insured !== "配偶者" || livingBenefit))
+    add("配偶者", p.insured === "配偶者" ? "配偶者（満期金・年金の受取）" : "配偶者");
+  kids.forEach((k, i) => {
+    // 学資保険で被保険者の子は、その子自身なので外す
+    if (p.insured === "子" && HAS.edu(t) && i === p.kid) return;
+    add(k.name.trim() || `子ども${i + 1}`);
+  });
+  if (kids.length >= 2) add("子ども全員（均等）");
+  add("法定相続人");
+  return opts;
+}
+
+// 受取人のプルダウン。「その他」を選んだら下に入力欄を出す
+function BeneficiaryField({
+  p,
+  kids,
+  onChange,
+}: {
+  p: Insurance;
+  kids: Kid[];
+  onChange: (patch: Partial<Insurance>) => void;
+}) {
+  const hasSpouse = usePlanStore((s) => !!s.plan.spouseBirth);
+  const opts = beneficiaryOptions(p, kids, hasSpouse);
+  // 「その他」を選んだがまだ何も入れていない（値が空）ときだけ、その状態をここで覚えておく
+  const [otherPicked, setOtherPicked] = useState(false);
+  const value = p.beneficiary;
+  // 既存の値が選択肢のどれかと一致すればそれを選択、一致しなければ「その他」＋入力欄にその文字（以前の自由入力との互換）
+  const selected = value === "" ? (otherPicked ? BENEFICIARY_OTHER : "") : opts.some((o) => o.value === value) ? value : BENEFICIARY_OTHER;
+
+  return (
+    <>
+      <SelectField
+        label="受取人（引き継ぎ書用）"
+        value={selected}
+        onChange={(v) => {
+          if (v === BENEFICIARY_OTHER) {
+            setOtherPicked(true);
+            if (selected !== BENEFICIARY_OTHER) onChange({ beneficiary: "" }); // 入力欄は空から書き始める
+          } else {
+            setOtherPicked(false);
+            onChange({ beneficiary: v });
+          }
+        }}
+        options={[...opts, { value: BENEFICIARY_OTHER, label: "その他（自分で入力）" }]}
+      />
+      {selected === BENEFICIARY_OTHER ? (
+        <TextField
+          label="受取人の名前・続柄"
+          value={value}
+          onChange={(v) => onChange({ beneficiary: v.trim() })}
+          placeholder="例：母、兄、〇〇さん"
+        />
+      ) : null}
+    </>
+  );
+}
 
 function Hint({ children, warn }: { children: React.ReactNode; warn?: boolean }) {
   return (
@@ -138,12 +214,7 @@ export function InsuranceCard({
             options={CONTRACTOR_OPTIONS}
           />
         </div>
-        <TextField
-          label="受取人（引き継ぎ書用）"
-          value={p.beneficiary}
-          onChange={(v) => onChange({ beneficiary: v })}
-          placeholder="例：妻、長男"
-        />
+        <BeneficiaryField p={p} kids={kids} onChange={onChange} />
 
         <SubHead>保険料</SubHead>
         <div className="grid grid-cols-2 gap-2">

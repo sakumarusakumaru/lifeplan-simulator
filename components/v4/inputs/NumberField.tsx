@@ -62,7 +62,7 @@ export function NumberField({
   return (
     <Field label={label} hint={hint} className={className}>
       <div
-        className="flex overflow-hidden bg-white focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#d55e00]"
+        className="flex overflow-hidden bg-white focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#cf7a4a]"
         style={{ border: "1.5px solid #0a0a0a", borderRadius: 8 }}
       >
         {manText ? (

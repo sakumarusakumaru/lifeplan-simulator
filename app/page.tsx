@@ -66,11 +66,11 @@ export default function LandingPage() {
         {/* 重要な注意事項 */}
         <div
           className="mb-6 overflow-hidden rounded-xl"
-          style={{ background: "#fff8e7", border: "2.5px solid #d55e00" }}
+          style={{ background: "#fff8e7", border: "2.5px solid #cf7a4a" }}
         >
           <div
             className="px-4 py-2.5"
-            style={{ background: "#d55e00" }}
+            style={{ background: "#cf7a4a" }}
           >
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white">
               ⚠ 重要 ／ ご利用前に必ずお読みください
@@ -79,7 +79,7 @@ export default function LandingPage() {
           <div className="px-5 py-4">
             <ul className="flex flex-col gap-2.5 text-[13px] leading-relaxed text-[#0a0a0a]/85">
               <li className="flex gap-2">
-                <span className="shrink-0 font-bold text-[#d55e00]">1.</span>
+                <span className="shrink-0 font-bold text-[#cf7a4a]">1.</span>
                 <span>
                   本サイトは
                   <span className="font-bold">個人が運営する情報提供のための計算ツール</span>
@@ -89,7 +89,7 @@ export default function LandingPage() {
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="shrink-0 font-bold text-[#d55e00]">2.</span>
+                <span className="shrink-0 font-bold text-[#cf7a4a]">2.</span>
                 <span>
                   入力されたデータは
                   <span className="font-bold">お使いのブラウザ内（localStorage）にのみ保存</span>
@@ -99,7 +99,7 @@ export default function LandingPage() {
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="shrink-0 font-bold text-[#d55e00]">3.</span>
+                <span className="shrink-0 font-bold text-[#cf7a4a]">3.</span>
                 <span>
                   計算結果は前提条件（インフレ率・運用利回り・税率・耐用年数等）下の
                   <span className="font-bold">概算</span>
@@ -108,7 +108,7 @@ export default function LandingPage() {
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="shrink-0 font-bold text-[#d55e00]">4.</span>
+                <span className="shrink-0 font-bold text-[#cf7a4a]">4.</span>
                 <span>
                   個別の商品選択・税務判断・契約に関わる意思決定は、必ず
                   <span className="font-bold">登録のある専門家（FP・税理士・社労士・弁護士等）</span>
@@ -116,7 +116,7 @@ export default function LandingPage() {
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="shrink-0 font-bold text-[#d55e00]">5.</span>
+                <span className="shrink-0 font-bold text-[#cf7a4a]">5.</span>
                 <span>
                   本サイトの利用により発生したいかなる損害（投資判断・税務判断・契約等を含む）についても、
                   <span className="font-bold">運営者は一切の責任を負いません</span>。
@@ -130,13 +130,13 @@ export default function LandingPage() {
             >
               <Link
                 href="/terms"
-                className="font-bold text-[#0a0a0a] underline hover:text-[#d55e00]"
+                className="font-bold text-[#0a0a0a] underline hover:text-[#cf7a4a]"
               >
                 → 利用規約を読む
               </Link>
               <Link
                 href="/privacy"
-                className="font-bold text-[#0a0a0a] underline hover:text-[#d55e00]"
+                className="font-bold text-[#0a0a0a] underline hover:text-[#cf7a4a]"
               >
                 → プライバシーポリシーを読む
               </Link>
@@ -149,14 +149,14 @@ export default function LandingPage() {
           className="flex cursor-pointer items-start gap-3 rounded-xl p-4"
           style={{
             background: agreed ? "#e9f2fa" : "#ffffff",
-            border: `2.5px solid ${agreed ? "#0072b2" : "#0a0a0a"}`,
+            border: `2.5px solid ${agreed ? "#4f86b8" : "#0a0a0a"}`,
           }}
         >
           <input
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#0072b2]"
+            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-[#4f86b8]"
           />
           <span className="flex-1 text-sm font-bold leading-snug text-[#0a0a0a]">
             上記すべての内容を理解し、同意して利用します
@@ -185,10 +185,10 @@ export default function LandingPage() {
         </button>
 
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
-          <Link href="/lite" className="font-bold text-[#d55e00] underline hover:text-[#0a0a0a]">
+          <Link href="/lite" className="font-bold text-[#cf7a4a] underline hover:text-[#0a0a0a]">
             → まずは3分で試す（Lite版）
           </Link>
-          <Link href="/guide" className="font-bold text-[#0a0a0a] underline hover:text-[#d55e00]">
+          <Link href="/guide" className="font-bold text-[#0a0a0a] underline hover:text-[#cf7a4a]">
             → 使い方ガイドを見る
           </Link>
         </div>

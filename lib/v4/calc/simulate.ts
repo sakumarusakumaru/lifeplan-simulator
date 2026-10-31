@@ -680,7 +680,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     // 家を買う予定の人は、買う年齢までは家賃、買ってからは固定資産税
     const buyAge = input.homeBuyAge ?? 0;
     const bought = buyAge > 0 && age >= buyAge;
-    const homeRent = bought ? 0 : input.rentM * 12 * infl;
+    // 買う前は家賃、買ったあとは管理費・修繕積立金（家を買う予定の人だけ）
+    const homeRent = bought ? (input.homeMgmtM ?? 0) * 12 * infl : input.rentM * 12 * infl;
     const homeTax = buyAge > 0 && !bought ? 0 : input.homeTaxY * infl;
     const home = homeRent + homeTax + homePay;
     // 保険料（亡くなった人が被保険者の保険は払い終わる。払込免除も insuranceYear の中で判定）

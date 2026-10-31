@@ -8,7 +8,7 @@ import { TextField } from "@/components/v4/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { LoanDetailFields } from "@/components/v4/LoanDetailFields";
-import { LoanPartsEditor } from "@/components/v4/LoanPartsEditor";
+import { LoanPartsEditor, mixParts } from "@/components/v4/LoanPartsEditor";
 import { loanTotals } from "@/lib/v4/calc/homeLoan";
 import { Section } from "@/components/v4/Section";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
@@ -109,9 +109,9 @@ function AccountBox({
 }) {
   const c =
     tone === "green"
-      ? { border: "#0072b240", bg: "#e9f2fa", fg: "#0072b2" }
+      ? { border: "#4f86b840", bg: "#e9f2fa", fg: "#4f86b8" }
       : tone === "blue"
-        ? { border: "#0072b240", bg: "#eef6fc", fg: "#0072b2" }
+        ? { border: "#4f86b840", bg: "#eef6fc", fg: "#4f86b8" }
         : { border: "#0a0a0a30", bg: "#f0f0ee", fg: "#0a0a0ab3" };
   return (
     <div className="overflow-hidden" style={INNER}>
@@ -134,14 +134,14 @@ function Meter({ label, used, max }: { label: string; used: number; max: number 
     <div className="flex flex-col gap-1">
       <div className="flex justify-between text-[10px] font-bold text-[#0a0a0a]/70">
         <span>{label}</span>
-        <span className="tabular-nums" style={{ color: over ? "#d55e00" : undefined }}>
+        <span className="tabular-nums" style={{ color: over ? "#cf7a4a" : undefined }}>
           {fmtMan(used)} / {fmtMan(max)}
         </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "#0a0a0a15" }}>
         <div
           className="h-full rounded-full"
-          style={{ width: `${pct}%`, background: over ? "#d55e00" : "#0072b2" }}
+          style={{ width: `${pct}%`, background: over ? "#cf7a4a" : "#4f86b8" }}
         />
       </div>
     </div>
@@ -152,7 +152,7 @@ function Note({ children, warn }: { children: React.ReactNode; warn?: boolean })
   return (
     <p
       className="text-[10px] leading-relaxed"
-      style={{ color: warn ? "#d55e00" : "#0a0a0a8c", fontWeight: warn ? 700 : 400 }}
+      style={{ color: warn ? "#cf7a4a" : "#0a0a0a8c", fontWeight: warn ? 700 : 400 }}
     >
       {children}
     </p>
@@ -495,7 +495,7 @@ export function AssetsMegaSection() {
             </div>
             <div
               className="rounded-md px-2.5 py-1.5 text-[10px] leading-relaxed"
-              style={{ background: dcOver ? "#fdf0e7" : "#f0f0ee", color: dcOver ? "#d55e00" : "#0a0a0ab3" }}
+              style={{ background: dcOver ? "#fdf0e7" : "#f0f0ee", color: dcOver ? "#cf7a4a" : "#0a0a0ab3" }}
             >
               上限（2027年〜）: {dcLimitNew.note}
               {dcLimitNew.note !== dcLimitNow.note ? <><br />2026年11月掛金分まで: {dcLimitNow.note}</> : null}
@@ -692,13 +692,13 @@ export function AssetsMegaSection() {
                     {/* 推定評価額表示 + 手動上書き */}
                     <div
                       className="rounded-lg p-2"
-                      style={{ background: useOverride ? "#fff8e7" : "#e9f2fa", border: `1.5px solid ${useOverride ? "#e69f00" : "#0072b2"}40` }}
+                      style={{ background: useOverride ? "#fff8e7" : "#e9f2fa", border: `1.5px solid ${useOverride ? "#d4a24c" : "#4f86b8"}40` }}
                     >
                       <div className="mb-1.5 flex items-baseline justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: useOverride ? "#8a5a00" : "#0072b2" }}>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: useOverride ? "#9a7430" : "#4f86b8" }}>
                           {useOverride ? "現在評価額（手動指定）" : "推定現在評価額"}
                         </span>
-                        <span className="text-sm font-bold tabular-nums" style={{ color: useOverride ? "#8a5a00" : "#0072b2" }}>
+                        <span className="text-sm font-bold tabular-nums" style={{ color: useOverride ? "#9a7430" : "#4f86b8" }}>
                           {fmtMan(estimatedValue)}
                         </span>
                       </div>
@@ -779,23 +779,16 @@ export function AssetsMegaSection() {
                             hint="運用開始年齢"
                           />
                         </div>
-                        {r.bal > 0 ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateRe(i, {
-                                loanParts: [{
-                                  label: "ローン1", bal: r.bal, years: r.term, rate: r.rate,
-                                  rateType: r.loanRateType ?? "variable", fixedUntilAge: r.loanFixedUntilAge, rateAfter: r.loanRateAfter,
-                                  method: r.loanMethod ?? "annuity", rule5y: r.loanRule5y ?? true,
-                                }],
-                              })
-                            }
-                            className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#d55e00]"
-                          >
-                            固定と変動のミックスローンにする（2本以上に分ける）
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const parts = mixParts(r.bal, r.term || 30, r.rate || 1.5);
+                            updateRe(i, { loanParts: parts, ...reLoanTotals(parts) });
+                          }}
+                          className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#cf7a4a]"
+                        >
+                          固定と変動のミックスローンにする（合計を2本に分けて、割合はスライダーで）
+                        </button>
                       </>
                     )}
                     {r.bal > 0 && !r.loanParts?.length ? (

@@ -127,7 +127,7 @@ export function HeaderMenu({
         {realValue || mcOn ? (
           <span
             className="h-1.5 w-1.5 rounded-full"
-            style={{ background: "#0072b2" }}
+            style={{ background: "#4f86b8" }}
             aria-label="表示設定を変更中"
             title={
               [mcOn ? "振れ幅" : null, realValue ? "今の価値" : null]
@@ -156,7 +156,7 @@ export function HeaderMenu({
             value={mcOn}
             options={["固定", "振れ幅"]}
             onChange={setMcOn}
-            activeColor="#0072b2"
+            activeColor="#4f86b8"
           />
           <Seg
             label="金額の表示"
@@ -253,13 +253,13 @@ export function HeaderMenu({
           <button
             type="button"
             role="menuitem"
-            className={`${item} text-[#d55e00] hover:bg-[#fdf0e7]`}
+            className={`${item} text-[#cf7a4a] hover:bg-[#fdf0e7]`}
             onClick={run(onReset)}
           >
             <span aria-hidden>⟲</span>
             <span className="flex flex-col">
               <span className="font-bold">入力をすべて消す</span>
-              <span className="text-[10px] text-[#d55e00]/70">
+              <span className="text-[10px] text-[#cf7a4a]/70">
                 確認のあと、はじめの状態に戻ります（取り消し不可）
               </span>
             </span>

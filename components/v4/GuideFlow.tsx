@@ -13,8 +13,8 @@ const GUIDE_KEY = "lp_guide_v4";
 const CONSENT_KEY = "lp_consent_v1";
 
 const INK = "#0a0a0a";
-const RED = "#d55e00";
-const GREEN = "#0072b2";
+const RED = "#cf7a4a";
+const GREEN = "#4f86b8";
 const CREAM = "#f0f0ee";
 
 const STEPS = [
@@ -87,7 +87,7 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#d55e00]"
+        className="w-full accent-[#cf7a4a]"
       />
     </label>
   );
@@ -168,7 +168,7 @@ function StepHello() {
                   type="checkbox"
                   checked={!!checked[p.key]}
                   onChange={(e) => setChecked((c) => ({ ...c, [p.key]: e.target.checked }))}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-[#0072b2]"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[#4f86b8]"
                 />
                 <span className="flex flex-col">
                   <span className="text-[12px] font-bold text-[#0a0a0a]">{p.label}</span>
@@ -243,7 +243,7 @@ function StepHow() {
               <text x={x(65) + 3} y={11} fontSize={12} fill="#0a0a0a99" fontWeight={700}>65歳 退職</text>
             </>
           ) : null}
-          <path d={area} fill={short ? "#d55e0022" : "#0072b222"} />
+          <path d={area} fill={short ? "#cf7a4a22" : "#4f86b822"} />
           <path d={line} fill="none" stroke={short ? RED : GREEN} strokeWidth={2.5} />
           {short ? <circle cx={x(short.age)} cy={y(0)} r={4} fill={RED} /> : null}
           <text x={0} y={H + 14} fontSize={12} fill="#0a0a0a99" fontWeight={700}>{age}歳</text>
@@ -341,7 +341,7 @@ function StepInput() {
             <dd className="text-[13px] leading-relaxed text-[#0a0a0a]/80">{t.where}</dd>
           </div>
           <div className="rounded-lg px-3 py-2" style={{ background: "#fff8e7" }}>
-            <dt className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#8a5a00" }}>コツ</dt>
+            <dt className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#9a7430" }}>コツ</dt>
             <dd className="text-[12px] leading-relaxed text-[#0a0a0a]/80">{t.tip}</dd>
           </div>
         </dl>
@@ -426,7 +426,7 @@ function StepAccount() {
             </p>
           </div>
           <div className="rounded-lg px-3 py-2" style={{ background: "#f3f4f6" }}>
-            <p className="text-[11px] font-bold text-[#64748b]">特定口座</p>
+            <p className="text-[11px] font-bold text-[#7d93ab]">特定口座</p>
             <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
               いくらでも買える。売ったときの利益に20.315%（所得税15.315%＋住民税5%）。「源泉徴収あり」なら証券会社が税を払うので確定申告はいらない。
             </p>
@@ -454,7 +454,7 @@ function StepAccount() {
               color: GREEN,
               note: c.tokuIn > 0 ? `新NISA ${man(c.nisa)}（非課税）＋特定口座 ${man(c.toku)}（税 −${man(c.tokuTax)}）` : `運用益 ${man(gain)} に税金はかからない`,
             },
-            { label: "全部を特定口座で積み立てる", value: c.allNet, color: "#64748b", note: `運用益 ${man(gain)} に20.315%（税 −${man(c.allTax)}）` },
+            { label: "全部を特定口座で積み立てる", value: c.allNet, color: "#7d93ab", note: `運用益 ${man(gain)} に20.315%（税 −${man(c.allTax)}）` },
           ].map((b) => (
             <div key={b.label}>
               <div className="mb-0.5 flex items-baseline justify-between text-[11px] font-bold">
@@ -568,15 +568,15 @@ function StepResult() {
         </div>
         <div className="mt-2 rounded-lg bg-white p-2.5" style={{ border: `2px solid ${INK}20` }}>
           <svg viewBox="0 0 300 80" className="h-28 w-full" preserveAspectRatio="none" aria-hidden>
-            <path d="M0,70 L40,62 L80,50 L120,38 L160,28 L200,26 L240,34 L300,46 L300,80 L0,80Z" fill="#94a3b8" />
+            <path d="M0,70 L40,62 L80,50 L120,38 L160,28 L200,26 L240,34 L300,46 L300,80 L0,80Z" fill="#a3b8cc" />
             <path d="M0,74 L40,70 L80,64 L120,58 L160,52 L200,54 L240,60 L300,66 L300,80 L0,80Z" fill={GREEN} opacity={0.75} />
-            <path d="M0,76 L40,74 L80,72 L120,70 L160,68 L200,70 L240,73 L300,75 L300,80 L0,80Z" fill="#64748b" />
+            <path d="M0,76 L40,74 L80,72 L120,70 L160,68 L200,70 L240,73 L300,75 L300,80 L0,80Z" fill="#7d93ab" />
             <path d="M0,72 L40,60 L80,46 L120,33 L160,22 L200,22 L240,30 L300,42" fill="none" stroke={RED} strokeWidth={2} />
           </svg>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="rounded-lg px-2.5 py-2 text-[10px]" style={{ background: "#fff8e7", border: "1.5px solid #e69f0060" }}>
-            <b style={{ color: "#8a5a00" }}>制度チェック</b>
+          <div className="rounded-lg px-2.5 py-2 text-[10px]" style={{ background: "#fff8e7", border: "1.5px solid #d4a24c60" }}>
+            <b style={{ color: "#9a7430" }}>制度チェック</b>
             <p className="text-[#0a0a0a]/60">● NISA生涯枠に56歳で到達…</p>
           </div>
           <div className="rounded-lg bg-white px-2.5 py-2 text-[10px]" style={{ border: `1.5px solid ${INK}20` }}>
@@ -633,8 +633,8 @@ function StepStart({ onStart }: { onStart: () => void }) {
           <li>5. 本サイトの利用で生じた損害について、運営者は責任を負いません。</li>
         </ul>
         <div className="flex gap-4 border-t px-4 py-2 text-[11px]" style={{ borderColor: "#0a0a0a20" }}>
-          <Link href="/terms" className="font-bold underline hover:text-[#d55e00]">→ 利用規約</Link>
-          <Link href="/privacy" className="font-bold underline hover:text-[#d55e00]">→ プライバシーポリシー</Link>
+          <Link href="/terms" className="font-bold underline hover:text-[#cf7a4a]">→ 利用規約</Link>
+          <Link href="/privacy" className="font-bold underline hover:text-[#cf7a4a]">→ プライバシーポリシー</Link>
         </div>
       </div>
       <label
@@ -645,7 +645,7 @@ function StepStart({ onStart }: { onStart: () => void }) {
           type="checkbox"
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
-          className="mt-0.5 h-5 w-5 shrink-0 accent-[#0072b2]"
+          className="mt-0.5 h-5 w-5 shrink-0 accent-[#4f86b8]"
         />
         <span className="text-sm font-bold leading-snug text-[#0a0a0a]">上記の内容を理解し、同意して利用します</span>
       </label>
@@ -759,7 +759,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             <button
               type="button"
               onClick={() => (window.history.length > 1 ? router.back() : router.push(`${base}/detail`))}
-              className="text-[11px] font-bold text-[#0a0a0a] underline hover:text-[#d55e00]"
+              className="text-[11px] font-bold text-[#0a0a0a] underline hover:text-[#cf7a4a]"
             >
               ← シミュレーターに戻る
             </button>
@@ -767,7 +767,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             <button
               type="button"
               onClick={() => setStep(lastIdx)}
-              className="text-[11px] font-bold text-[#0a0a0a]/55 underline hover:text-[#d55e00]"
+              className="text-[11px] font-bold text-[#0a0a0a]/55 underline hover:text-[#cf7a4a]"
             >
               スキップ
             </button>

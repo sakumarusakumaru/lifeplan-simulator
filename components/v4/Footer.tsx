@@ -15,9 +15,9 @@ export function Footer() {
         {/* 重要な免責 */}
         <div
           className="flex flex-col gap-1.5 rounded-lg px-3 py-2.5"
-          style={{ background: "#fff8e7", border: "1.5px solid #d55e0040" }}
+          style={{ background: "#fff8e7", border: "1.5px solid #cf7a4a40" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d55e00]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#cf7a4a]">
             免責事項 ／ DISCLAIMER
           </p>
           <p className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
@@ -33,14 +33,14 @@ export function Footer() {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1">
           <Link
             href="/terms"
-            className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/65 hover:text-[#d55e00]"
+            className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/65 hover:text-[#cf7a4a]"
           >
             利用規約
           </Link>
           <span className="text-[#0a0a0a]/25">·</span>
           <Link
             href="/privacy"
-            className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/65 hover:text-[#d55e00]"
+            className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/65 hover:text-[#cf7a4a]"
           >
             プライバシーポリシー
           </Link>

@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
 import { useVBase } from "@/components/v4/useVBase";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
+import { CARD } from "@/components/v4/frame";
+import { YearTable } from "@/components/v4/YearTable";
 import { generateLifeEvents } from "@/lib/v4/calc/generateLifeEvents";
 import type { YearlyResult } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
@@ -22,10 +24,42 @@ const yenToOkuMan = (yen: number): string => {
 export function ResultsPanel() {
   const plan = usePlanStore((s) => s.plan);
   const result = useSimResult(plan);
-  const [showTable, setShowTable] = useState(false);
+  const jp = useVBase() === "/v5";
+  // ver5 は frame.ts のルールで「結果の本体（表）ははじめから開く」。ver4 は従来どおり閉じて始める
+  const [showTable, setShowTable] = useState(jp);
 
   const lifeEvents = useMemo(() => generateLifeEvents(plan), [plan]);
 
+  if (jp) {
+    // ver5: 年次サマリーは収支・運用・残高に絞った表（YearTable）。カードの枠・開閉は frame.ts の型
+    return (
+      <div className="flex flex-col gap-4">
+        <AssetsChart rows={result.rows} lifeEvents={lifeEvents} />
+        <CashflowChart rows={result.rows} lifeEvents={lifeEvents} />
+        <div style={CARD}>
+          <button
+            type="button"
+            onClick={() => setShowTable((v) => !v)}
+            aria-expanded={showTable}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          >
+            <span className="flex flex-col">
+              <span className="text-[13px] font-bold text-[#0a0a0a]">年次サマリー</span>
+              <span className="text-[11px] text-[#0a0a0a]/55">{result.rows.length}年分の収支・運用・残高</span>
+            </span>
+            <span className="shrink-0 text-[11px] font-bold text-[#0a0a0a]/55" aria-hidden>
+              {showTable ? "閉じる ▾" : "開く ▸"}
+            </span>
+          </button>
+          {showTable ? (
+            <YearTable rows={result.rows} plan={plan} lifeEvents={lifeEvents} shortfallAge={result.shortfallAge} />
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  // ver4（凍結中の版）: 従来の表のまま
   return (
     <div className="flex flex-col gap-4">
       <AssetsChart rows={result.rows} lifeEvents={lifeEvents} />
@@ -104,8 +138,9 @@ export function ResultsPanel() {
   );
 }
 
+// ver4 の年次サマリー（ver5 は YearTable.tsx）
 function YearlyTable({ rows }: { rows: YearlyResult[] }) {
-  const jp = useVBase() === "/v5"; // ver5 は「金融純資産」
+  const jp = useVBase() === "/v5"; // ver5 は「金融純資産」（いまは ver4 だけが使う）
   // デザイントークン（サイト統一）
   const BG_H1  = "#0a0a0a";
   const BG_INC = "#2a2a2a";
@@ -162,9 +197,9 @@ function YearlyTable({ rows }: { rows: YearlyResult[] }) {
           {rows.map((r, i) => {
             const otherInc = r.inherit;
             const otherExp = r.lifeExp + r.otherLoanPay;
-            const cfColor  = r.cf < 0 ? "#d55e00" : "#0072b2";
+            const cfColor  = r.cf < 0 ? "#cf7a4a" : "#4f86b8";
             const cfSign   = r.cf < 0 ? "−" : "+";
-            const nwColor  = r.nw < 0 ? "#d55e00" : "#0a0a0a";
+            const nwColor  = r.nw < 0 ? "#cf7a4a" : "#0a0a0a";
             const rowBg    = i % 2 === 0 ? "#f8f8f6" : "#ffffff";
             const bt       = i === 0 ? "none" : SEP;
             return (

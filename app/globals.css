@@ -15,15 +15,15 @@
   --bb-orange: #ffaa55;
   --bb-border-w: 2.5px;
   --bb-radius: 12px;
-  /* ver5.17〜 強調のベタ色（黒のベタをやめた）。選択中のタブ・主なボタン・結論の箱に使う */
-  --lp-primary: #2b4a6f;
-  --lp-primary-dark: #1f3752;
-  --lp-primary-soft: #e8eef5;
+  /* ver5.17〜 強調のベタ色（黒のベタをやめた）。ver5.19 でパステル寄りのくすんだ青に。選択中のタブ・主なボタン・結論の箱に使う */
+  --lp-primary: #557593;
+  --lp-primary-dark: #45617b;
+  --lp-primary-soft: #e7eef4;
   /* 状態の色（色覚に配慮: 赤と緑の組み合わせを使わない）。良い＝青、足りない・警告＝朱、注意＝橙、補足＝空色 */
-  --lp-ok: #0072b2;
-  --lp-ng: #d55e00;
-  --lp-warn: #e69f00;
-  --lp-info: #56b4e9;
+  --lp-ok: #4f86b8;
+  --lp-ng: #cf7a4a;
+  --lp-warn: #d4a24c;
+  --lp-info: #8fc1e0;
 }
 
 @theme inline {

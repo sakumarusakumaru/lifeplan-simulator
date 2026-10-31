@@ -385,6 +385,7 @@ export interface PlanInput {
   rentM: number;
   // 家を買う予定の年齢（未設定・0なら今の住まいのまま）。この年齢から家賃が止まり、固定資産税がかかる
   homeBuyAge?: number;
+  homeMgmtM?: number;            // 家を買ったあとの管理費・修繕積立金（月）。買う予定の人だけ使う（買う前は rentM＝家賃）
   homeTaxY: number;
   useHomeLoan: boolean;
   // 住宅ローンの合計（hlParts があるときは、その合計・平均で自動で入れる。ほかの画面の表示用）

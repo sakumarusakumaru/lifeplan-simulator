@@ -43,7 +43,7 @@ export function ConsentDialog() {
         className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6"
         style={{ border: "1.5px solid #0a0a0a", boxShadow: "0 16px 48px rgba(0,0,0,0.25)" }}
       >
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#d55e00]">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#cf7a4a]">
           重要 ／ ご利用にあたって
         </p>
         <h2
@@ -87,13 +87,13 @@ export function ConsentDialog() {
 
         <label
           className="mb-4 flex cursor-pointer items-start gap-2.5 rounded-lg p-3"
-          style={{ background: agreed ? "#e9f2fa" : "#f0f0ee", border: `2px solid ${agreed ? "#0072b2" : "#0a0a0a30"}` }}
+          style={{ background: agreed ? "#e9f2fa" : "#f0f0ee", border: `2px solid ${agreed ? "#4f86b8" : "#0a0a0a30"}` }}
         >
           <input
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#0072b2]"
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#4f86b8]"
           />
           <span className="text-xs font-bold leading-snug text-[#0a0a0a]">
             上記すべての内容を理解し、同意して利用します
@@ -106,9 +106,9 @@ export function ConsentDialog() {
           disabled={!agreed}
           className="w-full py-3 text-xs font-bold transition-all"
           style={{
-            background: agreed ? "var(--lp-primary)" : "#9ca3af",
+            background: agreed ? "var(--lp-primary)" : "#cfd3d8",
             color: "#ffffff",
-            border: `2.5px solid ${agreed ? "#0a0a0a" : "#9ca3af"}`,
+            border: `2.5px solid ${agreed ? "#0a0a0a" : "#cfd3d8"}`,
             borderRadius: 10,
             cursor: agreed ? "pointer" : "not-allowed",
             opacity: agreed ? 1 : 0.6,

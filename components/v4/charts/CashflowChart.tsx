@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState, useMemo } from "react";
 
-import { niceDomain, useLaggedDomain } from "@/components/v4/charts/useLaggedDomain";
+import { niceDomain, useAnimatedChart } from "@/components/v4/charts/useLaggedDomain";
 import { CARD, INNER } from "@/components/v4/frame";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import {
@@ -42,18 +42,18 @@ const axisFmt = (yen: number): string => {
 
 // 通常色
 const FILLS = {
-  income: "#334155",
-  expense: "#9ca3af",
-  invest: "#93c5fd",
-  cf: "#d55e00",
+  income: "#5f7690",
+  expense: "#cfd3d8",
+  invest: "#b3d3ec",
+  cf: "#cf7a4a",
 };
 
 // ホバー時のハイライト色（色相を明確に分離して取り違えを防止）
 const FILLS_HOVER = {
-  income: "#0f172a",  // 収入: 極暗スレート（冷たい青灰）
-  expense: "#9a3412", // 支出: 暖色オレンジ赤（収入の冷色と明確に区別）
+  income: "#4a5f78",  // 収入: 極暗スレート（冷たい青灰）
+  expense: "#b7835f", // 支出: 暖色オレンジ赤（収入の冷色と明確に区別）
   invest: "#1d6fa8",  // 投資積立: 青
-  cf: "#d55e00",
+  cf: "#cf7a4a",
 };
 
 const KEYS: ("収入" | "支出" | "投資積立")[] = ["収入", "支出", "投資積立"];
@@ -100,11 +100,11 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
     });
     return { data, cap, over: data.filter((d) => d.超過) };
   }, [rows]);
-  const data = capped.data;
+  const rawData = capped.data;
   const target = useMemo(() => {
     let lo = 0;
     let hi = 0;
-    for (const d of data) {
+    for (const d of rawData) {
       hi = Math.max(hi, d.収入, d.収支);
       lo = Math.min(lo, d.支出 + d.投資積立, d.収支);
     }
@@ -113,8 +113,9 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
       lo = Math.max(lo, -capped.cap);
     }
     return niceDomain(lo, hi);
-  }, [data, capped.cap]);
-  const domain = useLaggedDomain(target);
+  }, [rawData, capped.cap]);
+  // 線・棒が先に動き、そのあと目盛りと一緒に伸び縮みする
+  const { data, domain, ticks } = useAnimatedChart(rawData, target);
 
   const getFill = (key: "収入" | "支出" | "投資積立"): string => {
     const k = KEY_TO_FILL[key];
@@ -162,6 +163,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               axisLine={{ stroke: "#0a0a0a", strokeWidth: 2 }}
               width={58}
               domain={domain}
+              ticks={ticks}
               allowDataOverflow
             />
 
@@ -217,8 +219,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                       const isHovered = hoveredKey === key;
                       const valueColor = isCF
                         ? cf < 0
-                          ? "#d55e00"
-                          : "#0072b2"
+                          ? "#cf7a4a"
+                          : "#4f86b8"
                         : "#0a0a0a";
                       return (
                         <div
@@ -278,7 +280,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                         borderTop: "1.5px dashed #0a0a0a20",
                         fontSize: 10,
                         fontWeight: 700,
-                        color: cf < 0 ? "#d55e00" : "#0072b2",
+                        color: cf < 0 ? "#cf7a4a" : "#4f86b8",
                       }}
                     >
                       {cf < 0
@@ -296,6 +298,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
 
             {KEYS.map((key) => (
               <Bar
+                isAnimationActive={false}
                 key={key}
                 dataKey={key}
                 stackId="bb-cf"
@@ -307,6 +310,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
             ))}
 
             <Line
+              isAnimationActive={false}
               type="linear"
               dataKey="収支"
               stroke={FILLS.cf}
@@ -319,7 +323,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               <ReferenceLine
                 key={`${ev.age}-${ev.label}`}
                 x={ev.age}
-                stroke="#d55e00"
+                stroke="#cf7a4a"
                 strokeWidth={1.5}
                 strokeDasharray="4 3"
                 label={(props: { viewBox?: { x: number; y: number } }) => {
@@ -328,7 +332,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                   const staggerY = (idx % 3) * 18;
                   return (
                     <g>
-                      <circle cx={x} cy={y + staggerY + 9} r={7} fill="#d55e00" />
+                      <circle cx={x} cy={y + staggerY + 9} r={7} fill="#cf7a4a" />
                       <text
                         x={x}
                         y={y + staggerY + 9}
@@ -355,7 +359,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
             <div key={`leg-${ev.age}-${idx}`} className="flex items-center gap-1.5">
               <span
                 className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ background: "#d55e00" }}
+                style={{ background: "#cf7a4a" }}
               >
                 {idx + 1}
               </span>

@@ -243,7 +243,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-3 px-4 py-2 sm:px-8">
           <Link
             href="/"
-            className="shrink-0 text-sm font-bold uppercase tracking-[0.18em] text-[#0a0a0a] transition-colors hover:text-[#d55e00]"
+            className="shrink-0 text-sm font-bold uppercase tracking-[0.18em] text-[#0a0a0a] transition-colors hover:text-[#cf7a4a]"
           >
             LIFE PLAN<span className="hidden lg:inline"> SIMULATOR</span>{" "}
             <span
@@ -348,11 +348,11 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
           className="lp-banner px-4 py-1.5 text-[11px] leading-relaxed sm:px-8"
           style={{
             background: "#eef6fc",
-            borderBottom: "1.5px solid #0072b240",
+            borderBottom: "1.5px solid #4f86b840",
             color: "#0a0a0a",
           }}
         >
-          <span className="font-bold" style={{ color: "#0072b2" }}>
+          <span className="font-bold" style={{ color: "#4f86b8" }}>
             今のお金の価値で表示中
           </span>
           ：将来の金額を物価上昇率（年{plan.infl.toFixed(1)}

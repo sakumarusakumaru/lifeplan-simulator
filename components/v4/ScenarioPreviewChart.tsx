@@ -15,8 +15,8 @@ import { useVBase } from "@/components/v4/useVBase";
 import type { SimulationSummary } from "@/lib/v4/calc/types";
 
 const INK = "#0a0a0a";
-const GREEN = "#0072b2";
-const RED = "#d55e00";
+const GREEN = "#4f86b8";
+const RED = "#cf7a4a";
 
 const axisFmt = (yen: number) =>
   Math.abs(yen) >= 100_000_000 ? `${(yen / 100_000_000).toFixed(1)}億` : `${Math.round(yen / 10000)}万`;
@@ -140,7 +140,7 @@ export function ScenarioPreviewChart({
                     <p className="mb-0.5 font-bold">{label}歳</p>
                     <p className="flex items-center justify-between gap-3">
                       <span className="flex items-center gap-1">
-                        <span className="inline-block h-0 w-3 border-t-2 border-dashed" style={{ borderColor: "#94a3b8" }} />
+                        <span className="inline-block h-0 w-3 border-t-2 border-dashed" style={{ borderColor: "#a3b8cc" }} />
                         {dashedLabel}
                       </span>
                       <span className="font-bold tabular-nums">{fmtMan(row.いま)}</span>
@@ -168,7 +168,7 @@ export function ScenarioPreviewChart({
             {crashAges.map((a) => (
               <ReferenceLine key={a} x={a} stroke={RED} strokeOpacity={0.35} strokeDasharray="2 3" />
             ))}
-            <Line type="monotone" dataKey="いま" stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+            <Line type="monotone" dataKey="いま" stroke="#a3b8cc" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
             <Line
               type="monotone"
               dataKey="試算"
@@ -184,7 +184,7 @@ export function ScenarioPreviewChart({
       </div>
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-[#0a0a0a]/60">
         <span className="flex items-center gap-1">
-          <span className="inline-block h-0 w-4 border-t-2 border-dashed" style={{ borderColor: "#94a3b8" }} />
+          <span className="inline-block h-0 w-4 border-t-2 border-dashed" style={{ borderColor: "#a3b8cc" }} />
           {envOn ? "通常の環境" : "いまのプラン"}
         </span>
         <span className="flex items-center gap-1">

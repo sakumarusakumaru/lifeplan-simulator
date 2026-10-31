@@ -31,8 +31,8 @@ import { useSimResult } from "@/store/v4/useSimResult";
 import { useUiStore } from "@/store/v4/ui-store";
 
 const INK = "#0a0a0a";
-const RED = "#d55e00";
-const GREEN = "#0072b2";
+const RED = "#cf7a4a";
+const GREEN = "#4f86b8";
 
 const man = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
@@ -161,7 +161,7 @@ export default function RiskPage() {
         <Link
               href="/v4/handover"
               className="mb-6 flex items-center gap-3 rounded-xl px-4 py-4 transition-colors hover:bg-[#f6fff8]"
-              style={{ background: "#ffffff", border: "2.5px solid #0072b2" }}
+              style={{ background: "#ffffff", border: "2.5px solid #4f86b8" }}
             >
               <span className="text-2xl" aria-hidden>✉</span>
               <span className="flex flex-1 flex-col">
@@ -193,7 +193,7 @@ export default function RiskPage() {
                 max={Math.max(plan.curAge, Math.min(plan.endAge - 1, 85))}
                 value={deathAge}
                 onChange={(e) => update({ deathAge: Number(e.target.value) })}
-                className="w-full accent-[#d55e00]"
+                className="w-full accent-[#cf7a4a]"
               />
               <span className="text-[10px] text-[#0a0a0a]/50">FPは「今亡くなったら」を基準に考えるのが一般的</span>
             </label>
@@ -282,7 +282,7 @@ export default function RiskPage() {
                     : `この金額の保険金が${deathAge}歳で入れば、遺族が${plan.endAge}歳（本人の年齢換算）まで資金ショートしない計算です。`}
                 </p>
                 {base.shortfallAge !== null ? (
-                  <p className="mt-2 text-[11px] font-bold leading-relaxed text-[#8a5a00]">
+                  <p className="mt-2 text-[11px] font-bold leading-relaxed text-[#9a7430]">
                     ※ 亡くならなくても{base.shortfallAge}歳で資金ショートするプランです。必要保障額にはその不足分も含まれるため大きめに出ます。先に「レポート」でプランを見直すのがおすすめです。
                   </p>
                 ) : null}
@@ -380,7 +380,7 @@ export default function RiskPage() {
                       />
                       <ReferenceLine y={0} stroke={INK} />
                       <ReferenceLine x={deathAge} stroke={RED} strokeDasharray="4 3" label={{ value: "死亡", fill: RED, fontSize: 10, position: "top" }} />
-                      <Line type="monotone" dataKey="いまのプラン" stroke="#94a3b8" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="いまのプラン" stroke="#a3b8cc" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="亡くなった場合" stroke={RED} strokeWidth={2.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -413,8 +413,8 @@ export default function RiskPage() {
             </Section>
 
             <div className="flex flex-wrap justify-between gap-2 text-[12px] font-bold">
-              <Link href="/v4/suggest" className="underline hover:text-[#d55e00]">← 比較</Link>
-              <Link href="/v4/detail" className="underline hover:text-[#d55e00]">入力を修正する →</Link>
+              <Link href="/v4/suggest" className="underline hover:text-[#cf7a4a]">← 比較</Link>
+              <Link href="/v4/detail" className="underline hover:text-[#cf7a4a]">入力を修正する →</Link>
             </div>
           </div>
         </div>

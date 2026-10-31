@@ -2,7 +2,7 @@
 
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { niceDomain, useLaggedDomain } from "@/components/v4/charts/useLaggedDomain";
+import { niceDomain, useAnimatedChart } from "@/components/v4/charts/useLaggedDomain";
 
 import { GREEN, INK, RED, man } from "./controls";
 
@@ -18,13 +18,14 @@ export function LiteChart({
 }) {
   const min = Math.min(0, ...data.map((d) => d.fin));
   const max = Math.max(0, ...data.map((d) => d.fin));
-  const domain = useLaggedDomain(niceDomain(min, max)); // 縦軸は一拍おいて動かす
+  // 線が先に動き、そのあと目盛りと一緒に伸び縮みする
+  const { data: shown, domain, ticks } = useAnimatedChart(data, niceDomain(min, max));
   // 0の位置でグラデーションの色を切り替える（プラスは緑、マイナスは赤）
   const zero = max - min > 0 ? max / (max - min) : 1;
   return (
     <div className="h-56 w-full sm:h-64">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 16, right: 8, bottom: 0, left: 0 }}>
+        <AreaChart data={shown} margin={{ top: 16, right: 8, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="liteFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset={0} stopColor={GREEN} stopOpacity={0.55} />
@@ -43,6 +44,7 @@ export function LiteChart({
             tick={{ fontSize: 10 }}
             width={52}
             domain={domain}
+            ticks={ticks}
             allowDataOverflow
             tickFormatter={(v: number) => (Math.abs(v) >= 1e8 ? `${(v / 1e8).toFixed(1)}億` : `${Math.round(v / 1e4).toLocaleString()}万`)}
           />

@@ -12,8 +12,8 @@ import type { InheritSettings, PlanInput, SimulationSummary } from "@/lib/v4/cal
 import { usePlanStore } from "@/store/v4/plan-store";
 
 const INK = "#0a0a0a";
-const RED = "#d55e00";
-const GREEN = "#0072b2";
+const RED = "#cf7a4a";
+const GREEN = "#4f86b8";
 
 const man = (yen: number) => {
   const sign = yen < 0 ? "-" : "";

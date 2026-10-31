@@ -69,7 +69,7 @@ export function InputProgress({
       </h1>
       {base === "/v5" && mode === "input" ? (
         <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/75">
-          必須は<strong className="text-[#d55e00]">本人の生年月日</strong>。判定には<strong className="text-[#d55e00]">毎月の生活費</strong>も要ります。ほかの金額は、空欄なら0円として計算します。
+          必須は<strong className="text-[#cf7a4a]">本人の生年月日</strong>。判定には<strong className="text-[#cf7a4a]">毎月の生活費</strong>も要ります。ほかの金額は、空欄なら0円として計算します。
           入れるたびに<span className="hidden lg:inline">右</span><span className="lg:hidden">下</span>の試算が動きます。
         </p>
       ) : (
@@ -92,13 +92,13 @@ export function InputProgress({
                 style={{
                   background: ok ? "#e9f2fa" : isCur ? "var(--lp-primary)" : "#f0f0ee",
                   color: isCur && !ok ? "#ffffff" : "#0a0a0a",
-                  border: `2px solid ${ok ? "#0072b2" : "#0a0a0a"}`,
+                  border: `2px solid ${ok ? "#4f86b8" : "#0a0a0a"}`,
                 }}
               >
                 <span
                   className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
                   style={{
-                    background: ok ? "#0072b2" : isCur ? "#ffffff" : "var(--lp-primary)",
+                    background: ok ? "#4f86b8" : isCur ? "#ffffff" : "var(--lp-primary)",
                     color: ok ? "#ffffff" : isCur ? "#0a0a0a" : "#ffffff",
                   }}
                 >
@@ -121,10 +121,10 @@ export function InputProgress({
             入力を続ける →
           </Link>
         ) : null}
-        <button type="button" onClick={showNow} className="font-bold text-[#0a0a0a]/70 underline hover:text-[#d55e00]">
+        <button type="button" onClick={showNow} className="font-bold text-[#0a0a0a]/70 underline hover:text-[#cf7a4a]">
           途中でも、今の内容で結果を見る
         </button>
-        <button type="button" onClick={trySample} className="font-bold text-[#0a0a0a]/50 underline hover:text-[#d55e00]">
+        <button type="button" onClick={trySample} className="font-bold text-[#0a0a0a]/50 underline hover:text-[#cf7a4a]">
           サンプルの人で試してみる
         </button>
       </div>

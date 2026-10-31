@@ -190,7 +190,7 @@ function PensionPreview({
         <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#66666a]">
           推定 月額
         </span>
-        <span className="text-base font-bold tabular-nums text-[#d55e00]">
+        <span className="text-base font-bold tabular-nums text-[#cf7a4a]">
           {fmt(monthly)}
         </span>
         <span className="text-[9px] tabular-nums text-[#66666a]">
@@ -266,7 +266,7 @@ function SeverancePicker({ plan, index, update }: { plan: PlanInput; index: numb
                 <span className="text-[12px] font-bold">{c.label}</span>
                 {selected ? <span className="text-[9px] text-[#0a0a0a]/55">選択中</span> : null}
                 {c.key === best.key ? (
-                  <span className="rounded px-1 text-[9px] font-bold text-white" style={{ background: "#0072b2" }}>
+                  <span className="rounded px-1 text-[9px] font-bold text-white" style={{ background: "#4f86b8" }}>
                     手取り最大
                   </span>
                 ) : null}

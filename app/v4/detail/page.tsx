@@ -124,11 +124,11 @@ export default function DetailPage() {
         {justDone ? (
           <div
             className="mb-4 flex flex-col gap-3 rounded-xl px-4 py-3 sm:flex-row sm:items-center"
-            style={{ background: "#e9f2fa", border: "2.5px solid #0072b2" }}
+            style={{ background: "#e9f2fa", border: "2.5px solid #4f86b8" }}
             role="status"
           >
             <div className="flex-1">
-              <p className="text-sm font-bold text-[#0072b2]">あなたの結果が出ました</p>
+              <p className="text-sm font-bold text-[#4f86b8]">あなたの結果が出ました</p>
               <p className="mt-0.5 text-[12px] leading-relaxed text-[#0a0a0a]/75">
                 <span className="hidden sm:inline">右側</span>
                 <span className="sm:hidden">下</span>

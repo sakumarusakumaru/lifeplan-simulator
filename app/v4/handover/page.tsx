@@ -42,8 +42,8 @@ import { usePlanStore } from "@/store/v4/plan-store";
 import { useSecretStore } from "@/store/v4/secret-store";
 
 const INK = "#0a0a0a";
-const RED = "#d55e00";
-const GREEN = "#0072b2";
+const RED = "#cf7a4a";
+const GREEN = "#4f86b8";
 const GOLD = "#b8860b";
 
 const WILL_OPTIONS: { value: HandoverInput["will"]; label: string }[] = [
@@ -78,7 +78,7 @@ function TextArea({ label, value, onChange, placeholder }: { label: string; valu
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full bg-white px-2 py-1.5 text-xs leading-relaxed outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#d55e00]"
+        className="w-full bg-white px-2 py-1.5 text-xs leading-relaxed outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#cf7a4a]"
         style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
       />
     </label>
@@ -332,7 +332,7 @@ export default function HandoverPage() {
         </div>
         <p className="mb-2 text-[10px] leading-relaxed text-[#0a0a0a]/60">{c.hint}</p>
         {simTotal > 0 && Math.abs(simTotal - written) >= 10_000 ? (
-          <p className="mb-2 text-[10px] font-bold text-[#8a5a00]">
+          <p className="mb-2 text-[10px] font-bold text-[#9a7430]">
             シミュレーターの金額 {man(simTotal)}／ここに書いた合計 {man(written)}
           </p>
         ) : null}
@@ -350,7 +350,7 @@ export default function HandoverPage() {
                       </span>
                     ) : null}
                   </p>
-                  <button type="button" onClick={() => removeItem(it)} className="text-[11px] font-bold text-[#d55e00]">
+                  <button type="button" onClick={() => removeItem(it)} className="text-[11px] font-bold text-[#cf7a4a]">
                     削除
                   </button>
                 </div>
@@ -404,7 +404,7 @@ export default function HandoverPage() {
               <p className="text-[12px] font-bold">{c.title}</p>
               {side === "asset" || side === "debt" ? <p className="text-[11px] font-bold tabular-nums">{man(byCat(c.id).reduce((a, it) => a + amountOf(it), 0))}</p> : null}
             </div>
-            {c.warn ? <p className="mb-1.5 text-[10px] leading-relaxed text-[#d55e00]">{c.warn}</p> : null}
+            {c.warn ? <p className="mb-1.5 text-[10px] leading-relaxed text-[#cf7a4a]">{c.warn}</p> : null}
             {byCat(c.id).map((it) => itemView(c, it))}
           </div>
         ))}
@@ -978,7 +978,7 @@ export default function HandoverPage() {
                 onClick={() => {
                   if (confirm("この端末に保存した口座番号・ログインIDなどをすべて消しますか？")) clearSecrets();
                 }}
-                className="rounded-md bg-white px-2.5 py-1.5 font-bold text-[#d55e00]"
+                className="rounded-md bg-white px-2.5 py-1.5 font-bold text-[#cf7a4a]"
                 style={{ border: `2px solid ${RED}` }}
               >
                 番号・IDをこの端末から消す（{Object.keys(secrets).length}件）
@@ -1078,7 +1078,7 @@ export default function HandoverPage() {
                 <TextField label="受取人" value={p.beneficiary} onChange={(v) => updPolicy(i, { beneficiary: v })} />
                 <NumberField label="死亡保険金" value={p.benefit} unit="円" onChange={(v) => updPolicy(i, { benefit: v })} />
                 <TextField label="連絡先・証券の保管場所" value={p.contact} onChange={(v) => updPolicy(i, { contact: v })} />
-                <button type="button" onClick={() => upd({ policies: h.policies.filter((_, j) => j !== i) })} className="text-left text-[11px] font-bold text-[#d55e00]">
+                <button type="button" onClick={() => upd({ policies: h.policies.filter((_, j) => j !== i) })} className="text-left text-[11px] font-bold text-[#cf7a4a]">
                   削除
                 </button>
               </div>
@@ -1117,7 +1117,7 @@ export default function HandoverPage() {
                 />
                 <TextField label="名前・会社名" value={c.name} onChange={(v) => updContact(i, { name: v })} />
                 <TextField label="電話番号など" value={c.phone} onChange={(v) => updContact(i, { phone: v })} />
-                <button type="button" onClick={() => upd({ contacts: h.contacts.filter((_, j) => j !== i) })} className="text-left text-[11px] font-bold text-[#d55e00]">
+                <button type="button" onClick={() => upd({ contacts: h.contacts.filter((_, j) => j !== i) })} className="text-left text-[11px] font-bold text-[#cf7a4a]">
                   削除
                 </button>
               </div>

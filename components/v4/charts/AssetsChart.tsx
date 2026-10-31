@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState, useMemo } from "react";
 
-import { niceDomain, useLaggedDomain } from "@/components/v4/charts/useLaggedDomain";
+import { niceDomain, useAnimatedChart } from "@/components/v4/charts/useLaggedDomain";
 import { CARD, INNER } from "@/components/v4/frame";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import {
@@ -43,23 +43,23 @@ const axisFmt = (yen: number): string => {
 };
 
 const FILLS = {
-  cash: "#64748b",
-  fund: "#94a3b8",
-  stock: "#b8c6d4",
-  crypto: "#a78bfa",
-  gold: "#c9aa7c",
-  dc: "#dde6ef",
-  nw: "#d55e00",
+  cash: "#7d93ab",
+  fund: "#a3b8cc",
+  stock: "#c3d2e0",
+  crypto: "#c9b8e8",
+  gold: "#e2cfa6",
+  dc: "#e3ebf3",
+  nw: "#cf7a4a",
 };
 
 const FILLS_HOVER = {
-  cash: "#334155",   // 現金: ダークスレート（そのまま）
-  fund: "#0072b2",   // 投資信託: 青系（現金のスレートと明確に差別化）
-  stock: "#2d7a6a",  // 株: ティール緑（投信の青・現金のグレーと区別）
-  crypto: "#7c3aed", // 仮想通貨: 紫（そのまま）
-  gold: "#a47f4d",   // 金: アンバー（そのまま）
-  dc: "#5a7fa0",     // DC: スチールブルー（そのまま）
-  nw: "#d55e00",     // 純資産: 赤（そのまま）
+  cash: "#5f7690",   // 現金: ダークスレート（そのまま）
+  fund: "#4f86b8",   // 投資信託: 青系（現金のスレートと明確に差別化）
+  stock: "#6fa39a",  // 株: ティール緑（投信の青・現金のグレーと区別）
+  crypto: "#9d86cf", // 仮想通貨: 紫（そのまま）
+  gold: "#c4a575",   // 金: アンバー（そのまま）
+  dc: "#7f9dba",     // DC: スチールブルー（そのまま）
+  nw: "#cf7a4a",     // 純資産: 赤（そのまま）
 };
 
 const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
@@ -101,9 +101,10 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
     }
     return niceDomain(lo, hi);
   }, [rows]);
-  const domain = useLaggedDomain(target);
 
-  const data = rows.map((r) => ({
+  const rawData = useMemo(
+    () =>
+      rows.map((r) => ({
     age: r.age,
     現金: Math.round(r.ass.c),
     NISA: Math.round(r.ass.nisa),
@@ -112,7 +113,11 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
     金: Math.round(r.ass.g || 0),
     DC: Math.round(r.ass.dc),
     純資産: Math.round(r.nw),
-  }));
+      })),
+    [rows],
+  );
+  // 線が先に動き、そのあと目盛りと線が一緒に伸び縮みする（2段階・どちらもなめらかに）
+  const { data, domain, ticks } = useAnimatedChart(rawData, target);
 
   const getFill = (label: string): string => {
     const k = KEY_TO_FILL[label];
@@ -158,6 +163,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               axisLine={{ stroke: "#0a0a0a", strokeWidth: 2 }}
               width={58}
               domain={domain}
+              ticks={ticks}
               allowDataOverflow
             />
             <Tooltip
@@ -190,8 +196,8 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
                       const isHovered = hoveredKey === key;
                       const valueColor = isNW
                         ? Number(entry.value) < 0
-                          ? "#d55e00"
-                          : "#0072b2"
+                          ? "#cf7a4a"
+                          : "#4f86b8"
                         : "#0a0a0a";
                       return (
                         <div
@@ -251,7 +257,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
                         borderTop: "1.5px dashed #0a0a0a20",
                         fontSize: 10,
                         fontWeight: 700,
-                        color: nw < 0 ? "#d55e00" : "#0072b2",
+                        color: nw < 0 ? "#cf7a4a" : "#4f86b8",
                       }}
                     >
                       {nw < 0
@@ -268,6 +274,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
             />
 
             <Area
+              isAnimationActive={false}
               type="linear"
               dataKey="DC"
               stackId="bb"
@@ -279,6 +286,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Area
+              isAnimationActive={false}
               type="linear"
               dataKey="金"
               stackId="bb"
@@ -290,6 +298,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Area
+              isAnimationActive={false}
               type="linear"
               dataKey="暗号資産"
               stackId="bb"
@@ -301,6 +310,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Area
+              isAnimationActive={false}
               type="linear"
               dataKey="特定口座"
               stackId="bb"
@@ -312,6 +322,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Area
+              isAnimationActive={false}
               type="linear"
               dataKey="NISA"
               stackId="bb"
@@ -323,6 +334,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Area
+              isAnimationActive={false}
               type="linear"
               dataKey="現金"
               stackId="bb"
@@ -334,6 +346,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               onMouseLeave={() => setHoveredKey(null)}
             />
             <Line
+              isAnimationActive={false}
               type="linear"
               dataKey="純資産"
               name={jp ? "金融純資産" : "純資産"}
@@ -346,16 +359,16 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
             {highlightAge !== undefined ? (
               <ReferenceLine
                 x={highlightAge}
-                stroke="#2b4a6f"
+                stroke="#557593"
                 strokeWidth={2}
-                label={{ value: `${highlightAge}歳`, position: "insideTopRight", fill: "#2b4a6f", fontSize: 10, fontWeight: 700 }}
+                label={{ value: `${highlightAge}歳`, position: "insideTopRight", fill: "#557593", fontSize: 10, fontWeight: 700 }}
               />
             ) : null}
             {lifeEvents.map((ev, idx) => (
               <ReferenceLine
                 key={`${ev.age}-${ev.label}`}
                 x={ev.age}
-                stroke="#d55e00"
+                stroke="#cf7a4a"
                 strokeWidth={1.5}
                 strokeDasharray="4 3"
                 label={(props: { viewBox?: { x: number; y: number } }) => {
@@ -364,7 +377,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
                   const staggerY = (idx % 3) * 18;
                   return (
                     <g>
-                      <circle cx={x} cy={y + staggerY + 9} r={7} fill="#d55e00" />
+                      <circle cx={x} cy={y + staggerY + 9} r={7} fill="#cf7a4a" />
                       <text
                         x={x}
                         y={y + staggerY + 9}
@@ -390,7 +403,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
             <div key={`leg-${ev.age}-${idx}`} className="flex items-center gap-1.5">
               <span
                 className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ background: "#d55e00" }}
+                style={{ background: "#cf7a4a" }}
               >
                 {idx + 1}
               </span>

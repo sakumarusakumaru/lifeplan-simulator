@@ -9,10 +9,10 @@ import { useVBase } from "@/components/v4/useVBase";
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 
 const INK = "#0a0a0a";
-const C_CASH = "#9aa5b1";
-const C_RISKY = "#2b4a6f";
-const C_GOLD = "#c9aa7c";
-const C_BAND = "#e69f00";
+const C_CASH = "#c5cdd6";
+const C_RISKY = "#557593";
+const C_GOLD = "#e2cfa6";
+const C_BAND = "#d4a24c";
 
 // 年齢ごとの資産配分。
 // このプランで「現金」と「運用資産」の割合が年齢とともにどう動くかを1枚のグラフにし、
@@ -206,7 +206,7 @@ export function AllocationGuide({ plan, base }: { plan: PlanInput; base: Simulat
           step={1}
           value={shownAge}
           onChange={(e) => setAge(Number(e.target.value))}
-          className="mt-3 w-full accent-[#2b4a6f]"
+          className="mt-3 w-full accent-[#557593]"
           aria-label="配分を見る年齢"
         />
         <div className="mt-1 flex flex-wrap gap-1.5">

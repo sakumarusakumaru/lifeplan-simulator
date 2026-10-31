@@ -31,6 +31,15 @@ const PREPAY_OPTIONS = [
 
 const man = (yen: number) => `${Math.round(yen / 10000).toLocaleString()}万円`;
 
+// 固定と変動のミックスの型: 合計を半分ずつ、変動は今の金利、全期間固定は少し高め（今の金利＋0.8%、最低1.5%）
+export function mixParts(total: number, years: number, rate: number): HomeLoanPart[] {
+  const half = Math.round(total / 2 / 10000) * 10000;
+  return [
+    { label: "変動", bal: half, years, rate, rateType: "variable", method: "annuity", rule5y: true },
+    { label: "全期間固定", bal: Math.max(0, total - half), years, rate: Math.max(1.5, Math.round((rate + 0.8) * 100) / 100), rateType: "fixed", method: "annuity" },
+  ];
+}
+
 export function LoanPartsEditor({
   parts,
   setParts,
@@ -57,19 +66,46 @@ export function LoanPartsEditor({
   const monthlyNow = sched ? sched.summaries.reduce((a, x) => a + x.firstMonthly, 0) : 0;
   const totalInterest = sched ? sched.summaries.reduce((a, x) => a + x.totalInterest, 0) : 0;
 
+  // 2本のミックスは、合計を変えずに割合だけスライダーで動かせる
+  const total = parts.reduce((a, p) => a + p.bal, 0);
+  const share0 = parts.length === 2 && total > 0 ? Math.round((parts[0].bal / total) * 100) : 50;
+  const setShare = (pct: number) => {
+    const b0 = Math.round((total * pct) / 100 / 10000) * 10000;
+    setParts([{ ...parts[0], bal: b0 }, { ...parts[1], bal: Math.max(0, total - b0) }]);
+  };
+  const setTotal = (t: number) => {
+    const b0 = Math.round((t * share0) / 100 / 10000) * 10000;
+    setParts([{ ...parts[0], bal: b0 }, { ...parts[1], bal: Math.max(0, t - b0) }]);
+  };
+  const nameOf = (p: HomeLoanPart, i: number) => (p.rateType === "fixed" ? "全期間固定" : p.rateType === "fixedPeriod" ? "当初固定" : p.rateType === "variable" ? "変動" : `ローン${i + 1}`);
+
   return (
     <div className="flex flex-col gap-2">
+      {parts.length === 2 ? (
+        <div className="flex flex-col gap-2 p-3" style={INNER}>
+          <p className="text-[11px] font-bold">ミックスローンの合計と割合</p>
+          <NumberField label="合計の借入額（残高）" value={total} onChange={setTotal} unit="円" />
+          <div>
+            <div className="flex justify-between text-[11px] font-bold tabular-nums">
+              <span>{nameOf(parts[0], 0)} {share0}%（{man(parts[0].bal)}）</span>
+              <span>{nameOf(parts[1], 1)} {100 - share0}%（{man(parts[1].bal)}）</span>
+            </div>
+            <input type="range" min={0} max={100} step={5} value={share0} onChange={(e) => setShare(Number(e.target.value))} className="w-full accent-[#5b7c99]" aria-label="ミックスローンの割合" />
+          </div>
+          <p className="text-[10px] text-[#0a0a0a]/55">それぞれの金利・年数・金利のタイプは下で変えられます。</p>
+        </div>
+      ) : null}
       {parts.map((p, i) => (
         <div key={i} className="flex flex-col gap-2 p-3" style={INNER}>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold">{parts.length > 1 ? `ローン${i + 1}` : "ローン"}</span>
+            <span className="text-[11px] font-bold">{parts.length > 1 ? `ローン${i + 1}（${nameOf(p, i)}）` : "ローン"}</span>
             {parts.length > 1 ? (
               <button
                 type="button"
                 onClick={() => {
                   if (confirm(`ローン${i + 1}を消しますか？`)) setParts(parts.filter((_, idx) => idx !== i));
                 }}
-                className="text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#d55e00]"
+                className="text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#cf7a4a]"
               >
                 削除 ✕
               </button>
@@ -111,7 +147,7 @@ export function LoanPartsEditor({
           onClick={() => setParts([...parts, { label: `ローン${parts.length + 1}`, bal: 0, years: parts[0]?.years ?? 30, rate: 1.5, rateType: "fixed", method: "annuity" }])}
         />
         {onSimple ? (
-          <button type="button" onClick={onSimple} className="text-[11px] font-bold text-[#0a0a0a]/60 underline underline-offset-4 hover:text-[#d55e00]">
+          <button type="button" onClick={onSimple} className="text-[11px] font-bold text-[#0a0a0a]/60 underline underline-offset-4 hover:text-[#cf7a4a]">
             簡単な入力に戻す
           </button>
         ) : null}
@@ -148,7 +184,7 @@ export function LoanPartsEditor({
                 />
               </div>
             ) : null}
-            <button type="button" onClick={() => setPrepays(prepays.filter((_, idx) => idx !== i))} className="pb-2 text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#d55e00]">
+            <button type="button" onClick={() => setPrepays(prepays.filter((_, idx) => idx !== i))} className="pb-2 text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#cf7a4a]">
               削除 ✕
             </button>
           </div>

@@ -12,7 +12,7 @@ export function CheckboxField({ label, value, onChange, hint }: CheckboxFieldPro
     <label
       className="flex cursor-pointer items-start gap-3 px-3 py-2 text-xs font-bold transition-colors"
       style={{
-        border: `2px solid ${value ? "#d55e00" : "#0a0a0a"}`,
+        border: `2px solid ${value ? "#cf7a4a" : "#0a0a0a"}`,
         borderRadius: 8,
         background: "#f0f0ee",
         color: "#0a0a0a",
@@ -20,7 +20,7 @@ export function CheckboxField({ label, value, onChange, hint }: CheckboxFieldPro
     >
       <input
         type="checkbox"
-        className="mt-0.5 h-3.5 w-3.5 accent-[#d55e00]"
+        className="mt-0.5 h-3.5 w-3.5 accent-[#cf7a4a]"
         checked={value}
         onChange={(e) => onChange(e.target.checked)}
       />

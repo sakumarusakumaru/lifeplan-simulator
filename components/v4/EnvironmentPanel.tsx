@@ -14,8 +14,8 @@ import {
 import type { SimulationSummary } from "@/lib/v4/calc/types";
 
 const INK = "#0a0a0a";
-const RED = "#d55e00";
-const GREEN = "#0072b2";
+const RED = "#cf7a4a";
+const GREEN = "#4f86b8";
 
 const fmt = (yen: number) => {
   const sign = yen < 0 ? "-" : "";

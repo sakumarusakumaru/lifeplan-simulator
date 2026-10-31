@@ -56,7 +56,7 @@ export function ListItemCard({ kicker, onRemove, children, tone = "default" }: L
               if (jp && !confirm(`「${toJp(kicker)}」を消しますか？`)) return;
               onRemove();
             }}
-            className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/45 transition-colors hover:text-[#d55e00]"
+            className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#0a0a0a]/45 transition-colors hover:text-[#cf7a4a]"
           >
             {jp ? "削除 ✕" : "REMOVE ✕"}
           </button>
