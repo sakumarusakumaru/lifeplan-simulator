@@ -202,7 +202,8 @@ export function haigushaKojo(
   else if (spouseGoukei <= 130 * MAN) base = 6 * MAN;
   else if (spouseGoukei <= 133 * MAN) base = 3 * MAN;
   else base = 0;
-  if (kind === "jumin" && base > 33 * MAN) base = 33 * MAN;
+  // 配偶者特別控除の住民税は33万が上限。配偶者控除（62万以下）の老人加算38万には上限をかけない
+  if (kind === "jumin" && spouseGoukei > 62 * MAN && base > 33 * MAN) base = 33 * MAN;
   // 納税者の所得が900万超のときの2/3・1/3は、国税庁の表のとおり1万円単位で切り上げる（例 38万→26万・13万）
   return scale === 1 ? base : Math.ceil((base * scale) / MAN) * MAN;
 }

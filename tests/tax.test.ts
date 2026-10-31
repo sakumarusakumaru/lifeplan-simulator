@@ -111,6 +111,11 @@ test("TAX-14 配偶者控除: 納税者の合計所得900万超は国税庁の�
   assert.equal(haigushaKojo(970 * MAN, 0, 50, "income"), 13 * MAN);
   assert.equal(haigushaKojo(920 * MAN, 0, 72, "income"), 32 * MAN); // 老人控除対象配偶者48万の2/3
   assert.equal(haigushaKojo(1010 * MAN, 0, 50, "income"), 0);
+  // 住民税: 老人控除対象配偶者は38万（通し検証で発見したバグの回帰テスト。
+  //   配偶者特別控除の33万上限を老人加算にかけない）。特別控除側の上限は従来どおり
+  assert.equal(haigushaKojo(800 * MAN, 0, 72, "jumin"), 38 * MAN);
+  assert.equal(haigushaKojo(800 * MAN, 0, 50, "jumin"), 33 * MAN);
+  assert.equal(haigushaKojo(800 * MAN, 98 * MAN, 50, "jumin"), 33 * MAN); // 特別控除36万→住民税上限33万
 });
 
 test("TAX-15 国民健康保険（医療＋支援分）の上限は令和8年度93万", () => {
