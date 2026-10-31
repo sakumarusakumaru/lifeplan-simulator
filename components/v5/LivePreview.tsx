@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { INNER, strong } from "@/components/v4/frame";
 import { SECTION_ORDER } from "@/components/v4/Section";
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 import { useUiStore } from "@/store/v4/ui-store";
@@ -215,12 +216,13 @@ export function LivePreview({
     return (
       <aside
         aria-label="いまの試算"
-        className="no-print flex flex-col gap-4 rounded-xl bg-white p-5"
-        style={{ border: "1.5px solid #0a0a0a" }}
+        className="no-print flex flex-col gap-4 p-5"
+        // 入力画面の結論（枠のルール4: 強調）
+        style={strong()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold">いまの試算</h2>
-          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ border: "1.5px solid #0a0a0a" }}>
+          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: "#f0f0ee" }}>
             {real ? "今の価値" : "名目"}
           </span>
         </div>
@@ -231,7 +233,7 @@ export function LivePreview({
             {chart ? <MiniChart result={result} height={140} /> : null}
           </>
         ) : (
-          <p className="rounded-lg px-3 py-6 text-center text-[12px] font-bold leading-relaxed text-[#0a0a0a]/65" style={{ background: "#f0f0ee" }}>
+          <p className="px-3 py-6 text-center text-[12px] font-bold leading-relaxed text-[#0a0a0a]/65" style={INNER}>
             {waitText}
             {hasBirth ? (
               <span className="mt-1 block text-[11px] font-normal">生活費が0円のままだと、収入がそのまま貯まる計算になるためです</span>

@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { CARD } from "@/components/v4/frame";
 import { MC_RISK, MC_RUNS, runMonteCarlo, type McRisk, type MonteCarloResult } from "@/lib/v4/calc/montecarlo";
 import { deflator } from "@/lib/v4/calc/realValue";
 import type { PlanInput } from "@/lib/v4/calc/types";
@@ -113,7 +114,7 @@ export function MonteCarloPanel() {
   return (
     <div id="montecarlo" className="flex flex-col gap-3">
       {/* リスク水準の3択 */}
-      <div className="rounded-xl bg-white p-3" style={{ border: `2px solid ${INK}18` }}>
+      <div className="rounded-xl bg-white p-3" style={CARD}>
         <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#0a0a0a]/60">
           運用のリスク（値動きの大きさ）
         </p>
@@ -157,14 +158,14 @@ export function MonteCarloPanel() {
             {mc.runs.toLocaleString()}通りのうち {Math.round(mc.successRate * mc.runs).toLocaleString()}通りで{plan.endAge}歳まで資金ショートなし
           </p>
         </div>
-        <div className="rounded-xl bg-white p-4" style={{ border: `2px solid ${INK}18` }}>
+        <div className="rounded-xl bg-white p-4" style={CARD}>
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0a0a0a]/55">悪いケース（下位10%）</p>
           <p className="text-xl font-bold tabular-nums" style={{ color: mc.worstDepletionAge !== null ? RED : GREEN }}>
             {mc.worstDepletionAge !== null ? `${mc.worstDepletionAge}歳で枯渇` : "枯渇なし"}
           </p>
           <p className="text-[10px] text-[#0a0a0a]/60">{plan.endAge}歳の金融資産 {man(last?.悪いケース ?? 0)}</p>
         </div>
-        <div className="rounded-xl bg-white p-4" style={{ border: `2px solid ${INK}18` }}>
+        <div className="rounded-xl bg-white p-4" style={CARD}>
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#0a0a0a]/55">固定利回りの計算では</p>
           <p className="text-xl font-bold tabular-nums" style={{ color: mc.fixedShortfallAge !== null ? RED : GREEN }}>
             {mc.fixedShortfallAge !== null ? `${mc.fixedShortfallAge}歳で枯渇` : "枯渇なし"}
@@ -176,7 +177,7 @@ export function MonteCarloPanel() {
       </div>
 
       {/* 帯グラフ */}
-      <div className="rounded-xl bg-white p-3" style={{ border: `2px solid ${INK}18` }}>
+      <div className="rounded-xl bg-white p-3" style={CARD}>
         <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-[#0a0a0a]/70">
           <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: `${BLUE}30` }} />良いケース〜悪いケース（上位10%〜下位10%）</span>
           <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-4" style={{ background: BLUE }} />中央値</span>
@@ -218,7 +219,7 @@ export function MonteCarloPanel() {
         </p>
       </div>
 
-      <ul className="flex flex-col gap-1 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={{ border: `2px solid ${INK}18` }}>
+      <ul className="flex flex-col gap-1 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={CARD}>
         <li>毎年の利回りを「入力した想定利回り＋その年の値動き」にして{MC_RUNS.toLocaleString()}通り計算。値動きの大きさは「{MC_RISK[riskKey].label}」で年±{Math.round(MC_RISK[riskKey].sigma * 100)}%前後（対数正規分布）。乱数の種を固定しているので、同じ入力なら毎回同じ結果です。</li>
         <li>平均は入力した利回りどおりですが、値動きがあると複利が目減りするため、中央値は固定計算より少し下に出ます。</li>
         <li>NISA・特定口座・DCは同じ市場の値動き、金・暗号資産は別の値動きで計算。物価・金利・給与は固定のままです。</li>

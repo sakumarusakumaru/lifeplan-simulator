@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { CARD, INNER } from "@/components/v4/frame";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import {
   Bar,
@@ -87,11 +88,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   return (
     <div
       className="p-5"
-      style={{
-        background: "#f0f0ee",
-        border: isV3 ? "none" : "2.5px solid #0a0a0a",
-        borderRadius: 12,
-      }}
+      // ver5: グラフは「カード」（枠のルール2）
+      style={jp ? CARD : { background: "#f0f0ee", border: isV3 ? "none" : "2.5px solid #0a0a0a", borderRadius: 12 }}
     >
       <div className="mb-3 flex items-center justify-between">
         <span className={jp ? "text-[13px] font-bold text-[#0a0a0a]" : "text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]"}>
@@ -317,9 +315,9 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
       {/* グラフの読み方（折りたたみ。ふだんは1行だけ） */}
       <details
         className="mt-4 overflow-hidden rounded-xl"
-        style={{ border: "1.5px solid #0a0a0a20" }}
+        style={jp ? INNER : { border: "1.5px solid #0a0a0a20" }}
       >
-        <summary className="cursor-pointer bg-white px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/55">
+        <summary className={`cursor-pointer px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/55 ${jp ? "" : "bg-white"}`}>
           {jp ? "グラフの見方" : "グラフの構造 ／ CHART STRUCTURE"}
         </summary>
         {/* ゾーン構造図 */}

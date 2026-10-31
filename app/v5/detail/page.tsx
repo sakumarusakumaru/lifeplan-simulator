@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useState, type ComponentType } from "react";
 
+import { note as noteBox } from "@/components/v4/frame";
 import { MonteCarloBadge } from "@/components/v4/MonteCarloPanel";
 import { ResultsPanel } from "@/components/v4/ResultsPanel";
 import { WarningsPanel } from "@/components/v4/WarningsPanel";
@@ -136,8 +137,8 @@ export default function DetailPage() {
         <div className="flex min-w-0 flex-col gap-6">
           {justDone ? (
             <div
-              className="flex flex-col gap-2 rounded-xl px-4 py-3 sm:flex-row sm:items-center"
-              style={{ border: "1.5px solid #22863a", background: "#f0fff4" }}
+              className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center"
+              style={noteBox("green")}
               role="status"
             >
               <p className="flex-1 text-[12px] leading-relaxed">

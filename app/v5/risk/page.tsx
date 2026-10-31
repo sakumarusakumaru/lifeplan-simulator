@@ -1,5 +1,6 @@
 "use client";
 
+import { CARD, INNER } from "@/components/v4/frame";
 import { deathCoverAt, normalizeInsurance } from "@/lib/v4/calc/insurance";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -73,7 +74,7 @@ function Section({ no, title, children }: { no: string; title: string; children:
 
 function Kpi({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl bg-white p-3" style={{ border: `2px solid ${INK}18` }}>
+    <div className="flex flex-col gap-0.5 rounded-xl bg-white p-3" style={CARD}>
       <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">{label}</span>
       <span className="text-xl font-bold tabular-nums" style={{ color: color ?? INK }}>
         {value}
@@ -182,7 +183,7 @@ export default function RiskPage() {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[300px_1fr]">
           {/* 条件 */}
-          <aside className="flex flex-col gap-2 self-start rounded-xl bg-white p-4" style={{ border: `2.5px solid ${INK}` }}>
+          <aside className="flex flex-col gap-2 self-start p-4" style={CARD}>
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]">条件</p>
             {hasSpouse ? (
               <SelectField label="誰が" value={who} onChange={(v) => update({ who: v })} options={WHO_OPTIONS} />
@@ -230,7 +231,7 @@ export default function RiskPage() {
                 hint="亡くなると残債が0になる"
               />
             ) : null}
-            <div className="rounded-lg bg-white px-3 py-2 text-[11px] leading-relaxed" style={{ border: `1.5px solid ${INK}20` }}>
+            <div className="px-3 py-2 text-[11px] leading-relaxed" style={INNER}>
               <p className="font-bold">保険の一覧から（{deathAge}歳で亡くなった場合）</p>
               <p className="tabular-nums">
                 死亡保険金 {man(listCover.lump)}
@@ -265,7 +266,7 @@ export default function RiskPage() {
           {/* 結果 */}
           <div>
             {noSurvivor ? (
-              <div className="mb-6 rounded-xl bg-white p-4 text-[12px] leading-relaxed" style={{ border: `2px solid ${INK}20` }}>
+              <div className="mb-6 rounded-xl bg-white p-4 text-[12px] leading-relaxed" style={CARD}>
                 配偶者・子どもが入力されていないため、遺族年金や死亡保障を考える対象の家族がいません。
                 「入力」の基本設定で配偶者の生年月日、支出の教育費で子どもを登録すると試算できます。
               </div>
@@ -326,7 +327,7 @@ export default function RiskPage() {
 
             <Section no="02" title="遺族年金の内訳">
               {phases.length ? (
-                <div className="overflow-hidden rounded-xl bg-white" style={{ border: `2px solid ${INK}18` }}>
+                <div className="overflow-hidden rounded-xl bg-white" style={CARD}>
                   <table className="w-full text-[10px] sm:text-[11px]">
                     <thead>
                       <tr className="text-left text-[10px] uppercase tracking-[0.1em] text-[#0a0a0a]/55" style={{ background: "#f0f0ee" }}>
@@ -364,29 +365,32 @@ export default function RiskPage() {
                   </p>
                 </div>
               ) : (
-                <p className="rounded-xl bg-white p-4 text-[12px] text-[#0a0a0a]/65" style={{ border: `2px solid ${INK}18` }}>
+                <p className="rounded-xl bg-white p-4 text-[12px] text-[#0a0a0a]/65" style={CARD}>
                   この条件では遺族年金は出ません（18歳年度末までの子がいない、亡くなる人が厚生年金に加入していない、夫が遺族で55歳未満 など）。
                 </p>
               )}
             </Section>
 
             <Section no="03" title="金融資産の推移">
-              <div className="rounded-xl bg-white p-3" style={{ border: `2px solid ${INK}18` }}>
+              <div className="rounded-xl bg-white p-3" style={CARD}>
                 <div className="h-[260px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 4 }}>
                       <CartesianGrid stroke="rgba(10,10,10,0.08)" strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="age" tick={{ fill: INK, fontSize: 11 }} tickLine={false} />
-                      <YAxis tickFormatter={axisFmt} tick={{ fill: INK, fontSize: 11 }} width={56} tickLine={false} />
+                      <XAxis dataKey="age" tick={{ fill: INK, fontSize: 9 }} tickLine={false} minTickGap={12} />
+                      <YAxis tickFormatter={axisFmt} tick={{ fill: INK, fontSize: 9 }} width={48} tickLine={false} />
                       <Tooltip
                         formatter={(v) => man(Number(v))}
                         labelFormatter={(l) => `本人${l}歳`}
                         position={compact ? { y: 0 } : undefined}
+                        offset={compact ? 6 : 48}
                         wrapperStyle={{ pointerEvents: "none", zIndex: 5 }}
-                        contentStyle={compact ? { fontSize: 10, padding: "4px 8px" } : undefined}
+                        contentStyle={{ fontSize: 10, padding: "4px 8px", borderRadius: 8, border: "1.5px solid #0a0a0a30" }}
+                        labelStyle={{ fontSize: 10, fontWeight: 700, marginBottom: 2 }}
+                        itemStyle={{ padding: 0, lineHeight: 1.5 }}
                       />
                       <ReferenceLine y={0} stroke={INK} />
-                      <ReferenceLine x={deathAge} stroke={RED} strokeDasharray="4 3" label={{ value: "死亡", fill: RED, fontSize: 10, position: "top" }} />
+                      <ReferenceLine x={deathAge} stroke={RED} strokeDasharray="4 3" label={{ value: "死亡", fill: RED, fontSize: 9, position: "top" }} />
                       <Line type="monotone" dataKey="いまのプラン" stroke="#94a3b8" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="亡くなった場合" stroke={RED} strokeWidth={2.5} dot={false} />
                     </LineChart>
@@ -409,7 +413,7 @@ export default function RiskPage() {
 
 
             <Section no={noSurvivor ? "02" : "05"} title="計算の前提">
-              <ul className="flex flex-col gap-1.5 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={{ border: `2px solid ${INK}18` }}>
+              <ul className="flex flex-col gap-1.5 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={CARD}>
                 <li>遺族年金は令和8年度の額（遺族基礎847,300円、子の加算243,800円・3人目以降81,300円、中高齢寡婦加算635,500円）。毎年「年金額の改定率」で改定。</li>
                 <li>遺族厚生年金は報酬比例部分の3/4。在職中の死亡は加入300月とみなす。夫は妻の死亡時55歳以上が条件で、支給は60歳から（子がいる間は例外）。</li>
                 <li>亡くなった人の給与・年金は止まり、生活費は上の割合に。亡くなった人が被保険者の保険料も止まる。新しい積立（NISA・iDeCo等）は止めて計算。</li>

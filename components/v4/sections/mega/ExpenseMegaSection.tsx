@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { INNER } from "@/components/v4/frame";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { DateField } from "@/components/v4/inputs/DateField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
@@ -102,6 +103,17 @@ const JUKU_PRESETS: JukuPreset[] = [
   },
 ];
 
+const JUKU_STAGES: { key: keyof JukuMonthly; label: string }[] = [
+  { key: "pre", label: "幼児(3-5)" },
+  { key: "e13", label: "小1-3" },
+  { key: "e46", label: "小4-6" },
+  { key: "jh", label: "中学" },
+  { key: "hs", label: "高校" },
+  { key: "ronin", label: "浪人" },
+];
+const findJukuPreset = (m: JukuMonthly) =>
+  JUKU_PRESETS.find((p) => JUKU_STAGES.every((st) => p.values[st.key] === m[st.key])) ?? null;
+
 export const NEW_KID = (): Kid => ({
   name: "新しい子",
   birth: "",
@@ -140,6 +152,10 @@ export function ExpenseMegaSection() {
   const setField = usePlanStore((s) => s.setField);
   const patchPlan = usePlanStore((s) => s.patch);
   const [showLivingGuide, setShowLivingGuide] = useState(false);
+  // 塾・習い事: どのモデルにも当てはまらない値なら「カスタム」。カスタムを選んだあとは、モデルと同じ値になってもカスタムのまま
+  const jukuPreset = findJukuPreset(plan.jukuM);
+  const [jukuCustom, setJukuCustom] = useState(false);
+  const jukuIsCustom = jukuCustom || !jukuPreset;
 
   const updateLoan = (i: number, patch: Partial<OtherLoan>) =>
     setField("otherLoans", plan.otherLoans.map((ln, idx) => (idx === i ? { ...ln, ...patch } : ln)));
@@ -546,22 +562,19 @@ export function ExpenseMegaSection() {
             />
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
-                — 塾・習い事の月額（モデルケースから選んで自動入力）
+                — 塾・習い事の月額（モデルケースから選ぶか、カスタムで自由に入力）
               </div>
               <div className="mb-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                 {JUKU_PRESETS.map((p) => {
-                  const matches =
-                    plan.jukuM.pre === p.values.pre &&
-                    plan.jukuM.e13 === p.values.e13 &&
-                    plan.jukuM.e46 === p.values.e46 &&
-                    plan.jukuM.jh === p.values.jh &&
-                    plan.jukuM.hs === p.values.hs &&
-                    plan.jukuM.ronin === p.values.ronin;
+                  const matches = !jukuIsCustom && jukuPreset?.key === p.key;
                   return (
                     <button
                       key={p.key}
                       type="button"
-                      onClick={() => setField("jukuM", p.values)}
+                      onClick={() => {
+                        setJukuCustom(false);
+                        setField("jukuM", p.values);
+                      }}
                       className="flex flex-col gap-0.5 px-3 py-2 text-left transition-colors"
                       style={{
                         border: matches ? "2.5px solid #c8383a" : "2px solid #0a0a0a25",
@@ -574,48 +587,41 @@ export function ExpenseMegaSection() {
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => setJukuCustom(true)}
+                  className="flex flex-col gap-0.5 px-3 py-2 text-left transition-colors"
+                  style={{
+                    border: jukuIsCustom ? "2.5px solid #c8383a" : "2px solid #0a0a0a25",
+                    background: jukuIsCustom ? "#fff0f0" : "#ffffff",
+                    borderRadius: 8,
+                  }}
+                >
+                  <span className="text-[11px] font-bold text-[#0a0a0a]">カスタム</span>
+                  <span className="text-[9px] leading-tight text-[#0a0a0a]/55">段階ごとの月額を自由に入力</span>
+                </button>
               </div>
               <p className="mb-2 text-[9px] leading-relaxed text-[#0a0a0a]/50">
-                ※ プリセット選択後、各段階の数値を個別に編集できます。出典: 文部科学省 学校外活動費 / Benesse教育研究所 / 大手塾相場
+                出典: 文部科学省 学校外活動費 / Benesse教育研究所 / 大手塾相場。子ども1人あたりの月額
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                <NumberField
-                  label="幼児(3-5)"
-                  value={plan.jukuM.pre}
-                  onChange={(v) => setField("jukuM", { ...plan.jukuM, pre: v })}
-                  unit="円"
-                />
-                <NumberField
-                  label="小1-3"
-                  value={plan.jukuM.e13}
-                  onChange={(v) => setField("jukuM", { ...plan.jukuM, e13: v })}
-                  unit="円"
-                />
-                <NumberField
-                  label="小4-6"
-                  value={plan.jukuM.e46}
-                  onChange={(v) => setField("jukuM", { ...plan.jukuM, e46: v })}
-                  unit="円"
-                />
-                <NumberField
-                  label="中学"
-                  value={plan.jukuM.jh}
-                  onChange={(v) => setField("jukuM", { ...plan.jukuM, jh: v })}
-                  unit="円"
-                />
-                <NumberField
-                  label="高校"
-                  value={plan.jukuM.hs}
-                  onChange={(v) => setField("jukuM", { ...plan.jukuM, hs: v })}
-                  unit="円"
-                />
-                <NumberField
-                  label="浪人"
-                  value={plan.jukuM.ronin}
-                  onChange={(v) => setField("jukuM", { ...plan.jukuM, ronin: v })}
-                  unit="円"
-                />
-              </div>
+              {jukuIsCustom ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {JUKU_STAGES.map((st) => (
+                    <NumberField
+                      key={st.key}
+                      label={st.label}
+                      value={plan.jukuM[st.key]}
+                      onChange={(v) => setField("jukuM", { ...plan.jukuM, [st.key]: v })}
+                      unit="円"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="px-3 py-2 text-[10px] leading-relaxed tabular-nums text-[#0a0a0a]/70" style={INNER}>
+                  {JUKU_STAGES.map((st) => `${st.label} ${(plan.jukuM[st.key] / 10000).toLocaleString()}万円`).join("・")}
+                  <span className="text-[#0a0a0a]/50">（月額。変えたいときは「カスタム」）</span>
+                </p>
+              )}
             </div>
             <div>
               <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#66666a]">
@@ -742,7 +748,7 @@ export function ExpenseMegaSection() {
         <CollapsibleSubGroup title="保険" defaultOpen={false}>
           <div className="flex flex-col gap-3">
             {insList.length ? (
-              <div className="rounded-lg bg-white px-3 py-2 text-[11px] leading-relaxed tabular-nums" style={{ border: "1.5px solid #0a0a0a20" }}>
+              <div className="px-3 py-2 text-[11px] leading-relaxed tabular-nums" style={INNER}>
                 <p className="font-bold">いまの保険料 年{Math.round(insPremNow / 10000).toLocaleString()}万円（月{Math.round(insPremNow / 12 / 1000) / 10}万円）</p>
                 <p>
                   本人が亡くなったら 死亡保険金{Math.round(coverSelf.lump / 10000).toLocaleString()}万円

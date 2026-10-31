@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { INNER } from "@/components/v4/frame";
 import { DRAW_LABEL } from "@/lib/v4/calc/drawOrder";
 import { simulate } from "@/lib/v4/calc/simulate";
 import type { DrawAsset, SimulationSummary } from "@/lib/v4/calc/types";
@@ -86,7 +87,7 @@ export function DrawOrderEditor() {
       </div>
 
       {auto ? (
-        <ol className="flex flex-col gap-1.5 rounded-lg bg-white p-3" style={{ border: `1.5px solid ${INK}20` }}>
+        <ol className="flex flex-col gap-1.5 p-3" style={INNER}>
           {[
             {
               no: "0",
@@ -116,7 +117,7 @@ export function DrawOrderEditor() {
           ))}
         </ol>
       ) : (
-        <div className="flex flex-col gap-1.5 rounded-lg p-2" style={{ background: "#f0f0ee", border: "1.5px solid #0a0a0a30" }}>
+        <div className="flex flex-col gap-1.5 p-2" style={INNER}>
           <p className="px-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">上から先に売る（現金のあと）</p>
           {plan.drawCustomOrder.map((code, i) => (
             <div key={code} className="flex items-center gap-2 rounded-lg bg-white px-2.5 py-1.5" style={{ border: `2px solid ${INK}` }}>

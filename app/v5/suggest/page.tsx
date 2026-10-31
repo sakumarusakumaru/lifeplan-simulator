@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
+import { CARD, LINE_SOFT, note } from "@/components/v4/frame";
 import { AllocationGuide } from "@/components/v4/AllocationGuide";
 import { EnvironmentPanel } from "@/components/v4/EnvironmentPanel";
 import {
@@ -455,6 +456,25 @@ export default function SuggestPage() {
   // マウスを乗せている間（PC）／押している間（タッチ）だけ、その打ち手をグラフに映す。
   // クリック（タップ）でキープし、もう一度でキープを外す。長押しのあとはキープしない
   const pressAt = useRef(0);
+  // PC: カードからグラフへマウスを動かす間に映している条件が消えないよう、外れたときの解除を少し待つ。
+  // グラフに乗っている間は保ち、グラフから外れたら解除する
+  const overChart = useRef(false);
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClear = () => {
+    if (clearTimer.current) clearTimeout(clearTimer.current);
+    clearTimer.current = null;
+  };
+  const clearSoon = () => {
+    cancelClear();
+    clearTimer.current = setTimeout(() => {
+      if (!overChart.current) setPreview(null);
+    }, 180);
+  };
+  const onChartHover = (over: boolean) => {
+    overChart.current = over;
+    if (over) cancelClear();
+    else setPreview(null);
+  };
   const pressHandlers = (sc: Scenario) => ({
     onPointerDown: (e: React.PointerEvent) => {
       pressAt.current = Date.now();
@@ -465,9 +485,15 @@ export default function SuggestPage() {
     },
     onPointerCancel: () => setPreview(null),
     onPointerEnter: (e: React.PointerEvent) => {
-      if (e.pointerType === "mouse") setPreview(sc);
+      if (e.pointerType === "mouse") {
+        cancelClear();
+        setPreview(sc);
+      }
     },
-    onPointerLeave: () => setPreview(null),
+    onPointerLeave: (e: React.PointerEvent) => {
+      if (e.pointerType === "mouse") clearSoon();
+      else setPreview(null);
+    },
     onClick: () => {
       if (Date.now() - pressAt.current < 500) toggleKeep(sc);
     },
@@ -504,11 +530,12 @@ export default function SuggestPage() {
           envOn={envActive(env)}
           crashAges={crashAges(plan, env)}
           domainSeries={[normalBase, base, ...visible.map((v) => v.result), ...(keptResult ? [keptResult] : []), ...(hoverResult ? [hoverResult] : [])]}
+          onHoverChange={onChartHover}
         />
 
         {/* キープ中の打ち手 */}
         {keptList.length > 0 ? (
-          <div className="mb-4 rounded-xl p-3" style={{ background: "#f0fff4", border: "2px solid #22863a" }}>
+          <div className="mb-4 p-3" style={note("green")}>
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="mr-1 text-[10px] font-bold text-[#22863a]">キープ中（重ねて試算）</span>
               {keptList.map((k) => (
@@ -642,7 +669,7 @@ export default function SuggestPage() {
                                 ? "2.5px solid #22863a"
                                 : pressed
                                   ? `2px solid ${positive ? "#22863a" : "#c8383a"}`
-                                  : "2px solid #0a0a0a18",
+                                  : `2px solid ${LINE_SOFT}`,
                               transform: pressed ? "scale(0.985)" : undefined,
                               // 長押しで文字選択・iOSのメニューが出ないように
                               WebkitTouchCallout: "none",
@@ -733,8 +760,8 @@ export default function SuggestPage() {
 
         {visible.length === 0 && (
           <div
-            className="rounded-xl p-8 text-center"
-            style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
+            className="p-8 text-center"
+            style={CARD}
           >
             <p className="text-sm text-[#0a0a0a]/50">
               今の入力では、結果がよくなる条件が見つかりませんでした。入力を変えると、ここに表示されます。

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { note } from "@/components/v4/frame";
 import { HANDOFF_KEY } from "@/components/lite/sendToV4";
 
 // Lite から詳細版に移った直後に、「どの欄に何を入れたか」を見せる（閉じるまで、このタブの中だけ）
@@ -26,7 +27,7 @@ export function LiteHandoffNote() {
     setLines(null);
   };
   return (
-    <div className="rounded-xl px-4 py-3" style={{ border: "1.5px solid #0a0a0a", background: "#f7f7f5" }} role="status">
+    <div className="px-4 py-3" style={note("blue")} role="status">
       <div className="flex items-start justify-between gap-3">
         <p className="text-[13px] font-bold">Lite版の答えを、詳細版のこれらの欄に入れました</p>
         <button type="button" onClick={close} className="shrink-0 text-[12px] font-bold text-[#0a0a0a]/60 underline">

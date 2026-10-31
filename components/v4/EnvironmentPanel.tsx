@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { CARD } from "@/components/v4/frame";
 import { useVBase } from "@/components/v4/useVBase";
 
 import {
@@ -42,8 +43,8 @@ export function EnvironmentPanel({
   const delta = current.finalNetWorth - normal.finalNetWorth;
   return (
     <div
-      className="mb-6 rounded-xl bg-white p-4"
-      style={{ border: `2.5px solid ${INK}` }}
+      className="mb-6 p-4"
+      style={CARD}
     >
       <div className="mb-2 flex items-start justify-between gap-3">
         <button

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { INNER } from "@/components/v4/frame";
 import { useVBase } from "@/components/v4/useVBase";
 
 interface ListItemCardProps {
@@ -39,12 +40,9 @@ export function ListItemCard({ kicker, onRemove, children, tone = "default" }: L
   const jp = useVBase() === "/v5";
   return (
     <div
-      className="p-4"
-      style={{
-        background: t.bg,
-        border: `2.5px solid ${t.border}`,
-        borderRadius: 12,
-      }}
+      className={jp ? "p-3" : "p-4"}
+      // ver5: カードの中で繰り返す1件は「中箱」（線なし・薄い地色。枠のルール3）
+      style={jp ? INNER : { background: t.bg, border: `2.5px solid ${t.border}`, borderRadius: 12 }}
     >
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">

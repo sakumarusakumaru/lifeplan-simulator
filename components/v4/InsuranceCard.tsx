@@ -1,5 +1,6 @@
 "use client";
 
+import { INNER2 } from "@/components/v4/frame";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
@@ -430,7 +431,7 @@ export function InsuranceCard({
           </>
         ) : null}
 
-        <div className="rounded-md px-2.5 py-2 text-[10px] leading-relaxed" style={{ background: "#f7f7f5", border: `1px solid ${INK}15` }}>
+        <div className="px-2.5 py-2 text-[10px] leading-relaxed" style={INNER2}>
           <SelectField
             label={`保険料控除の区分（契約者の${p.contractor}の所得から）`}
             value={p.deductKind}

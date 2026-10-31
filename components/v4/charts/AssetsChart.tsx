@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { CARD, INNER } from "@/components/v4/frame";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import {
   Area,
@@ -107,11 +108,8 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
   return (
     <div
       className="p-5"
-      style={{
-        background: "#f0f0ee",
-        border: isV3 ? "none" : "2.5px solid #0a0a0a",
-        borderRadius: 12,
-      }}
+      // ver5: グラフは「カード」（枠のルール2）
+      style={jp ? CARD : { background: "#f0f0ee", border: isV3 ? "none" : "2.5px solid #0a0a0a", borderRadius: 12 }}
     >
       <div className="mb-3 flex items-center justify-between">
         <span className={jp ? "text-[13px] font-bold text-[#0a0a0a]" : "text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]"}>
@@ -381,7 +379,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
       {/* このグラフの読み方（折りたたみ。ふだんは1行だけ） */}
       <details
         className="mt-4 rounded-xl p-3"
-        style={{ background: "#ffffff", border: "1.5px solid #0a0a0a30" }}
+        style={jp ? INNER : { background: "#ffffff", border: "1.5px solid #0a0a0a30" }}
       >
         <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
           {jp ? "このグラフの読み方" : "このグラフの読み方 ／ HOW TO READ"}

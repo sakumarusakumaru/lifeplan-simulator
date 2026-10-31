@@ -2,6 +2,7 @@
 
 import { Fragment, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { INNER } from "@/components/v4/frame";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { DateField } from "@/components/v4/inputs/DateField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
@@ -343,8 +344,8 @@ export function SettingsMegaSection() {
             {detailed && (
               <>
                 <div
-                  className="rounded-xl p-3 text-[11px] leading-relaxed text-[#0a0a0a]/70"
-                  style={{ background: "#ffffff", border: "2.5px solid #0a0a0a" }}
+                  className="p-3 text-[11px] leading-relaxed text-[#0a0a0a]/70"
+                  style={INNER}
                 >
                   <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]">
                     詳細計算で考慮するもの
@@ -362,8 +363,8 @@ export function SettingsMegaSection() {
                 </div>
 
                 <div
-                  className="rounded-xl p-4"
-                  style={{ background: "#f0f0ee", border: "2.5px solid #0a0a0a" }}
+                  className="p-3"
+                  style={INNER}
                 >
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">
                     {plan.curAge}歳時点の試算（現在の収入条件で）

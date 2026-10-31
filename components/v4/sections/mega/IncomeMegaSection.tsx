@@ -2,6 +2,7 @@
 
 import { useContext, useMemo } from "react";
 
+import { INNER2 } from "@/components/v4/frame";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
@@ -183,7 +184,7 @@ function PensionPreview({
   return (
     <div
       className="grid grid-cols-1 gap-2 p-2 md:grid-cols-2"
-      style={{ background: "#f0f0ee", border: "1.5px dashed #0a0a0a40", borderRadius: 8 }}
+      style={INNER2}
     >
       <div className="flex flex-col gap-0.5">
         <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#66666a]">
@@ -236,7 +237,7 @@ function SeverancePicker({ plan, index, update }: { plan: PlanInput; index: numb
   const man = (v: number) => `${Math.round(v / 10000).toLocaleString()}万円`;
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg p-2.5" style={{ background: "#f0f0ee", border: "1.5px solid #0a0a0a20" }}>
+    <div className="flex flex-col gap-2 p-2.5" style={INNER2}>
       <SelectField label="退職金の受け取り方" value={method} onChange={(v) => update({ sevMethod: v })} options={SEV_METHOD_OPTIONS} />
       {method !== "lump" ? (
         <div className="grid grid-cols-2 items-start gap-2">

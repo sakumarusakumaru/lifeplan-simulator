@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { INNER, note } from "@/components/v4/frame";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
@@ -86,7 +87,7 @@ export function HomeLoanEditor({
       ) : (
         <>
           {parts.map((p, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-lg p-3" style={{ border: "1.5px solid #0a0a0a30", background: "#fafaf9" }}>
+            <div key={i} className="flex flex-col gap-2 p-3" style={INNER}>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold">{parts.length > 1 ? `ローン${i + 1}` : "ローン"}</span>
                 {parts.length > 1 ? (
@@ -150,7 +151,7 @@ export function HomeLoanEditor({
           <div className="mt-1">
             <p className="text-[11px] font-bold text-[#0a0a0a]/70">繰上返済の予定（あれば）</p>
             {prepays.map((pp, i) => (
-              <div key={i} className="mt-1.5 flex flex-wrap items-end gap-2 rounded-lg p-2" style={{ border: "1.5px solid #0a0a0a20" }}>
+              <div key={i} className="mt-1.5 flex flex-wrap items-end gap-2 p-2" style={INNER}>
                 <div className="w-24">
                   <NumberField label="何歳で" value={pp.age} onChange={(v) => setPrepays(prepays.map((x, idx) => (idx === i ? { ...x, age: v } : x)))} unit="歳" />
                 </div>
@@ -196,7 +197,7 @@ export function HomeLoanEditor({
 
       {/* どの入力でも、意味がすぐ分かるように「毎月いくら・いつ返し終わるか」をその場で出す */}
       {sched && parts.length ? (
-        <div className="rounded-lg px-3 py-2 text-[11px] leading-relaxed" style={{ background: "#eef6fc", border: "1.5px solid #3b82f640" }}>
+        <div className="px-3 py-2 text-[11px] leading-relaxed" style={note("blue")}>
           この入力だと: 毎月の返済 約{Math.round(monthlyNow / 1000) / 10}万円
           {parts.length > 1 ? `（${sched.summaries.map((x, i) => `ローン${i + 1} ${Math.round(x.firstMonthly / 1000) / 10}万`).join("・")}）` : ""}
           ／ {sched.payoffAge !== null ? `${sched.payoffAge}歳ごろ返し終わる` : "この期間では返し終わらない"}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { CARD, INNER, note } from "@/components/v4/frame";
 import { useVBase } from "@/components/v4/useVBase";
 import { ageOn } from "@/lib/v4/calc/age";
 import { DEFAULT_INHERIT, basicDeduction, legalHeirs, legalSharesPct, planInheritance, realEstateEval } from "@/lib/v4/calc/inheritance";
@@ -173,7 +174,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">{jp ? "相続の備え" : "相続の備え ／ INHERITANCE"}</p>
       </div>
 
-      <div className="rounded-xl bg-white p-4" style={{ border: `2px solid ${INK}18` }}>
+      <div className="p-4" style={CARD}>
         <p className="text-[12px] leading-relaxed text-[#0a0a0a]/75">
           このプランのまま進んだときの財産（現金・運用資産・自宅や不動産 − ローン）と、相続税の基礎控除を比べています。
           法定相続人は {noFamily ? "親または兄弟姉妹の1人（配偶者・子が未入力のため仮定）" : `${hasSpouse ? "配偶者" : ""}${hasSpouse && kids ? "＋" : ""}${kids ? `子${kids}人` : ""}の${heirs.count}人`} として計算
@@ -230,7 +231,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
         ))}
       </div>
 
-      <div className="mt-2 rounded-xl bg-white p-4" style={{ border: `2.5px solid ${INK}` }}>
+      <div className="mt-2 p-4" style={CARD}>
         <p className="text-sm font-bold text-[#0a0a0a]">{stage.title}</p>
         {/* 試算の条件 */}
         <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg p-2.5 sm:grid-cols-3" style={{ background: "#f7f7f5" }}>
@@ -395,7 +396,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
         ) : null}
 
         {P.first.people.length > 0 ? (
-          <div className="mt-2 overflow-x-auto rounded-lg p-2.5" style={{ border: `2px solid ${INK}18` }}>
+          <div className="mt-2 overflow-x-auto p-2.5" style={INNER}>
             <p className="text-[11px] font-bold">一人ずつの相続額と税</p>
             <table className="mt-1 w-full min-w-[480px] text-[10px] tabular-nums">
               <thead>
@@ -459,7 +460,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
         ) : null}
 
         {twoStep ? (
-          <div className="mt-2 rounded-lg p-3" style={{ border: `2px solid ${RED}50`, background: "#fffafa" }}>
+          <div className="mt-2 p-3" style={note("red")}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <div>
                 <p className="text-[10px] font-bold text-[#0a0a0a]/55">二次相続（配偶者がその後亡くなったとき）</p>

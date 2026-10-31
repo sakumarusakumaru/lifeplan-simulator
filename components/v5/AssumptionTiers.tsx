@@ -1,5 +1,11 @@
+"use client";
+
+import { useState } from "react";
+
+import { CARD } from "@/components/v4/frame";
+
 // ver5: 計算の中身を「制度どおり」「仮定を置いたもの」「対象外」の3つに分けて見せる
-// （細かく計算している所と、単純にしている所の両方を、隠さずに並べる）
+// （細かく計算している所と、単純にしている所の両方を、隠さずに並べる）。ふだんは見出しだけで、開くと中身
 
 const TIERS: { title: string; note: string; color: string; items: string[] }[] = [
   {
@@ -8,7 +14,7 @@ const TIERS: { title: string; note: string; color: string; items: string[] }[] =
     color: "#22863a",
     items: [
       "所得税（累進・復興特別所得税）・住民税と、基礎・給与所得・配偶者・扶養・社会保険料・生命保険料・地震保険料・iDeCo・住宅ローンの各控除",
-      "厚生年金・健康保険・介護保険・子ども子育て支援金・雇用保険の保険料、退職後の国民健康保険・後期高齢者医療",
+      "厚生年金・健康保険・介護保険・子ども子育て支援金・雇用保険の保険料（標準報酬月額の等級表・標準賞与額・端数処理）、退職後の国民健康保険・後期高齢者医療",
       "老齢年金（基礎・厚生）の見積もり、繰上げ・繰下げ、加給年金、在職老齢年金",
       "退職金・DC一時金の退職所得（勤続年数の控除・1/2課税・受け取り時期が近い場合の調整）",
       "NISAの年間枠・生涯枠・売ったあとの枠の復活",
@@ -26,7 +32,7 @@ const TIERS: { title: string; note: string; color: string; items: string[] }[] =
       "教育費は文部科学省などの調査の平均的な額",
       "国民健康保険・後期高齢者医療・介護保険（65歳以上）は全国平均的な料率で概算。自治体によって年に数万〜数十万円違う（大阪市の令和8年度の料率と比べると、自営業の例で約24%少なく出る）",
       "個人事業税は、(事業所得 − 290万円) × 5% で計算（業種によって3%・4%・対象外もある）",
-      "会社員の社会保険料は、標準報酬の等級表を使わず年収に料率をかけた概算（年収によって約1〜2%の差）",
+      "会社員の給与は、年収を「月給×12か月＋賞与（月給2か月分×年2回）」に分けたものとして社会保険料を計算",
       "不動産の相続税評価は、時価や築年数からの目安（路線価は見ていない）",
       "暗号資産の総合課税は固定の税率で近似。2028年以降の分離課税は方針の段階",
       "運用の振れ幅は、値動きの大きさを3段階から選んだ対数正規分布（物価・金利は固定）",
@@ -51,21 +57,37 @@ const TIERS: { title: string; note: string; color: string; items: string[] }[] =
 ];
 
 export function AssumptionTiers() {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   return (
-    <div className="mt-3 flex flex-col gap-3">
-      {TIERS.map((t) => (
-        <div key={t.title} className="rounded-xl bg-white p-4" style={{ border: `2px solid ${t.color}40` }}>
-          <p className="text-[12px] font-bold" style={{ color: t.color }}>
-            {t.title}
-          </p>
-          <p className="mt-0.5 text-[10px] text-[#0a0a0a]/55">{t.note}</p>
-          <ul className="mt-2 flex flex-col gap-1 text-[11px] leading-relaxed text-[#0a0a0a]/75">
-            {t.items.map((it) => (
-              <li key={it}>・{it}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
+    <div className="mt-3 flex flex-col gap-2">
+      {TIERS.map((t) => {
+        const isOpen = !!open[t.title];
+        return (
+          <div key={t.title} style={CARD}>
+            <button
+              type="button"
+              onClick={() => setOpen((o) => ({ ...o, [t.title]: !o[t.title] }))}
+              aria-expanded={isOpen}
+              className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+            >
+              <span>
+                <span className="block text-[12px] font-bold" style={{ color: t.color }}>
+                  {t.title}（{t.items.length}項目）
+                </span>
+                <span className="mt-0.5 block text-[10px] text-[#0a0a0a]/55">{t.note}</span>
+              </span>
+              <span className="shrink-0 text-[11px] font-bold text-[#0a0a0a]/55">{isOpen ? "閉じる ▾" : "開く ▸"}</span>
+            </button>
+            {isOpen ? (
+              <ul className="flex flex-col gap-1 px-4 pb-4 text-[11px] leading-relaxed text-[#0a0a0a]/75">
+                {t.items.map((it) => (
+                  <li key={it}>・{it}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

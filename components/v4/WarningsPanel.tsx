@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { note } from "@/components/v4/frame";
 import type { SimulationWarning } from "@/lib/v4/calc/types";
 
 // 制度上限の超過・退職所得控除の重複など、計算の前提を変えた点を知らせる。
@@ -11,7 +12,7 @@ export function WarningsPanel({ warnings }: { warnings: SimulationWarning[] }) {
   const [open, setOpen] = useState(hasWarn);
   if (!warnings.length) return null;
   return (
-    <div className="rounded-xl" style={{ background: "#fff8e7", border: "2px solid #d4a01760" }}>
+    <div style={note("yellow")}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

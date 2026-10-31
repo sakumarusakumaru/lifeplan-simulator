@@ -6,6 +6,7 @@ import {
   LineChart,
   ReferenceLine,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -19,6 +20,10 @@ const RED = "#c8383a";
 
 const axisFmt = (yen: number) =>
   Math.abs(yen) >= 100_000_000 ? `${(yen / 100_000_000).toFixed(1)}億` : `${Math.round(yen / 10000)}万`;
+const fmtMan = (yen: number) => {
+  const man = Math.round(yen / 10000);
+  return Math.abs(man) >= 10000 ? `${(man / 10000).toFixed(2)}億円` : `${man.toLocaleString()}万円`;
+};
 const fmtDelta = (yen: number) => {
   const sign = yen >= 0 ? "+" : "-";
   const abs = Math.abs(Math.round(yen / 10000));
@@ -53,6 +58,7 @@ export function ScenarioPreviewChart({
   envOn = false,
   crashAges = [],
   domainSeries,
+  onHoverChange,
 }: {
   normal?: SimulationSummary;
   base: SimulationSummary;
@@ -63,6 +69,7 @@ export function ScenarioPreviewChart({
   envOn?: boolean;
   crashAges?: number[];
   domainSeries?: SimulationSummary[];
+  onHoverChange?: (over: boolean) => void; // グラフにマウスが乗っている間は、いま映している条件を保つため
 }) {
   const jp = useVBase() === "/v5"; // ver5 は「金融純資産」「条件」の言葉で
   const ref = normal ?? base;
@@ -70,6 +77,14 @@ export function ScenarioPreviewChart({
   const delta = preview ? preview.finalNetWorth - base.finalNetWorth : 0;
   const color = !preview ? (envOn ? RED : INK) : delta >= 0 ? GREEN : RED;
   const domain = niceDomain(domainSeries ?? [ref, base, ...(preview ? [preview] : [])]);
+  const dashedLabel = envOn ? "通常の環境" : "いまのプラン";
+  const solidLabel = preview
+    ? kept
+      ? jp ? "条件を重ねた場合" : "打ち手を重ねた場合"
+      : jp ? "条件を変えた場合" : "打ち手を試した場合"
+    : envOn
+      ? "選んだ外的環境"
+      : "いまのプラン";
   const data = base.rows.map((r, i) => ({
     age: r.age,
     いま: Math.round(ref.rows[i]?.nw ?? r.nw),
@@ -79,6 +94,8 @@ export function ScenarioPreviewChart({
   return (
     <div
       className="sticky z-20 -mx-4 mb-4 px-4 pt-2 pb-3 sm:-mx-8 sm:px-8"
+      onPointerEnter={(e) => e.pointerType === "mouse" && onHoverChange?.(true)}
+      onPointerLeave={(e) => e.pointerType === "mouse" && onHoverChange?.(false)}
       style={{ top: "var(--lp-header-h, 56px)", background: "#f0f0ee", borderBottom: "2px solid #0a0a0a15" }}
     >
       <div className="mb-1 flex min-h-[34px] items-end justify-between gap-3">
@@ -87,7 +104,7 @@ export function ScenarioPreviewChart({
             {preview ? previewKicker ?? (jp ? "この条件で試算すると" : "この打ち手を試すと") : envOn ? `選んだ外的環境での${jp ? "金融純資産" : "純資産"}` : `いまのプランの${jp ? "金融純資産" : "純資産"}`}
           </p>
           <p className="truncate text-[12px] font-bold" style={{ color: preview ? color : INK }}>
-            {preview ? previewTitle : "下のカードにマウスを乗せる（長押し）と変わり、クリックでキープします"}
+            {preview ? previewTitle : "下のカードにマウスを乗せる（長押し）と変わり、クリックでキープします。グラフに乗せると、その年の金額が出ます"}
           </p>
         </div>
         {preview ? (
@@ -108,6 +125,44 @@ export function ScenarioPreviewChart({
               tickLine={false}
               domain={domain}
               allowDataOverflow
+            />
+            <Tooltip
+              cursor={{ stroke: "#0a0a0a40", strokeDasharray: "3 3" }}
+              offset={40}
+              wrapperStyle={{ pointerEvents: "none", zIndex: 30 }}
+              isAnimationActive={false}
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const row = payload[0].payload as { いま: number; 試算: number };
+                const diff = row.試算 - row.いま;
+                return (
+                  <div className="min-w-[150px] rounded-lg bg-white px-2.5 py-1.5 text-[10px] leading-relaxed shadow" style={{ border: "1.5px solid #0a0a0a30" }}>
+                    <p className="mb-0.5 font-bold">{label}歳</p>
+                    <p className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-1">
+                        <span className="inline-block h-0 w-3 border-t-2 border-dashed" style={{ borderColor: "#94a3b8" }} />
+                        {dashedLabel}
+                      </span>
+                      <span className="font-bold tabular-nums">{fmtMan(row.いま)}</span>
+                    </p>
+                    {preview || envOn ? (
+                      <>
+                        <p className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-1">
+                            <span className="inline-block h-0.5 w-3" style={{ background: color }} />
+                            {solidLabel}
+                          </span>
+                          <span className="font-bold tabular-nums" style={{ color }}>{fmtMan(row.試算)}</span>
+                        </p>
+                        <p className="mt-0.5 flex justify-between gap-3 border-t pt-0.5 text-[#0a0a0a]/60" style={{ borderColor: "#0a0a0a15" }}>
+                          <span>差</span>
+                          <span className="font-bold tabular-nums" style={{ color: diff >= 0 ? GREEN : RED }}>{fmtDelta(diff)}円</span>
+                        </p>
+                      </>
+                    ) : null}
+                  </div>
+                );
+              }}
             />
             <ReferenceLine y={0} stroke={INK} />
             {crashAges.map((a) => (

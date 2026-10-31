@@ -1,5 +1,6 @@
 "use client";
 
+import { INNER, INNER2 } from "@/components/v4/frame";
 import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
@@ -111,8 +112,8 @@ function AccountBox({
         ? { border: "#1a6fa840", bg: "#eef6fc", fg: "#1a6fa8" }
         : { border: "#0a0a0a30", bg: "#f0f0ee", fg: "#0a0a0ab3" };
   return (
-    <div className="overflow-hidden rounded-lg" style={{ border: `2px solid ${c.border}` }}>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-3 py-1.5" style={{ background: c.bg }}>
+    <div className="overflow-hidden" style={INNER}>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-3 pt-2.5">
         <span className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: c.fg }}>
           {title}
         </span>
@@ -188,7 +189,7 @@ function HoldingCard({
   rHint: string;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg bg-white p-2.5" style={{ border: "1.5px solid #0a0a0a20" }}>
+    <div className="flex flex-col gap-1.5 p-2.5" style={INNER2}>
       <div>
         <p className="text-[12px] font-bold text-[#0a0a0a]">{title}</p>
         <p className="text-[10px] leading-snug text-[#0a0a0a]/55">{examples}</p>
@@ -203,7 +204,7 @@ function HoldingCard({
 
 function HoldingsTotal({ total, r }: { total: number; r: number }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-3 rounded-lg px-3 py-2" style={{ background: "#ffffff", border: "2px solid #0a0a0a" }}>
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 px-3 py-2" style={INNER2}>
       <span className="text-[11px] font-bold">この口座の合計</span>
       <span className="text-[13px] font-bold tabular-nums">
         {fmtMan(total)} <span className="text-[11px] font-normal text-[#0a0a0a]/60">／ 平均の想定利回り {r.toFixed(1)}%</span>

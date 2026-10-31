@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+import { CARD, note } from "@/components/v4/frame";
 import { AssumptionTiers } from "@/components/v5/AssumptionTiers";
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
@@ -343,7 +344,7 @@ export default function ResultPage() {
       <ReportSection no="02" title="入力したプロフィール">
         <div
           className="rounded-xl p-4"
-          style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
+          style={CARD}
         >
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <ProfileItem label="本人 現在年齢" value={`${selfAge}歳`} />
@@ -455,7 +456,7 @@ export default function ResultPage() {
       <ReportSection no={mcOn ? "07" : "06"} title="計算の前提と留意事項">
         <div
           className="rounded-xl p-4"
-          style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
+          style={CARD}
         >
           <ul className="flex flex-col gap-1.5 text-[11px] leading-relaxed text-[#0a0a0a]/70">
             <li>
@@ -586,7 +587,7 @@ function SummaryCard({
   return (
     <div
       className="flex flex-col gap-1 rounded-xl p-3"
-      style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
+      style={CARD}
     >
       <span className="text-[9px] font-bold uppercase tracking-wide text-[#0a0a0a]/50">
         {label}
@@ -757,7 +758,7 @@ function BalanceSheetTimeline({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-xl bg-white px-4 py-3" style={{ border: "2px solid #0a0a0a18" }}>
+      <div className="rounded-xl px-4 py-3" style={CARD}>
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-sm font-bold text-[#0a0a0a]">
             {isNow ? "現在（入力した残高）" : `${shownAge}歳の年末時点`}
@@ -915,7 +916,7 @@ function BalanceSheetVis({
   return (
     <div
       className="mt-3 rounded-xl p-4"
-      style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
+      style={CARD}
     >
       <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/60">
         資産と負債のバランス
@@ -979,8 +980,7 @@ function BalanceSheetVis({
       <div
         className="mt-4 flex flex-col gap-1 rounded-lg px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         style={{
-          background: isAlert ? "#fff0f0" : "#f0fff4",
-          border: `2px solid ${isAlert ? "#c8383a" : "#22863a"}`,
+          ...note(isAlert ? "red" : "green"),
         }}
       >
         <div>
@@ -1255,7 +1255,7 @@ function KpiCard({
   return (
     <div
       className="flex flex-col gap-1 rounded-xl p-3"
-      style={{ border: "2px solid #0a0a0a22", background: "#fff" }}
+      style={CARD}
     >
       <span className="text-[9px] font-bold uppercase tracking-wide text-[#0a0a0a]/50">
         {label}

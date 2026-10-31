@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { INNER, INNER2 } from "@/components/v4/frame";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
 import { PercentField } from "@/components/v4/inputs/PercentField";
@@ -57,7 +58,7 @@ export function LoanDetailFields({
     );
   }
   return (
-    <div className="flex flex-col gap-2 rounded-lg p-3" style={{ border: "1.5px solid #0a0a0a20", background: "#fafaf9" }}>
+    <div className="flex flex-col gap-2 p-3" style={INNER2}>
       <SelectField label="金利のタイプ" value={value.rateType} onChange={(v) => onChange({ rateType: v })} options={RATE_TYPE_OPTIONS} />
       {value.rateType === "fixedPeriod" ? (
         <div className="grid grid-cols-2 gap-2">
@@ -82,7 +83,7 @@ export function LoanDetailFields({
       <div>
         <p className="text-[11px] font-bold text-[#0a0a0a]/70">繰上返済の予定（あれば）</p>
         {value.prepays.map((pp, i) => (
-          <div key={i} className="mt-1.5 flex flex-wrap items-end gap-2 rounded-lg bg-white p-2" style={{ border: "1.5px solid #0a0a0a20" }}>
+          <div key={i} className="mt-1.5 flex flex-wrap items-end gap-2 p-2" style={INNER}>
             <div className="w-24">
               <NumberField label="何歳で" value={pp.age} onChange={(v) => onChange({ prepays: value.prepays.map((x, idx) => (idx === i ? { ...x, age: v } : x)) })} unit="歳" />
             </div>

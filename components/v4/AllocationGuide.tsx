@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { CARD } from "@/components/v4/frame";
 import { useVBase } from "@/components/v4/useVBase";
 
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
@@ -150,7 +151,7 @@ export function AllocationGuide({ plan, base }: { plan: PlanInput; base: Simulat
         ))}
       </div>
 
-      <div className="rounded-xl bg-white p-4" style={{ border: `2.5px solid ${INK}` }}>
+      <div className="p-4" style={CARD}>
         <p className="text-sm font-bold text-[#0a0a0a]">{stage.title}</p>
 
         <div className="mt-3">

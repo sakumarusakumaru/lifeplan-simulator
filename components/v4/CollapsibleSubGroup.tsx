@@ -1,8 +1,12 @@
 "use client";
 
-import { useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
+import { CARD, LINE_SOFT } from "@/components/v4/frame";
 import { TabModeContext } from "@/components/v4/Section";
+
+// カードの中に入れた組（基本設定の「詳細設定」の中など）。カードの中にカードを作らず、見出しと区切り線だけにする
+export const NestedGroupContext = createContext(false);
 
 export function CollapsibleSubGroup({
   title,
@@ -17,16 +21,42 @@ export function CollapsibleSubGroup({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const tabMode = useContext(TabModeContext);
+  const nested = useContext(NestedGroupContext);
 
-  // ver5: はじめから開いている組は開閉をやめて、見出しと中身をそのまま出す（開閉は「あれば入れる」組だけ）
-  if (tabMode && defaultOpen) {
+  // ver5: 組はどれも同じ「カード」（枠のルール2）。はじめから開いている組は開閉なし、
+  // 「あれば入れる」組は同じカードの見出しの右に「開く／閉じる」
+  if (tabMode && nested) {
     return (
-      <div className="flex flex-col gap-2 pt-1">
-        <div className="flex items-center justify-between gap-2 border-b pb-1.5" style={{ borderColor: "#0a0a0a20" }}>
-          <span className="text-[13px] font-bold text-[#0a0a0a]">{title}</span>
+      <div className="flex flex-col gap-2 border-t pt-3" style={{ borderColor: LINE_SOFT }}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[12px] font-bold text-[#0a0a0a]">{title}</span>
           {headerExtra ? <div className="flex shrink-0 items-center">{headerExtra}</div> : null}
         </div>
         <div className="flex flex-col gap-2">{children}</div>
+      </div>
+    );
+  }
+  if (tabMode) {
+    const fixed = defaultOpen;
+    const shown = fixed || open;
+    return (
+      <div style={CARD}>
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
+          {fixed ? (
+            <span className="text-[13px] font-bold text-[#0a0a0a]">{title}</span>
+          ) : (
+            <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex flex-1 items-center justify-between gap-2 text-left">
+              <span className="text-[13px] font-bold text-[#0a0a0a]">{title}</span>
+              <span className="text-[11px] font-bold text-[#0a0a0a]/55">{open ? "閉じる ▾" : "開く ▸"}</span>
+            </button>
+          )}
+          {headerExtra ? <div className="flex shrink-0 items-center">{headerExtra}</div> : null}
+        </div>
+        {shown ? (
+          <NestedGroupContext.Provider value={true}>
+            <div className="flex flex-col gap-2 px-4 pb-4">{children}</div>
+          </NestedGroupContext.Provider>
+        ) : null}
       </div>
     );
   }
