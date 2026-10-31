@@ -193,10 +193,6 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        <p className="mt-6 text-[11px] leading-relaxed text-[#0a0a0a]/45">
-          運営者：個人（さくまる）／ 連絡先：本サイトはお問い合わせ窓口を設けておりません。
-          サイトの利用は完全に自己責任でお願いします。
-        </p>
       </div>
     </main>
   );
