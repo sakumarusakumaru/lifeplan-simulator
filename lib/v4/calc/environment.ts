@@ -95,12 +95,16 @@ export function applyEnvPlan(plan: PlanInput, env: EnvInput): PlanInput {
         x.rateType === "fixed" ? x : x.rateType === "fixedPeriod" ? { ...x, rateAfter: (x.rateAfter ?? x.rate) + env.rateUp } : { ...x, rate: x.rate + env.rateUp },
       );
     // 不動産投資のローンも、全期間固定は上がらず、当初固定は固定が終わってからの金利だけ上がる
+    const upPart = <T extends { rateType: string; rate: number; rateAfter?: number }>(x: T): T =>
+      x.rateType === "fixed" ? x : x.rateType === "fixedPeriod" ? { ...x, rateAfter: (x.rateAfter ?? x.rate) + env.rateUp } : { ...x, rate: x.rate + env.rateUp };
     p.res = plan.res.map((r) =>
-      r.loanRateType === "fixed"
-        ? r
-        : r.loanRateType === "fixedPeriod"
-          ? { ...r, loanRateAfter: (r.loanRateAfter ?? r.rate) + env.rateUp }
-          : { ...r, rate: r.rate + env.rateUp },
+      r.loanParts?.length
+        ? { ...r, loanParts: r.loanParts.map(upPart) }
+        : r.loanRateType === "fixed"
+          ? r
+          : r.loanRateType === "fixedPeriod"
+            ? { ...r, loanRateAfter: (r.loanRateAfter ?? r.rate) + env.rateUp }
+            : { ...r, rate: r.rate + env.rateUp },
     );
     p.cashRate = plan.cashRate + env.rateUp / 2 / 100;
   }

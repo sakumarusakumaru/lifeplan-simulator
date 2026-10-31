@@ -1,7 +1,7 @@
 import { ageOn, parseYMD, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
 import { EDU, pmt } from "./finance";
-import { schedulePart, scheduleLoans } from "./homeLoan";
+import { propertyLoanParts, scheduleLoans, scheduleParts } from "./homeLoan";
 import { createInsuranceState, insuranceDeduction, insuranceYear, normalizeInsurance } from "./insurance";
 import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable, zaishokuTeishiAnnual } from "./pension";
 import {
@@ -130,27 +130,14 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     payY: r.bal > 0 ? pmt(r.rate / 100 / 12, r.term * 12, r.bal) * 12 : 0,
     startA: yearToStartAge(r.start, input),
   }));
-  // 不動産投資のローンも住宅ローンと同じ仕組みで返済予定を作る（金利タイプ・返済方法・繰上返済）
-  const reSchedules = rSims.map((r) =>
-    r.bal > 0
-      ? schedulePart(
-          {
-            label: r.name,
-            bal: r.bal,
-            years: r.term,
-            rate: r.rate,
-            rateType: r.loanRateType ?? "variable",
-            fixedUntilAge: r.loanFixedUntilAge,
-            rateAfter: r.loanRateAfter,
-            method: r.loanMethod ?? "annuity",
-            rule5y: r.loanRule5y,
-          },
-          Math.max(r.startA, input.curAge),
-          r.loanPrepays ?? [],
-          0,
-        )
-      : null,
-  );
+  // 不動産投資のローンも住宅ローンと同じ仕組みで返済予定を作る（ミックスローン・金利タイプ・返済方法・繰上返済）
+  const reSchedules = rSims.map((r) => {
+    const parts = propertyLoanParts(r);
+    if (!parts.length) return null;
+    const sched = scheduleParts(parts, Math.max(r.startA, input.curAge), r.loanPrepays ?? []);
+    r.bal = sched.startBal; // ミックスのときは各本の合計を残高に
+    return sched;
+  });
 
   const spouseCurAge = ageOn(input.spouseBirth, input.baseDate);
   const hasSpouse = spouseCurAge !== null;
@@ -487,7 +474,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       let pay = 0;
       if (r.bal > 0 && active) {
         // 返済予定（金利タイプ・返済方法・繰上返済込み）から、その年の返済・利息・年末残高を取る
-        const y = reSchedules[ri]?.years.get(age);
+        const y = reSchedules[ri]?.byAge.get(age);
         intr = y?.interest ?? 0;
         pay = y ? y.pay + y.prepay : 0;
         r.bal = y ? y.bal : 0;

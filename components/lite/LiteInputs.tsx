@@ -281,7 +281,7 @@ export function LiteInputs() {
                 value={e.label}
                 onChange={(ev) => setEvent(i, { label: ev.target.value })}
                 className="rounded-lg bg-white px-2.5 py-2 text-[13px] font-bold outline-none"
-                style={{ border: `2px solid ${INK}` }}
+                style={{ border: `1.5px solid ${INK}` }}
               />
             </label>
             <NumField label="何歳で" value={e.age} onChange={(v) => setEvent(i, { age: v })} unit="歳" min={q.age} max={100} />

@@ -48,7 +48,7 @@ function AgeDisplay({ birth }: { birth: string }) {
 // ver5: 配偶者の「いる／いない」。いないときは配偶者の欄を出さない（計算は生年月日が空なら配偶者なし）
 function SpouseToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div className="grid grid-cols-2 overflow-hidden" style={{ border: "2px solid #0a0a0a", borderRadius: 10 }} role="radiogroup" aria-label="配偶者">
+    <div className="grid grid-cols-2 overflow-hidden" style={{ border: "1.5px solid #0a0a0a", borderRadius: 10 }} role="radiogroup" aria-label="配偶者">
       {[
         { v: false, label: "いない" },
         { v: true, label: "いる" },
@@ -63,7 +63,7 @@ function SpouseToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) =>
           style={{
             background: on === o.v ? "var(--lp-primary)" : "#ffffff",
             color: on === o.v ? "#ffffff" : "#0a0a0a",
-            borderLeft: i === 0 ? "none" : "2px solid #0a0a0a",
+            borderLeft: i === 0 ? "none" : "1.5px solid #0a0a0a",
           }}
         >
           {o.label}
@@ -295,7 +295,7 @@ export function SettingsMegaSection() {
           <div className="flex flex-col gap-3">
             <div
               className="grid grid-cols-2 gap-0 overflow-hidden"
-              style={{ border: "2.5px solid #0a0a0a", borderRadius: 12 }}
+              style={{ border: "1.5px solid #0a0a0a", borderRadius: 12 }}
             >
               <button
                 type="button"
@@ -304,7 +304,7 @@ export function SettingsMegaSection() {
                 style={{
                   background: !detailed ? "var(--lp-primary)" : "#ffffff",
                   color: !detailed ? "#ffffff" : "#0a0a0a",
-                  borderRight: "2.5px solid #0a0a0a",
+                  borderRight: "1.5px solid #0a0a0a",
                 }}
               >
                 簡易（一律%で計算）

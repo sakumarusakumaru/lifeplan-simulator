@@ -14,6 +14,7 @@ import {
   buildAfterDeathSteps,
   insuranceRows,
   itemAmount,
+  itemField,
   monthlyPayments,
   newItemId,
   syncHandoverItems,
@@ -118,8 +119,8 @@ function DocPage({ no, total, title, children }: { no: number; total: number; ti
   return (
     <section className="handover-page mx-auto mb-6 w-full max-w-[210mm] bg-white px-5 py-6 shadow-sm sm:px-10 sm:py-10" style={{ border: "1px solid #0a0a0a20", color: INK }}>
       <div className="mb-4 flex items-baseline justify-between border-b-2 pb-2" style={{ borderColor: INK }}>
-        <h2 className="text-lg font-bold">{title}</h2>
-        <span className="text-[10px] tabular-nums text-[#0a0a0a]/50">
+        <h2 className="hv-xl font-bold">{title}</h2>
+        <span className="hv-xs tabular-nums text-[#0a0a0a]/50">
           {no}章 / 全{total}章
         </span>
       </div>
@@ -130,14 +131,14 @@ function DocPage({ no, total, title, children }: { no: number; total: number; ti
 
 function Th({ children, right }: { children: React.ReactNode; right?: boolean }) {
   return (
-    <th className={`border-b px-2 py-1.5 text-[11px] font-bold ${right ? "text-right" : "text-left"}`} style={{ borderColor: `${INK}40` }}>
+    <th className={`hv-th border-b px-2 py-1.5 font-bold ${right ? "text-right" : "text-left"}`} style={{ borderColor: `${INK}40` }}>
       {children}
     </th>
   );
 }
 function Td({ children, right }: { children: React.ReactNode; right?: boolean }) {
   return (
-    <td className={`border-b px-2 py-1.5 align-top text-[12px] ${right ? "whitespace-nowrap text-right tabular-nums" : ""}`} style={{ borderColor: `${INK}15` }}>
+    <td className={`hv-td border-b px-2 py-1.5 align-top ${right ? "whitespace-nowrap text-right tabular-nums" : ""}`} style={{ borderColor: `${INK}15` }}>
       {children}
     </td>
   );
@@ -147,7 +148,7 @@ function Td({ children, right }: { children: React.ReactNode; right?: boolean })
 function WriteLines({ n = 2, label }: { n?: number; label?: string }) {
   return (
     <div className="mt-2">
-      {label ? <p className="text-[9px] font-bold text-[#0a0a0a]/50">{label}</p> : null}
+      {label ? <p className="hv-2xs font-bold text-[#0a0a0a]/50">{label}</p> : null}
       {Array.from({ length: n }).map((_, i) => (
         <div key={i} className="h-[26px] border-b" style={{ borderColor: `${INK}40`, borderBottomStyle: "dotted" }} />
       ))}
@@ -179,6 +180,12 @@ export default function HandoverPage() {
     if (next) upd({ items: next, version: 2 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, plan]);
+
+  // この画面を開いているあいだは、globals.css の印刷ルール（A4横に縮小）を効かせない（A4縦・等倍で印刷する）
+  useEffect(() => {
+    document.documentElement.classList.add("lp-print-doc");
+    return () => document.documentElement.classList.remove("lp-print-doc");
+  }, []);
 
   const sources = useMemo(() => autoSources(plan), [plan]);
   const insList = useMemo(() => plan.ins.map((p) => normalizeInsurance(p as never, plan.curAge, plan.endAge)), [plan.ins, plan.curAge, plan.endAge]);
@@ -213,13 +220,16 @@ export default function HandoverPage() {
   // 区分の状況: 書いた項目があれば「ある」。なければ本人が選んだ「ない・わからない」（未選択は空）
   const statusOf = (catId: string) => (byCat(catId).length ? "ある" : h.catStatus?.[catId] ?? "");
 
+  // 項目の見出し。入力から作ったローンなどで借入先がまだ書かれていなければ、区分の名前（住宅ローン など）で出す
+  const itemTitle = (c: CategoryDef, it: HandoverItem) => it.f[c.nameKey] || it.f.label || it.f.kind || (it.src ? c.title.replace(/（.*$/, "") : "") || "（名前未記入）";
+
   // 別紙（パスワードなど手書きする欄）の通し番号。章の順に振る
   const handList: { no: number; key: string; cat: string; item: string; label: string }[] = [];
   for (const side of SIDES)
     for (const c of CATEGORIES.filter((x) => x.side === side))
       for (const it of byCat(c.id))
         for (const d of c.fields.filter((x) => x.type === "hand"))
-          handList.push({ no: handList.length + 1, key: `${it.id}.${d.key}`, cat: c.title.replace(/（.*$/, ""), item: it.f[c.nameKey] || it.f.label || it.f.kind || "（名前未記入）", label: d.label });
+          handList.push({ no: handList.length + 1, key: `${it.id}.${d.key}`, cat: c.title.replace(/（.*$/, ""), item: itemTitle(c, it), label: d.label });
   const handNo = (key: string) => handList.find((x) => x.key === key)?.no;
 
   const sameAsAuto = (p: HandoverPolicy) => insRows.some((x) => x.company === p.company && x.kind === p.kind);
@@ -286,7 +296,7 @@ export default function HandoverPage() {
   const setBeneficiary = (index: number, v: string) => setField("ins", insList.map((p, i) => (i === index ? { ...p, beneficiary: v } : p)));
 
   // 1欄の入力（項目・保険・年金・本人情報で共通）
-  const renderField = (def: FieldDef, value: string, onChange: (v: string) => void, secretKey: string, autoAmount?: number) => (
+  const renderField = (def: FieldDef, value: string, onChange: (v: string) => void, secretKey: string, autoAmount?: number, hint?: string) => (
     <FieldInput
       key={def.key}
       def={def}
@@ -296,10 +306,15 @@ export default function HandoverPage() {
       secretValue={secrets[secretKey] ?? ""}
       onSecret={(v) => setSecret(secretKey, v)}
       autoAmount={autoAmount}
+      hint={hint}
     />
   );
+  // 入力から出し直している欄（本人がまだ書いていない）の説明
+  const liveHint = (it: HandoverItem, key: string) => {
+    if (!it.src || it.f[key]) return undefined;
+    return sources.find((s) => s.src === it.src)?.live?.[key] ? "シミュレーターの入力から自動（書き換えられます）" : undefined;
+  };
 
-  const itemTitle = (c: CategoryDef, it: HandoverItem) => it.f[c.nameKey] || it.f.label || it.f.kind || "（名前未記入）";
 
   const categoryForm = (c: CategoryDef) => {
     const list = byCat(c.id);
@@ -358,7 +373,8 @@ export default function HandoverPage() {
                   {c.fields.map((def) =>
                     def.type === "amount"
                       ? renderField(def, typeof it.amount === "number" ? String(it.amount) : "", (v) => updItem(it.id, { amount: Number(v) || 0 }), "", auto)
-                      : renderField(def, it.f[def.key] ?? "", (v) => setItemField(it, def.key, v), `${it.id}.${def.key}`),
+                      : // 毎月の返済・金利・完済予定などは入力から出し直す（itemField）。本人が書けばそちらが優先
+                        renderField(def, itemField(it, def.key, sources), (v) => setItemField(it, def.key, v), `${it.id}.${def.key}`, undefined, liveHint(it, def.key)),
                   )}
                 </div>
                 {it.src && typeof it.amount === "number" ? (
@@ -379,14 +395,14 @@ export default function HandoverPage() {
   const itemView = (c: CategoryDef, it: HandoverItem) => (
     <div key={it.id} className="handover-item mb-2 rounded-md p-2.5" style={{ border: `1px solid ${INK}30` }}>
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <p className="text-[13px] font-bold">{itemTitle(c, it)}</p>
-        {amountOf(it) > 0 ? <p className="text-[13px] font-bold tabular-nums">{man(amountOf(it))}</p> : null}
+        <p className="hv-lg font-bold">{itemTitle(c, it)}</p>
+        {amountOf(it) > 0 ? <p className="hv-lg font-bold tabular-nums">{man(amountOf(it))}</p> : null}
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
         {c.fields
           .filter((d) => d.type !== "amount" && d.key !== c.nameKey)
           .map((d) => (
-            <FieldView key={d.key} def={d} value={it.f[d.key] ?? ""} secretValue={sec(`${it.id}.${d.key}`)} handNo={handNo(`${it.id}.${d.key}`)} maskPrint={maskPrint} />
+            <FieldView key={d.key} def={d} value={itemField(it, d.key, sources)} secretValue={sec(`${it.id}.${d.key}`)} handNo={handNo(`${it.id}.${d.key}`)} maskPrint={maskPrint} />
           ))}
       </div>
     </div>
@@ -401,22 +417,22 @@ export default function HandoverPage() {
         {used.map((c) => (
           <div key={c.id} className="mb-4">
             <div className="mb-1.5 flex items-baseline justify-between border-b pb-1" style={{ borderColor: `${INK}30` }}>
-              <p className="text-[12px] font-bold">{c.title}</p>
-              {side === "asset" || side === "debt" ? <p className="text-[11px] font-bold tabular-nums">{man(byCat(c.id).reduce((a, it) => a + amountOf(it), 0))}</p> : null}
+              <p className="hv-md font-bold">{c.title}</p>
+              {side === "asset" || side === "debt" ? <p className="hv-sm font-bold tabular-nums">{man(byCat(c.id).reduce((a, it) => a + amountOf(it), 0))}</p> : null}
             </div>
-            {c.warn ? <p className="mb-1.5 text-[10px] leading-relaxed text-[#c8383a]">{c.warn}</p> : null}
+            {c.warn ? <p className="mb-1.5 hv-xs leading-relaxed text-[#c8383a]">{c.warn}</p> : null}
             {byCat(c.id).map((it) => itemView(c, it))}
           </div>
         ))}
-        {!used.length ? <p className="text-[12px] text-[#0a0a0a]/55">（記入なし）</p> : null}
+        {!used.length ? <p className="hv-md text-[#0a0a0a]/55">（記入なし）</p> : null}
         {unused.length ? (
           <div className="handover-item mt-3 rounded-md p-2.5" style={{ background: "#f7f7f5" }}>
-            <p className="mb-1 text-[11px] font-bold">書いていない区分（あれば余白に書き足す）</p>
+            <p className="mb-1 hv-sm font-bold">書いていない区分（あれば余白に書き足す）</p>
             <ul className="flex flex-col gap-0.5">
               {unused.map((c) => {
                 const st = statusOf(c.id);
                 return (
-                  <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-3 text-[11px]">
+                  <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-3 hv-sm">
                     <span>{c.title}</span>
                     {st ? (
                       <b>{st}</b>
@@ -442,23 +458,23 @@ export default function HandoverPage() {
       title: "お金の引き継ぎ書",
       body: (
         <>
-          <p className="text-[12px] leading-relaxed">
+          <p className="hv-md leading-relaxed">
             この書類は、{h.author || "わたし"}に万一のことがあったとき、家族が困らないように、 財産と負債のありか、毎月の契約、当面のお金の流れ、やることをまとめたものです。
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[12px] sm:grid-cols-3">
+          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 hv-md sm:grid-cols-3">
             <div>
-              <p className="text-[9px] font-bold text-[#0a0a0a]/55">作成日</p>
+              <p className="hv-2xs font-bold text-[#0a0a0a]/55">作成日</p>
               <p className="font-bold">{todayStr}</p>
             </div>
             <div>
-              <p className="text-[9px] font-bold text-[#0a0a0a]/55">名前</p>
+              <p className="hv-2xs font-bold text-[#0a0a0a]/55">名前</p>
               <p className="font-bold">
                 {h.author || "（未記入）"}
-                {h.profile?.kana ? <span className="ml-1 text-[10px] font-normal">（{h.profile.kana}）</span> : null}
+                {h.profile?.kana ? <span className="ml-1 hv-xs font-normal">（{h.profile.kana}）</span> : null}
               </p>
             </div>
             <div>
-              <p className="text-[9px] font-bold text-[#0a0a0a]/55">年齢</p>
+              <p className="hv-2xs font-bold text-[#0a0a0a]/55">年齢</p>
               <p className="font-bold">{selfAge}歳</p>
             </div>
             {PROFILE_FIELDS.filter((d) => d.key !== "kana").map((d) => (
@@ -466,8 +482,8 @@ export default function HandoverPage() {
             ))}
           </div>
           <div className="mt-4">
-            <p className="mb-1 text-[11px] font-bold">家族</p>
-            <ul className="text-[12px] leading-relaxed">
+            <p className="mb-1 hv-sm font-bold">家族</p>
+            <ul className="hv-md leading-relaxed">
               {hasSpouse ? <li>配偶者：{spouseAge}歳</li> : null}
               {plan.kids.map((k, i) => (
                 <li key={i}>
@@ -479,27 +495,27 @@ export default function HandoverPage() {
           </div>
           <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="rounded-lg p-3" style={{ background: "#f0f0ee" }}>
-              <p className="text-[10px] font-bold text-[#0a0a0a]/55">資産（プラス）</p>
-              <p className="text-lg font-bold tabular-nums">{man(totalAssets)}</p>
+              <p className="hv-xs font-bold text-[#0a0a0a]/55">資産（プラス）</p>
+              <p className="hv-xl font-bold tabular-nums">{man(totalAssets)}</p>
             </div>
             <div className="rounded-lg p-3" style={{ background: "#f0f0ee" }}>
-              <p className="text-[10px] font-bold text-[#0a0a0a]/55">負債（マイナス）</p>
-              <p className="text-lg font-bold tabular-nums">{man(totalDebts)}</p>
-              <p className="text-[9px] text-[#0a0a0a]/55">差し引き {man(totalAssets - totalDebts)}</p>
+              <p className="hv-xs font-bold text-[#0a0a0a]/55">負債（マイナス）</p>
+              <p className="hv-xl font-bold tabular-nums">{man(totalDebts)}</p>
+              <p className="hv-2xs text-[#0a0a0a]/55">差し引き {man(totalAssets - totalDebts)}</p>
             </div>
             <div className="rounded-lg p-3" style={{ background: tax.payable > 0 ? "#fff1f1" : "#f0fff4" }}>
-              <p className="text-[10px] font-bold text-[#0a0a0a]/55">相続税の目安</p>
-              <p className="text-lg font-bold tabular-nums" style={{ color: tax.payable > 0 ? RED : GREEN }}>
+              <p className="hv-xs font-bold text-[#0a0a0a]/55">相続税の目安</p>
+              <p className="hv-xl font-bold tabular-nums" style={{ color: tax.payable > 0 ? RED : GREEN }}>
                 {tax.taxable > 0 ? man(tax.payable) : "かからない見込み"}
               </p>
-              <p className="text-[9px] text-[#0a0a0a]/55">
+              <p className="hv-2xs text-[#0a0a0a]/55">
                 総額 {man(tax.totalTax)}・基礎控除 {man(tax.deduction)}
                 {reDiscount > 0 ? `。不動産は相続税評価額で計算（時価より${man(reDiscount)}低い）` : ""}
                 {hasSpouse && inh.heirKids > 0 && inh.second && inh.second.payable > 0 ? `。配偶者がその後亡くなると、二次相続でさらに約${man(inh.second.payable)}` : ""}
               </p>
             </div>
           </div>
-          <p className="mb-1 mt-5 text-[11px] font-bold">財産と負債の一覧（{todayStr}時点）</p>
+          <p className="mb-1 mt-5 hv-sm font-bold">財産と負債の一覧（{todayStr}時点）</p>
           <table className="w-full border-collapse">
             <thead>
               <tr>
@@ -516,7 +532,7 @@ export default function HandoverPage() {
                   return (
                     <tr key={c.id}>
                       <Td>
-                        <span className="text-[10px] text-[#0a0a0a]/55">{side === "asset" ? "資産" : "負債"}　</span>
+                        <span className="hv-xs text-[#0a0a0a]/55">{side === "asset" ? "資産" : "負債"}　</span>
                         {c.title.replace(/（.*$/, "")}
                       </Td>
                       <Td>{st ? (st === "ある" ? `ある（${byCat(c.id).length}件）` : st) : "□ある □ない □わからない"}</Td>
@@ -527,7 +543,7 @@ export default function HandoverPage() {
               )}
             </tbody>
           </table>
-          <div className="mt-4 rounded-lg p-3 text-[11px] leading-relaxed" style={{ border: `1.5px solid ${GOLD}` }}>
+          <div className="mt-4 rounded-lg p-3 hv-sm leading-relaxed" style={{ border: `1.5px solid ${GOLD}` }}>
             <p className="mb-1 font-bold">この書類の扱い</p>
             <ul className="list-disc pl-4">
               <li>この書類に法的な効力はありません（遺言書の代わりにはなりません）。</li>
@@ -543,7 +559,7 @@ export default function HandoverPage() {
               <li>年に1回、誕生日などに見直してください。見直した日：＿＿年＿＿月＿＿日／＿＿年＿＿月＿＿日</li>
             </ul>
           </div>
-          <p className="mt-4 text-[10px] leading-relaxed text-[#0a0a0a]/55">
+          <p className="mt-4 hv-xs leading-relaxed text-[#0a0a0a]/55">
             金額は作成日時点の目安です（自宅・不動産は購入価格から築年数で減価した概算）。相続税の目安は「もしも ＞ 相続の備え」で選んだ分け方での概算で、実際の評価（路線価・小規模宅地等の特例など）で大きく変わります。手続きは税理士・司法書士にご相談ください。
           </p>
         </>
@@ -555,7 +571,7 @@ export default function HandoverPage() {
       body: (
         <>
           {sideView("debt")}
-          <p className="mt-3 text-[11px] leading-relaxed text-[#0a0a0a]/75">
+          <p className="mt-3 hv-sm leading-relaxed text-[#0a0a0a]/75">
             負債は相続の対象です。マイナスの財産がプラスより多いときは、亡くなったことを知ってから3か月以内に、家庭裁判所で相続放棄・限定承認を申し立てられます。
             {plan.useHomeLoan && plan.hlBal > 0 && plan.risk.danshin ? "住宅ローンは団信で返済される想定です（銀行に連絡すると手続きが始まります）。" : ""}
           </p>
@@ -571,12 +587,12 @@ export default function HandoverPage() {
             return (
               <div key={x.index} className="handover-item mb-2 rounded-md p-2.5" style={{ border: `1px solid ${INK}30` }}>
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-[13px] font-bold">
-                    {x.company || "（未記入）"} <span className="text-[11px] font-normal">{x.kind}</span>
+                  <p className="hv-lg font-bold">
+                    {x.company || "（未記入）"} <span className="hv-sm font-normal">{x.kind}</span>
                   </p>
-                  {x.deathBenefit ? <p className="text-[13px] font-bold tabular-nums">死亡 {man(x.deathBenefit)}</p> : null}
+                  {x.deathBenefit ? <p className="hv-lg font-bold tabular-nums">死亡 {man(x.deathBenefit)}</p> : null}
                 </div>
-                {x.benefit ? <p className="text-[11px] text-[#0a0a0a]/70">{x.benefit}</p> : null}
+                {x.benefit ? <p className="hv-sm text-[#0a0a0a]/70">{x.benefit}</p> : null}
                 <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1.5">
                   <FieldView def={{ key: "who", label: "契約者・被保険者 → 受取人", type: "text" }} value={`${x.contractor}・${x.insured} → ${x.beneficiary || "（未記入）"}`} />
                   {x.premiumM > 0 ? <FieldView def={{ key: "prem", label: "保険料", type: "text" }} value={`月${Math.round(x.premiumM).toLocaleString()}円`} /> : null}
@@ -602,7 +618,7 @@ export default function HandoverPage() {
                   <tr key={i}>
                     <Td>
                       {p.company || "（未記入）"}
-                      {p.contact ? <div className="text-[10px] text-[#0a0a0a]/60">{p.contact}</div> : null}
+                      {p.contact ? <div className="hv-xs text-[#0a0a0a]/60">{p.contact}</div> : null}
                     </Td>
                     <Td>{p.kind}</Td>
                     <Td>
@@ -622,17 +638,17 @@ export default function HandoverPage() {
               </tbody>
             </table>
           ) : null}
-          {!insRows.length && !extraPolicies.length && !(plan.risk.deathInsurance > 0) ? <p className="text-[12px] text-[#0a0a0a]/55">（記入なし）</p> : null}
-          <p className="mt-2 text-[11px] leading-relaxed text-[#0a0a0a]/70">
+          {!insRows.length && !extraPolicies.length && !(plan.risk.deathInsurance > 0) ? <p className="hv-md text-[#0a0a0a]/55">（記入なし）</p> : null}
+          <p className="mt-2 hv-sm leading-relaxed text-[#0a0a0a]/70">
             保険金の請求は保険会社に連絡して行います（請求できる期限は一般に3年）。死亡保険金のうち「500万円 × 法定相続人の数」までは相続税がかかりません。
             本人が受け取る前に亡くなった医療保険などの給付金も請求できます。
           </p>
-          <p className="mb-1.5 mt-4 border-b pb-1 text-[12px] font-bold" style={{ borderColor: `${INK}30` }}>
+          <p className="mb-1.5 mt-4 border-b pb-1 hv-md font-bold" style={{ borderColor: `${INK}30` }}>
             公的年金
           </p>
           {pensionWho.map((who) => (
             <div key={who} className="handover-item mb-2 rounded-md p-2.5" style={{ border: `1px solid ${INK}30` }}>
-              <p className="mb-1 text-[12px] font-bold">{who === "self" ? "本人" : "配偶者"}</p>
+              <p className="mb-1 hv-md font-bold">{who === "self" ? "本人" : "配偶者"}</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                 {PENSION_FIELDS.map((d) => (
                   <FieldView key={d.key} def={d} value={h.pension?.[who]?.[d.key] ?? ""} secretValue={sec(`pension-${who}.${d.key}`)} maskPrint={maskPrint} />
@@ -647,22 +663,22 @@ export default function HandoverPage() {
       title: "当面のお金はどうなるか",
       body: hasFamily ? (
         <>
-          <p className="text-[12px] leading-relaxed">
+          <p className="hv-md leading-relaxed">
             {todayStr}時点で{h.author || "わたし"}が亡くなった場合の試算です。
           </p>
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="rounded-lg p-3" style={{ background: "#f0f0ee" }}>
-              <p className="text-[10px] font-bold text-[#0a0a0a]/55">すぐに入るお金（目安）</p>
-              <p className="text-lg font-bold tabular-nums">{man(deathRow?.deathLump ?? 0)}</p>
-              <p className="text-[9px] text-[#0a0a0a]/55">死亡保険金・死亡退職金・iDeCo等</p>
+              <p className="hv-xs font-bold text-[#0a0a0a]/55">すぐに入るお金（目安）</p>
+              <p className="hv-xl font-bold tabular-nums">{man(deathRow?.deathLump ?? 0)}</p>
+              <p className="hv-2xs text-[#0a0a0a]/55">死亡保険金・死亡退職金・iDeCo等</p>
             </div>
             <div className="rounded-lg p-3" style={{ background: "#f0f0ee" }}>
-              <p className="text-[10px] font-bold text-[#0a0a0a]/55">毎月の遺族年金（最初）</p>
-              <p className="text-lg font-bold tabular-nums">{phases[0] ? `${((phases[0].kiso + phases[0].kosei + phases[0].chukorei) / 12 / 10000).toFixed(1)}万円` : "対象外"}</p>
+              <p className="hv-xs font-bold text-[#0a0a0a]/55">毎月の遺族年金（最初）</p>
+              <p className="hv-xl font-bold tabular-nums">{phases[0] ? `${((phases[0].kiso + phases[0].kosei + phases[0].chukorei) / 12 / 10000).toFixed(1)}万円` : "対象外"}</p>
             </div>
             <div className="rounded-lg p-3" style={{ background: need === 0 ? "#f0fff4" : "#fff1f1" }}>
-              <p className="text-[10px] font-bold text-[#0a0a0a]/55">暮らしの見通し</p>
-              <p className="text-[13px] font-bold" style={{ color: need === 0 ? GREEN : RED }}>
+              <p className="hv-xs font-bold text-[#0a0a0a]/55">暮らしの見通し</p>
+              <p className="hv-lg font-bold" style={{ color: need === 0 ? GREEN : RED }}>
                 {need === null
                   ? "亡くならなくても足りなくなる計算のため、必要な保障額は出していません"
                   : need === 0
@@ -697,7 +713,7 @@ export default function HandoverPage() {
               </tbody>
             </table>
           ) : null}
-          <ul className="mt-4 list-disc pl-5 text-[11px] leading-relaxed text-[#0a0a0a]/75">
+          <ul className="mt-4 list-disc pl-5 hv-sm leading-relaxed text-[#0a0a0a]/75">
             <li>遺族年金は年金事務所で請求します（非課税）。請求するまで振り込まれません。</li>
             {plan.useHomeLoan && plan.risk.danshin ? <li>住宅ローンは団信で返済され、毎月の返済はなくなる想定です。</li> : null}
             <li>銀行が名義人の死亡を知ると、その口座は止まります。当面の生活費は家族名義の口座にも置いておくと安心です（遺産分割の前でも、一定額までは引き出せる制度があります）。</li>
@@ -705,7 +721,7 @@ export default function HandoverPage() {
           </ul>
         </>
       ) : (
-        <p className="text-[12px] text-[#0a0a0a]/60">配偶者・子どもが未入力のため、遺族年金の試算は省略しています。</p>
+        <p className="hv-md text-[#0a0a0a]/60">配偶者・子どもが未入力のため、遺族年金の試算は省略しています。</p>
       ),
     },
     {
@@ -714,7 +730,7 @@ export default function HandoverPage() {
         <>
           {payments.length ? (
             <>
-              <p className="mb-1.5 text-[12px] font-bold">シミュレーターに入れている支払い</p>
+              <p className="mb-1.5 hv-md font-bold">シミュレーターに入れている支払い</p>
               <table className="w-full border-collapse">
                 <thead>
                   <tr>
@@ -744,7 +760,7 @@ export default function HandoverPage() {
       body: (
         <>
           {sideView("digital")}
-          <p className="mt-3 text-[11px] leading-relaxed text-[#0a0a0a]/75">
+          <p className="mt-3 hv-sm leading-relaxed text-[#0a0a0a]/75">
             iPhoneは「故人アカウント管理連絡先」、Googleは「アカウント無効化管理ツール」を設定しておくと、家族がデータを受け取れます。ネット銀行・ネット証券は、ログインできなくても金融機関名が分かれば相続の手続きができます。
           </p>
         </>
@@ -781,18 +797,18 @@ export default function HandoverPage() {
       title: "いつまでに何をするか",
       body: (
         <>
-          <p className="mb-3 text-[11px] text-[#0a0a0a]/65">
+          <p className="mb-3 hv-sm text-[#0a0a0a]/65">
             亡くなった日からの一般的な期限の目安です。入力内容（証券口座・住宅ローン・DCなど）に合わせて、必要な手続きを足しています。済んだら □ に印を付けてください。
           </p>
           <div className="flex flex-col gap-3">
             {steps.map((s) => (
               <section key={s.when} className="handover-item">
-                <p className="mb-1 inline-block rounded px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: "var(--lp-primary)" }}>
+                <p className="mb-1 inline-block rounded px-2 py-0.5 hv-sm font-bold text-white" style={{ background: "var(--lp-primary)" }}>
                   {s.when}
                 </p>
                 <ul className="flex flex-col gap-1">
                   {s.items.map((it) => (
-                    <li key={it} className="flex gap-2 text-[12px] leading-relaxed">
+                    <li key={it} className="flex gap-2 hv-md leading-relaxed">
                       <span className="mt-[3px] inline-block h-3.5 w-3.5 shrink-0" style={{ border: `1.5px solid ${INK}` }} />
                       <span>{it}</span>
                     </li>
@@ -808,7 +824,7 @@ export default function HandoverPage() {
       title: "見つからないときの調べ方",
       body: (
         <>
-          <p className="mb-3 text-[11px] leading-relaxed text-[#0a0a0a]/70">この書類に書いていないもの、書き忘れたものがあっても、家族は次の窓口で調べられます。</p>
+          <p className="mb-3 hv-sm leading-relaxed text-[#0a0a0a]/70">この書類に書いていないもの、書き忘れたものがあっても、家族は次の窓口で調べられます。</p>
           <table className="w-full border-collapse">
             <tbody>
               {LOOKUP_GUIDE.map((x) => (
@@ -821,7 +837,7 @@ export default function HandoverPage() {
               ))}
             </tbody>
           </table>
-          <p className="mt-3 text-[10px] leading-relaxed text-[#0a0a0a]/55">手数料・期限は2026年10月時点の目安です。窓口で最新の条件を確認してください。</p>
+          <p className="mt-3 hv-xs leading-relaxed text-[#0a0a0a]/55">手数料・期限は2026年10月時点の目安です。窓口で最新の条件を確認してください。</p>
         </>
       ),
     },
@@ -837,7 +853,7 @@ export default function HandoverPage() {
                     <Td>{c.role}</Td>
                     <Td>
                       {c.name}
-                      <div className="text-[10px] text-[#0a0a0a]/60">{c.why}</div>
+                      <div className="hv-xs text-[#0a0a0a]/60">{c.why}</div>
                     </Td>
                     <Td right>{whereOf(c.key) || <span className="text-[#0a0a0a]/35">（未記入）</span>}</Td>
                   </tr>
@@ -852,7 +868,7 @@ export default function HandoverPage() {
               </tbody>
             </table>
           ) : (
-            <p className="text-[12px] text-[#0a0a0a]/55">（記入なし）</p>
+            <p className="hv-md text-[#0a0a0a]/55">（記入なし）</p>
           )}
           <WriteLines n={3} label="書き足し用" />
         </>
@@ -867,16 +883,16 @@ export default function HandoverPage() {
               <FieldView key={d.key} def={d} value={h.wish?.[d.key] ?? (d.key === "funeral" ? h.wishes : "")} />
             ))}
           </div>
-          <p className="mb-1 mt-5 text-[12px] font-bold">遺言書</p>
-          <p className="text-[12px]">
+          <p className="mb-1 mt-5 hv-md font-bold">遺言書</p>
+          <p className="hv-md">
             {WILL_OPTIONS.find((w) => w.value === h.will)?.label}
             {h.will !== "none" && h.willPlace ? `：${h.willPlace}` : ""}
           </p>
-          {h.will === "self" ? <p className="text-[10px] text-[#0a0a0a]/55">自宅で保管している自筆の遺言は、開封せずに家庭裁判所で「検認」を受けてください。</p> : null}
+          {h.will === "self" ? <p className="hv-xs text-[#0a0a0a]/55">自宅で保管している自筆の遺言は、開封せずに家庭裁判所で「検認」を受けてください。</p> : null}
           <div className="handover-item mt-6 rounded-lg p-4" style={{ border: `1.5px solid ${INK}40` }}>
-            <p className="mb-1 text-[12px] font-bold">家族へ</p>
-            <p className="min-h-[4em] whitespace-pre-wrap text-[13px] leading-relaxed">{h.message || ""}</p>
-            <p className="mt-3 text-right text-[11px]">
+            <p className="mb-1 hv-md font-bold">家族へ</p>
+            <p className="min-h-[4em] whitespace-pre-wrap hv-lg leading-relaxed">{h.message || ""}</p>
+            <p className="mt-3 text-right hv-sm">
               {todayStr}　{h.author || ""}
             </p>
           </div>
@@ -887,7 +903,7 @@ export default function HandoverPage() {
       title: "別紙　パスワードなど（切り離して封をする）",
       body: (
         <>
-          <div className="mb-3 rounded-md p-2.5 text-[11px] leading-relaxed" style={{ border: `1.5px solid ${RED}`, color: "#7a1f20" }}>
+          <div className="mb-3 rounded-md p-2.5 hv-sm leading-relaxed" style={{ border: `1.5px solid ${RED}`, color: "#7a1f20" }}>
             このページは、本体から切り離して封筒に入れ、封をして、本体とは別の場所（金庫・貸金庫など）に保管してください。
             封筒には「{h.author || "わたし"}が亡くなったら開けてください」と書いておくと安心です。キャッシュカードの暗証番号は書かないでください。
           </div>
@@ -907,7 +923,7 @@ export default function HandoverPage() {
                     <Td>{x.no}</Td>
                     <Td>
                       {x.item}
-                      <div className="text-[9px] text-[#0a0a0a]/55">{x.cat}</div>
+                      <div className="hv-2xs text-[#0a0a0a]/55">{x.cat}</div>
                     </Td>
                     <Td>{x.label}</Td>
                     <td className="w-[40%] border-b px-2 py-1.5" style={{ borderColor: `${INK}15` }}>
@@ -918,7 +934,7 @@ export default function HandoverPage() {
               </tbody>
             </table>
           ) : (
-            <p className="text-[12px] text-[#0a0a0a]/55">パスワードを書く項目はありません。</p>
+            <p className="hv-md text-[#0a0a0a]/55">パスワードを書く項目はありません。</p>
           )}
           <WriteLines n={4} label="そのほか（スマホのロック解除・パスワード管理アプリのマスターパスワードなど）" />
         </>
@@ -928,17 +944,51 @@ export default function HandoverPage() {
 
   return (
     <main className="px-4 py-6 sm:px-8">
-      {/* 印刷時: A4縦・等倍、入力フォームとアプリの飾りは出さない */}
+      {/*
+        紙面の体裁（13章すべて共通）。
+        画面: 文字の大きさは今までどおり px（hv-* のクラス）。
+        印刷: A4縦・余白15mm（@page はここ1か所で決める。globals.css の印刷ルールは html.lp-print-doc のとき効かない）。
+              紙面は余白の内側いっぱい（180mm）に広げ、文字は本文12.5pt・表11pt・見出し16pt。
+      */}
       <style>{`
+        .handover-page .hv-xl { font-size: 18px; line-height: 1.4; }
+        .handover-page .hv-lg { font-size: 13px; }
+        .handover-page .hv-md { font-size: 12px; }
+        .handover-page .hv-sm { font-size: 11px; }
+        .handover-page .hv-xs { font-size: 10px; }
+        .handover-page .hv-2xs { font-size: 9px; }
+        .handover-page .hv-th { font-size: 11px; }
+        .handover-page .hv-td { font-size: 12px; }
         @media print {
-          @page { size: A4 portrait; margin: 12mm; }
+          @page { size: A4 portrait; margin: 15mm; }
           html { zoom: 1 !important; }
+          html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; }
           .lp-banner { display: none !important; }
           .lp-root, main { background: #ffffff !important; }
-          main { padding: 0 !important; }
-          .handover-page { break-after: page; box-shadow: none !important; border: none !important; margin: 0 !important; max-width: none !important; padding: 0 !important; }
-          .handover-page:last-of-type { break-after: auto; }
-          .handover-item, .handover-page table, .handover-page tr { break-inside: avoid; }
+          main { padding: 0 !important; margin: 0 !important; }
+          /* 紙面: 余白は @page に任せ、箱の余白・枠・影は消す。章ごとに改ページ */
+          .handover-page {
+            break-after: page; page-break-after: always;
+            break-inside: auto; page-break-inside: auto;
+            box-shadow: none !important; border: none !important;
+            margin: 0 !important; padding: 0 !important;
+            width: 100% !important; max-width: none !important;
+          }
+          .handover-page:last-of-type { break-after: auto; page-break-after: auto; }
+          .handover-item, .handover-page tr { break-inside: avoid; page-break-inside: avoid; }
+          .handover-page thead { display: table-header-group; }
+          /* 文字の大きさ（本文12.5pt・表11pt） */
+          .handover-page { font-size: 12.5pt; line-height: 1.55; }
+          .handover-page .hv-xl { font-size: 16pt; }
+          .handover-page .hv-lg { font-size: 13pt; }
+          .handover-page .hv-md { font-size: 12.5pt; }
+          .handover-page .hv-sm { font-size: 11pt; }
+          .handover-page .hv-xs { font-size: 10pt; }
+          .handover-page .hv-2xs { font-size: 9pt; }
+          .handover-page .hv-th { font-size: 10pt; }
+          .handover-page .hv-td { font-size: 11pt; }
+          /* 手書き欄は紙で書きやすい高さに */
+          .handover-page .h-\\[26px\\] { height: 9mm !important; }
         }
       `}</style>
 
@@ -958,7 +1008,7 @@ export default function HandoverPage() {
               <b>🔒 パスワード・暗証番号</b>は、画面に入力欄がありません。印刷した紙の枠に、手で書いてください。
             </li>
             <li>
-              <b>🔑 口座番号・ログインID・証券番号</b>は、既定では印刷後に手書きです。画面で入れることもできます。その場合は、この端末の中だけに保存されます（シミュレーターの入力とは別の場所。JSONの保存や検証用の書き出しには含まれません）。
+              <b>🔑 口座番号・ログインID・証券番号</b>は、既定では印刷後に手書きです。画面で入れることもできます。その場合は、この端末の中に、シミュレーターの入力とは別の場所に保存されます。「画面で入力する」がオンのあいだは「入力データを保存」のJSONにも入り（読み込むと戻ります）、オフにすると入りません。検証用の書き出しには、どちらでも入りません。
             </li>
             <li>
               パスワード・ロック解除コードは、本体ではなく巻末の<b>別紙</b>に書きます。別紙は切り離して封をし、本体とは別の場所（金庫など）に保管してください。パスワード管理アプリを使っているなら、マスターパスワードだけで足ります。
@@ -992,7 +1042,7 @@ export default function HandoverPage() {
                 印刷するときも番号を伏せる（家族に渡す写し用。原本は外して印刷）
               </label>
               <p className="mt-1 text-[10px] text-[#7a5a00]">
-                画面のプレビューでは下4桁以外を伏せ字にしています。共用のパソコンでは入力しないでください。
+                画面のプレビューでは下4桁以外を伏せ字にしています。共用のパソコンでは入力しないでください。保存したJSONにも番号が入るので、ファイルの置き場所にも注意してください。
               </p>
             </>
           ) : null}

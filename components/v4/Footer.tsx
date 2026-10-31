@@ -7,7 +7,7 @@ export function Footer() {
     <footer
       className="px-4 py-4 sm:px-8"
       style={{
-        borderTop: "2.5px solid #0a0a0a",
+        borderTop: "1.5px solid #0a0a0a",
         background: "#f0f0ee",
       }}
     >
@@ -18,7 +18,7 @@ export function Footer() {
           style={{ background: "#fff8e7", border: "1.5px solid #c8383a40" }}
         >
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
-            ⚠ 免責事項 ／ DISCLAIMER
+            免責事項 ／ DISCLAIMER
           </p>
           <p className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
             本サイトは個人運営の情報提供ツールです。運営者はFP・税理士・社労士・弁護士等の有資格者ではなく、

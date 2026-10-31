@@ -28,7 +28,7 @@ function Seg({
       </div>
       <div
         className="grid grid-cols-2 overflow-hidden text-[11px] font-bold"
-        style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
+        style={{ border: "1.5px solid #0a0a0a", borderRadius: 8 }}
       >
         {[false, true].map((v, i) => (
           <button
@@ -114,7 +114,7 @@ export function HeaderMenu({
         style={{
           background: open ? "var(--lp-primary)" : "#ffffff",
           color: open ? "#ffffff" : "#0a0a0a",
-          border: "2px solid #0a0a0a",
+          border: "1.5px solid #0a0a0a",
           borderRadius: 8,
         }}
       >
@@ -141,7 +141,7 @@ export function HeaderMenu({
         <div
           role="menu"
           className="absolute right-0 top-[calc(100%+6px)] z-[60] max-h-[calc(100vh-80px)] w-72 overflow-y-auto rounded-xl bg-white py-1 shadow-lg"
-          style={{ border: "2px solid #0a0a0a" }}
+          style={{ border: "1.5px solid #0a0a0a" }}
         >
           <p className="px-3 pt-1.5 pb-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/45">
             表示設定

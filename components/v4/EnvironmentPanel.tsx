@@ -84,7 +84,7 @@ export function EnvironmentPanel({
             type="button"
             onClick={() => setEnv(ENV_NONE)}
             className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold"
-            style={{ border: `2px solid ${INK}` }}
+            style={{ border: `1.5px solid ${INK}` }}
           >
             リセット
           </button>

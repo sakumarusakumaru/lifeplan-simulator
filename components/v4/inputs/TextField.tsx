@@ -28,7 +28,7 @@ export function TextField({ label, value, onChange, placeholder, hint, className
       <input
         type="text"
         className="bg-white px-2 py-1.5 text-xs font-bold outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#c8383a]"
-        style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
+        style={{ border: "1.5px solid #0a0a0a", borderRadius: 8 }}
         value={text}
         placeholder={placeholder}
         onChange={(e) => setText(e.target.value)}

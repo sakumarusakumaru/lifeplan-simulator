@@ -203,6 +203,8 @@ export default function ResultPage() {
 
   const realValue = useUiStore((s) => s.realValue);
   const mcOn = useUiStore((s) => s.mcOn);
+  // いまの状況のスライダーの年齢（資産の推移のグラフにも線を出す）
+  const [bsAge, setBsAge] = useState(plan.curAge);
   const v = buildVerdict(plan, result, realValue);
 
   // プロフィール
@@ -390,7 +392,7 @@ export default function ResultPage() {
 
       {/* 3. 現状の収支・資産 */}
       <ReportSection no="03" title="いまの状況">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <SummaryCard
             label="現状の年収（手取り）"
             value={fmtMan(cur?.income ?? 0)}
@@ -412,6 +414,8 @@ export default function ResultPage() {
           plan={plan}
           result={result}
           real={realValue}
+          age={bsAge}
+          setAge={setBsAge}
           now={{
             assets: [
               { label: "現金・預金", value: plan.cashBal, color: BS_COLORS.cash, category: "current" },
@@ -436,7 +440,7 @@ export default function ResultPage() {
       <ReportSection no="04" title="資産の推移">
         <div className="flex flex-col gap-3">
           <WarningsPanel warnings={result.warnings} />
-          <AssetsChart rows={result.rows} />
+          <AssetsChart rows={result.rows} highlightAge={bsAge > plan.curAge ? bsAge : undefined} />
         </div>
       </ReportSection>
 
@@ -497,7 +501,7 @@ export default function ResultPage() {
           href="/v5/detail"
           className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[var(--lp-primary)] hover:text-white"
           style={{
-            border: "2.5px solid #0a0a0a",
+            border: "1.5px solid #0a0a0a",
             borderRadius: 10,
             color: "#0a0a0a",
           }}
@@ -509,7 +513,7 @@ export default function ResultPage() {
           className="flex-1 py-3 text-center text-xs font-bold text-white transition-colors hover:opacity-80"
           style={{
             background: "var(--lp-primary)",
-            border: "2.5px solid #0a0a0a",
+            border: "1.5px solid #0a0a0a",
             borderRadius: 10,
           }}
         >
@@ -711,13 +715,16 @@ function BalanceSheetTimeline({
   result,
   real,
   now,
+  age,
+  setAge,
 }: {
   plan: PlanInput;
   result: SimulationSummary;
   real: boolean;
   now: { assets: BSItem[]; liabilities: BSItem[] };
+  age: number;
+  setAge: (a: number | ((a: number) => number)) => void; // 年齢はページ側で持ち、資産の推移のグラフにも連動させる
 }) {
-  const [age, setAge] = useState(plan.curAge);
   const [playing, setPlaying] = useState(false);
   const minAge = plan.curAge;
   const maxAge = plan.endAge;
@@ -735,7 +742,7 @@ function BalanceSheetTimeline({
       });
     }, 180);
     return () => window.clearInterval(id);
-  }, [playing, maxAge]);
+  }, [playing, maxAge, setAge]);
 
   const isNow = shownAge === minAge;
   const row = result.rows.find((r) => r.age === shownAge);

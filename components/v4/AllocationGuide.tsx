@@ -1,16 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Area, AreaChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { CARD } from "@/components/v4/frame";
+import { CARD, INNER, note } from "@/components/v4/frame";
 import { useVBase } from "@/components/v4/useVBase";
 
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 
 const INK = "#0a0a0a";
+const C_CASH = "#9aa5b1";
+const C_RISKY = "#2b4a6f";
+const C_GOLD = "#c9aa7c";
+const C_BAND = "#22863a";
 
-// 年齢ごとの資産配分（リバランス）の一般的な考え方。
-// 個別の推奨ではなく、よく挙げられる考え方と「このプランのまま進んだ場合の配分」を並べて見せる。
+// 年齢ごとの資産配分。
+// このプランで「現金」と「運用資産」の割合が年齢とともにどう動くかを1枚のグラフにし、
+// よく挙げられる目安（運用の割合 100−年齢 〜 120−年齢）の帯を重ねる。
+// 年齢を選ぶと、その年の割合・目安との差・その時期の考え方を出す。
+// 個別の推奨ではなく、一般的な考え方と「このプランのまま進んだ場合」を並べて見せるもの
+
 interface Stage {
   key: string;
   label: string;
@@ -28,10 +37,9 @@ const STAGES: Stage[] = [
     to: 39,
     title: "積み立て期：時間を味方にする時期",
     points: [
-      "使う予定のない長期のお金は、株式中心で積み立てる考え方が一般的。下がっても取り戻す時間がある",
-      "生活費の6〜12か月分は、運用とは別に預金で持っておく（生活防衛資金）",
-      "リバランスは「年1回」か「目標の比率から±5%以上ずれたら」が目安。売らずに、毎月の積立の配分を変えて調整すれば税金もかからない",
-      "NISAのつみたて投資枠・iDeCoの非課税枠を先に使う",
+      "使う予定のない長期のお金は株式中心で積み立てる考え方が一般的。下がっても取り戻す時間がある",
+      "生活費の6〜12か月分は、運用とは別に預金で持つ（生活防衛資金）",
+      "リバランスは年1回か、目標から±5%以上ずれたら。売らずに毎月の積立の配分を変えれば税金はかからない",
     ],
   },
   {
@@ -41,7 +49,7 @@ const STAGES: Stage[] = [
     to: 49,
     title: "支出のピーク期：使う時期が決まったお金を分ける",
     points: [
-      "教育費・住宅の頭金など、5年以内に使うお金は運用から外して預金などで確保する",
+      "教育費・住宅の頭金など5年以内に使うお金は、運用から外して預金などで確保する",
       "老後のためのお金は、引き続き長期の運用でよいとされることが多い",
       "収入が増えたら、生活費を上げる前に積立額を見直す",
     ],
@@ -53,9 +61,9 @@ const STAGES: Stage[] = [
     to: 59,
     title: "退職準備期：少しずつ守りを厚くする",
     points: [
-      "退職10年前ごろから、株式の比率を少しずつ下げていく考え方がある（ターゲットイヤー型の投信も同じ発想）",
-      "退職直後に暴落が来ると影響が大きい。生活費の2〜3年分を預金・債券など値動きの小さい資産で持つ「バケット」の考え方",
-      "iDeCo・企業型DCの受取方法（一時金・年金）と、退職金との受取時期を決めておく",
+      "退職10年前ごろから株式の比率を少しずつ下げる考え方がある（ターゲットイヤー型の投信と同じ発想）",
+      "退職直後の暴落に備え、生活費の2〜3年分を預金・債券など値動きの小さい資産で持つ（バケットの考え方）",
+      "iDeCo・企業型DCの受取方法と、退職金との受取時期を決めておく",
     ],
   },
   {
@@ -77,7 +85,7 @@ const STAGES: Stage[] = [
     to: 74,
     title: "取り崩し期：減らし方を決めて、年1回見直す",
     points: [
-      "「毎年、資産の4%前後を取り崩す」などのルールで考える方法がよく紹介される（相場によって調整）",
+      "「毎年、資産の4%前後を取り崩す」などのルールで考える方法がよく紹介される（相場で調整）",
       "株式の比率を急に下げすぎると、長生きとインフレに負けやすい。一部は運用を続ける考え方も多い",
       "年1回、取り崩し額と配分を見直す日を決めておく",
     ],
@@ -91,7 +99,7 @@ const STAGES: Stage[] = [
     points: [
       "口座や商品の数を減らし、管理しやすくする",
       "判断力が落ちたときに備え、家族と資産の一覧を共有する（任意後見・家族信託なども選択肢）",
-      "相続の準備は「もしも」タブの「相続の備え」を参照",
+      "相続の準備は「もしも」の「相続の備え」と「引き継ぎ」を参照",
     ],
   },
 ];
@@ -100,106 +108,157 @@ function stageOf(age: number): Stage {
   return STAGES.find((s) => age >= s.from && age <= s.to) ?? STAGES[STAGES.length - 1];
 }
 
-export function AllocationGuide({ plan, base }: { plan: PlanInput; base: SimulationSummary }) {
-  const jp = useVBase() === "/v5"; // ver5 は英語の小見出しを出さない
-  const stages = STAGES.filter((s) => s.to >= plan.curAge);
-  const [key, setKey] = useState(stageOf(plan.curAge).key);
-  const stage = STAGES.find((s) => s.key === key) ?? stages[0];
-  // そのステージの代表年齢（現在のステージなら今の年齢）
-  const repAge = Math.min(plan.endAge, Math.max(plan.curAge, stage.from === 0 ? plan.curAge : Math.round((stage.from + Math.min(stage.to, stage.from + 9)) / 2)));
-  const row = base.rows.find((r) => r.age === repAge) ?? base.rows[0];
+const bandOf = (age: number) => ({ lo: Math.max(0, Math.min(100, 100 - age)), hi: Math.max(0, Math.min(100, 120 - age)) });
 
-  const cash = Math.max(0, row?.ass.c ?? 0);
-  const risky = (row?.ass.nisa ?? 0) + (row?.ass.toku ?? 0) + (row?.ass.dc ?? 0) + (row?.ass.k ?? 0);
-  const gold = row?.ass.g ?? 0;
-  const total = cash + risky + gold;
-  const pct = (v: number) => (total > 0 ? Math.round((v / total) * 100) : 0);
-  // よく挙げられる目安「100−年齢」〜「120−年齢」（%）を運用資産の比率の参考帯として表示
-  const lo = Math.max(0, Math.min(100, 100 - repAge));
-  const hi = Math.max(0, Math.min(100, 120 - repAge));
-  const myRisky = pct(risky);
+export function AllocationGuide({ plan, base }: { plan: PlanInput; base: SimulationSummary }) {
+  const jp = useVBase() === "/v5";
+  const [age, setAge] = useState(plan.curAge);
+
+  // 年ごとの割合（%）と目安の帯
+  const data = useMemo(
+    () =>
+      base.rows.map((r) => {
+        const cash = Math.max(0, r.ass.c);
+        const risky = Math.max(0, r.ass.nisa + r.ass.toku + r.ass.dc + (r.ass.k || 0));
+        const gold = Math.max(0, r.ass.g || 0);
+        const total = cash + risky + gold;
+        const pct = (v: number) => (total > 0 ? Math.round((v / total) * 1000) / 10 : 0);
+        const band = bandOf(r.age);
+        return { age: r.age, 現金: pct(cash), 運用: pct(risky), 金: pct(gold), 目安下: band.lo, 目安上: band.hi, total };
+      }),
+    [base.rows],
+  );
+  const shownAge = Math.min(plan.endAge, Math.max(plan.curAge, age));
+  const row = data.find((d) => d.age === shownAge) ?? data[0];
+  const stage = stageOf(shownAge);
+  const band = bandOf(shownAge);
   const position =
-    total <= 0 ? null : myRisky > hi ? "参考帯より運用の比率が高め" : myRisky < lo ? "参考帯より運用の比率が低め（守り寄り）" : "参考帯の範囲内";
+    !row || row.total <= 0 ? null : row.運用 > band.hi ? "high" : row.運用 < band.lo ? "low" : "in";
+  const positionText =
+    position === "high" ? "目安の帯より運用の割合が高め" : position === "low" ? "目安の帯より運用の割合が低め（守り寄り）" : position === "in" ? "目安の帯の範囲内" : null;
+
+  // 目安から外れる最初の年齢（「ここから見直しの候補」として示す）
+  const firstOut = data.find((d) => d.age >= plan.curAge && d.total > 0 && (d.運用 > d.目安上 || d.運用 < d.目安下));
 
   return (
     <section className="mt-10">
       <div className="mb-3 border-b-2 border-[#0a0a0a] pb-2">
         {jp ? null : <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">Allocation by age</p>}
-        <h2 className="text-lg font-bold text-[#0a0a0a]">年齢ごとの資産配分の考え方</h2>
+        <h2 className="text-lg font-bold text-[#0a0a0a]">年齢ごとの資産配分</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/60">
-          一般によく挙げられる考え方と、このプランのまま進んだときの「現金」と「運用資産」の割合を並べています。
+          このプランのまま進んだとき、「現金」と「運用資産（NISA・特定口座・iDeCo/DC・暗号資産）」の割合が年齢とともにどう動くか。
+          緑の点線は、よく挙げられる目安（運用の割合 100−年齢 〜 120−年齢）。グラフに乗せるか、下のスライダーで年齢を選べます。
           特定の商品や配分をすすめるものではありません。
         </p>
       </div>
 
-      <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
-        {stages.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            onClick={() => setKey(s.key)}
-            className="shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-bold"
-            style={{
-              background: s.key === key ? "var(--lp-primary)" : "#fff",
-              color: s.key === key ? "#fff" : INK,
-              border: `2px solid ${INK}`,
-            }}
-          >
-            {s.label}
-            {s.key === stageOf(plan.curAge).key ? <span className="ml-1 text-[9px] opacity-70">いま</span> : null}
-          </button>
-        ))}
-      </div>
-
       <div className="p-4" style={CARD}>
-        <p className="text-sm font-bold text-[#0a0a0a]">{stage.title}</p>
-
-        <div className="mt-3">
-          <div className="mb-1 flex items-baseline justify-between text-[11px]">
-            <span className="font-bold">{repAge}歳時点のあなたの配分（このプランの見込み）</span>
-            <span className="text-[10px] text-[#0a0a0a]/55">運用 {myRisky}%</span>
-          </div>
-          <div className="relative h-6 w-full overflow-hidden rounded" style={{ background: "#0a0a0a10" }}>
-            {total > 0 ? (
-              <div className="flex h-full w-full">
-                <div style={{ width: `${pct(cash)}%`, background: "#64748b" }} title={`現金 ${pct(cash)}%`} />
-                <div style={{ width: `${myRisky}%`, background: "#22863a" }} title={`運用 ${myRisky}%`} />
-                <div style={{ width: `${pct(gold)}%`, background: "#c9aa7c" }} title={`金 ${pct(gold)}%`} />
-              </div>
-            ) : null}
-          </div>
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-[#0a0a0a]/65">
-            <span><span className="mr-1 inline-block h-2 w-2" style={{ background: "#64748b" }} />現金 {pct(cash)}%</span>
-            <span><span className="mr-1 inline-block h-2 w-2" style={{ background: "#22863a" }} />運用（NISA・特定口座・DC等） {myRisky}%</span>
-            {gold > 0 ? <span><span className="mr-1 inline-block h-2 w-2" style={{ background: "#c9aa7c" }} />金 {pct(gold)}%</span> : null}
-          </div>
-          {total > 0 ? (
-            <div className="mt-3">
-              <p className="mb-1 text-[10px] font-bold text-[#0a0a0a]/60">運用資産の割合（0〜100%）と参考帯</p>
-              <div className="relative h-4 w-full rounded" style={{ background: "#0a0a0a10" }}>
-                <div
-                  className="absolute inset-y-0 rounded"
-                  style={{ left: `${lo}%`, width: `${Math.max(1, hi - lo)}%`, background: "#22863a30", border: "1.5px dashed #22863a" }}
-                />
-                <div className="absolute -top-1 -bottom-1 w-[3px] rounded" style={{ left: `calc(${myRisky}% - 1.5px)`, background: "var(--lp-primary)" }} />
-              </div>
-              <div className="relative mt-0.5 h-3 text-[9px] text-[#0a0a0a]/55">
-                <span className="absolute" style={{ left: 0 }}>0%</span>
-                <span className="absolute -translate-x-1/2" style={{ left: `${lo}%` }}>{lo}%</span>
-                <span className="absolute -translate-x-1/2" style={{ left: `${hi}%` }}>{hi}%</span>
-                <span className="absolute right-0">100%</span>
-              </div>
-            </div>
-          ) : null}
-          <p className="mt-2 rounded-md px-2.5 py-1.5 text-[11px] leading-relaxed" style={{ background: "#f0f0ee" }}>
-            参考：よく挙げられる目安「100−年齢」〜「120−年齢」でいうと、{repAge}歳の運用資産の割合は
-            <b> {lo}〜{hi}%</b>。
-            {position ? <>このプランは<b>{position}</b>です。</> : null}
-            <span className="text-[#0a0a0a]/55">（目安は人によって大きく変わります。持っている運用資産の中の株式・債券の比率までは見ていません）</span>
-          </p>
+        <div className="h-[220px] w-full sm:h-[260px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              onMouseMove={(st) => {
+                const a = st?.activeLabel;
+                if (typeof a === "number") setAge(a);
+                else if (typeof a === "string" && a) setAge(Number(a));
+              }}
+            >
+              <CartesianGrid stroke="rgba(10,10,10,0.08)" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="age" tick={{ fill: INK, fontSize: 10 }} tickLine={false} minTickGap={16} />
+              <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(v) => `${v}%`} tick={{ fill: INK, fontSize: 10 }} width={40} tickLine={false} />
+              <Tooltip
+                offset={40}
+                wrapperStyle={{ pointerEvents: "none", zIndex: 5 }}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload as (typeof data)[number];
+                  return (
+                    <div className="min-w-[150px] rounded-lg bg-white px-2.5 py-1.5 text-[10px] leading-relaxed shadow" style={{ border: "1.5px solid #0a0a0a30" }}>
+                      <p className="mb-0.5 font-bold">{label}歳</p>
+                      <p className="flex justify-between gap-3"><span><span className="mr-1 inline-block h-2 w-2" style={{ background: C_RISKY }} />運用</span><b>{d.運用}%</b></p>
+                      <p className="flex justify-between gap-3"><span><span className="mr-1 inline-block h-2 w-2" style={{ background: C_CASH }} />現金</span><b>{d.現金}%</b></p>
+                      {d.金 > 0 ? <p className="flex justify-between gap-3"><span><span className="mr-1 inline-block h-2 w-2" style={{ background: C_GOLD }} />金</span><b>{d.金}%</b></p> : null}
+                      <p className="mt-0.5 flex justify-between gap-3 border-t pt-0.5 text-[#0a0a0a]/60" style={{ borderColor: "#0a0a0a15" }}><span>運用の目安</span><span>{d.目安下}〜{d.目安上}%</span></p>
+                    </div>
+                  );
+                }}
+              />
+              <Area type="monotone" dataKey="運用" stackId="a" stroke={C_RISKY} fill={C_RISKY} fillOpacity={0.85} strokeWidth={0.5} isAnimationActive={false} />
+              <Area type="monotone" dataKey="金" stackId="a" stroke={C_GOLD} fill={C_GOLD} fillOpacity={0.85} strokeWidth={0.5} isAnimationActive={false} />
+              <Area type="monotone" dataKey="現金" stackId="a" stroke={C_CASH} fill={C_CASH} fillOpacity={0.6} strokeWidth={0.5} isAnimationActive={false} />
+              <Line type="monotone" dataKey="目安下" stroke={C_BAND} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="目安上" stroke={C_BAND} strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
+              <ReferenceLine x={shownAge} stroke={INK} strokeWidth={1.5} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-[#0a0a0a]/65">
+          <span><span className="mr-1 inline-block h-2 w-2" style={{ background: C_RISKY }} />運用（NISA・特定口座・DC等）</span>
+          <span><span className="mr-1 inline-block h-2 w-2" style={{ background: C_CASH }} />現金</span>
+          <span><span className="mr-1 inline-block h-0 w-4 border-t-2 border-dashed align-middle" style={{ borderColor: C_BAND }} />運用の割合の目安（100−年齢〜120−年齢）</span>
         </div>
 
-        <ul className="mt-3 flex flex-col gap-1.5">
+        <input
+          type="range"
+          min={plan.curAge}
+          max={plan.endAge}
+          step={1}
+          value={shownAge}
+          onChange={(e) => setAge(Number(e.target.value))}
+          className="mt-3 w-full accent-[#2b4a6f]"
+          aria-label="配分を見る年齢"
+        />
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {STAGES.filter((s) => s.to >= plan.curAge && s.from <= plan.endAge).map((s) => {
+            const a = Math.max(plan.curAge, s.from);
+            const on = s.key === stage.key;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setAge(a)}
+                className="rounded-md px-2 py-0.5 text-[10px] font-bold"
+                style={{ background: on ? "var(--lp-primary)" : "#f0f0ee", color: on ? "#fff" : INK }}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 選んだ年齢の読み取り */}
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr]">
+          <div className="px-3 py-2" style={INNER}>
+            <p className="text-[10px] font-bold text-[#0a0a0a]/55">{shownAge}歳の配分（このプランの見込み）</p>
+            {row && row.total > 0 ? (
+              <p className="mt-0.5 text-[13px] font-bold tabular-nums">
+                運用 {row.運用}% ／ 現金 {row.現金}%{row.金 > 0 ? ` ／ 金 ${row.金}%` : ""}
+                <span className="ml-2 text-[10px] font-normal text-[#0a0a0a]/55">目安 {band.lo}〜{band.hi}%</span>
+              </p>
+            ) : (
+              <p className="mt-0.5 text-[12px] text-[#0a0a0a]/55">この年は金融資産がありません</p>
+            )}
+          </div>
+          <div className="px-3 py-2 text-[11px] leading-relaxed" style={note(position === "in" ? "green" : position ? "yellow" : "blue")}>
+            {positionText ? (
+              <>
+                <b>{positionText}。</b>
+                {position === "high"
+                  ? " 使う時期が近いお金（教育費・住宅・退職後数年の生活費）を預金などに分けておくと、下落のときの影響が小さくなります。"
+                  : position === "low"
+                    ? " 守り寄りです。長期で使わないお金があれば、NISAの積立を増やす余地があります（インフレで現金の価値は目減りします）。"
+                    : " このまま進めて問題のない範囲です。年1回、割合がずれていないか見直します。"}
+                {firstOut && firstOut.age > plan.curAge && position === "in" ? ` ${firstOut.age}歳ごろから目安を外れるので、その前に見直すのが目安です。` : ""}
+              </>
+            ) : (
+              "年齢を選ぶと、その年の割合と目安との差を出します。"
+            )}
+          </div>
+        </div>
+
+        <p className="mt-3 text-[12px] font-bold text-[#0a0a0a]">{stage.title}</p>
+        <ul className="mt-1.5 flex flex-col gap-1.5">
           {stage.points.map((p) => (
             <li key={p} className="flex gap-2 text-[12px] leading-relaxed text-[#0a0a0a]/80">
               <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--lp-primary)" }} />
@@ -208,8 +267,8 @@ export function AllocationGuide({ plan, base }: { plan: PlanInput; base: Simulat
           ))}
         </ul>
         <p className="mt-3 text-[10px] leading-relaxed text-[#0a0a0a]/50">
-          ※ このシミュレーターは自動でリバランスしません（入力した利回りで各口座を運用し、不足時に取り崩す計算）。
-          一般的な考え方の紹介であり、個別の投資助言ではありません。判断の前に登録のある専門家にご相談ください。
+          ※ このシミュレーターは自動でリバランスしません（入力した利回りで各口座を運用し、不足時に取り崩す計算）。目安は人によって大きく変わり、
+          運用資産の中の株式・債券の比率までは見ていません。一般的な考え方の紹介であり、個別の投資助言ではありません。
         </p>
       </div>
     </section>

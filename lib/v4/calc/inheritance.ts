@@ -8,6 +8,7 @@
 //   配偶者の税額軽減 = 総額 × min(配偶者の課税価格, max(1億6,000万, 課税価格 × 配偶者の法定相続分)) ÷ 課税価格
 //   未成年者控除 = 10万 × (18 − 年齢)（子の税額から引く）
 //   二次相続: 残った配偶者が亡くなったとき。配偶者の財産 = 配偶者名義の財産 + 一次相続で受け取った分 − その税。相続人は子だけ
+//   おすすめの分け方: 配偶者の取得割合を総当たりして、一次＋二次の税の合計が最も少ない割合（税額だけで選ぶ。生活費・遺留分は見ない）
 // 不動産は時価ではなく相続税評価額で入れる（realEstateEval）
 //   土地 = 路線価（公示価格のおよそ8割）→ 時価の目安 × 0.8
 //   建物 = 固定資産税評価額 → 建築費の6割 × 経年減点（耐用年数で2割まで下がり、それより下がらない）
@@ -288,6 +289,20 @@ export function estateAt(plan: PlanInput, row: YearlyResult, heirCount: number, 
   return estateBreakdown(plan, row, heirCount, deflate).total;
 }
 
+// 配偶者の取得割合ごとの、一次・二次の税
+export interface SplitResult {
+  ratio: number;  // 配偶者が受け取る割合（0〜1）
+  first: number;  // 一次相続で払う税
+  second: number; // 二次相続で払う税
+  total: number;  // 合計
+}
+
+// 名前のついた分け方（比較表に出すもの）
+export type SplitMode = "legal" | "all" | "cap16" | "none" | "best";
+export interface SplitOption extends SplitResult {
+  mode: SplitMode;
+}
+
 export interface InheritancePlan {
   breakdown: EstateBreakdown;
   spouseRatio: number;           // 選んだ配偶者の取得割合
@@ -298,8 +313,10 @@ export interface InheritancePlan {
   second: InheritanceEstimate | null; // 二次相続（配偶者と子がいる場合）
   secondEstate: number;
   total: number;                 // 一次＋二次
-  scan: { ratio: number; first: number; second: number; total: number }[]; // 配偶者の取得割合ごとの比較
-  bestRatio: number;             // 一次＋二次が最も少ない割合
+  scan: SplitResult[];           // 配偶者の取得割合ごとの比較（5%刻み。1億6,000万円までの割合も含む）
+  options: SplitOption[];        // 名前のついた分け方の比較（法定・全部・1億6千万まで・子だけ・おすすめ）。配偶者と子がいないときは空
+  bestRatio: number;             // 一次＋二次が最も少ない割合（おすすめ）
+  bestTotal: number;             // そのときの一次＋二次の税
 }
 
 // 小規模宅地等の特例は、配偶者が相続した自宅の土地の分だけに使う。
@@ -325,8 +342,41 @@ function secondFor(b: EstateBreakdown, first: InheritanceEstimate, ratio: number
   return { second: inheritanceTax(secondEstate, false, kids, 0), secondEstate };
 }
 
+// 1億6,000万円まで配偶者が受け取るときの割合（課税価格が1億6,000万円以下なら全部）
+export function cap16Ratio(estate: number) {
+  return Math.min(1, (16000 * MAN) / Math.max(1, estate));
+}
+
+// 配偶者の取得割合を総当たりして、一次＋二次の税が最も少ない割合（おすすめ）を探す
+//   候補: 0〜100% の5%刻み ＋ 法定相続分（50%）・1億6,000万円まで・全部（100%）・子だけ（0%）
+//   二次相続は secondFor と同じ前提（配偶者が受け取った分＋配偶者名義の財産を、増減なしで子が等分）
+//   同じ税額なら、配偶者の割合が小さい方を選ぶ
+//   配偶者か子がいなければ scan・options は空、bestRatio は 0
+export function scanSpouseRatios(b0: EstateBreakdown, hasSpouse: boolean, nKids: number, kidAges: number[] = []): { scan: SplitResult[]; options: SplitOption[]; bestRatio: number; bestTotal: number } {
+  if (!hasSpouse || nKids <= 0) return { scan: [], options: [], bestRatio: 0, bestTotal: 0 };
+  const calc = (ratio: number): SplitResult => {
+    const b = withLandCut(b0, ratio);
+    const first = inheritanceTax(b.total, true, nKids, ratio, kidAges);
+    const { second } = secondFor(b, first, ratio, nKids, true);
+    return { ratio, first: first.payable, second: second?.payable ?? 0, total: first.payable + (second?.payable ?? 0) };
+  };
+  const cap = cap16Ratio(b0.total);
+  const ratios = Array.from(new Set([...Array.from({ length: 21 }, (_, i) => i * 0.05), 0.5, cap, 1, 0].map((r) => Math.round(r * 1e6) / 1e6))).sort((a, b) => a - b);
+  const scan = ratios.map(calc);
+  const best = scan.reduce((m, x) => (x.total < m.total ? x : m), scan[0]);
+  const at = (r: number) => scan.find((x) => Math.abs(x.ratio - r) < 1e-6) ?? calc(r);
+  const options: SplitOption[] = [
+    { mode: "legal", ...at(0.5) },
+    { mode: "all", ...at(1) },
+    { mode: "cap16", ...at(cap) },
+    { mode: "none", ...at(0) },
+    { mode: "best", ...best },
+  ];
+  return { scan, options, bestRatio: best.ratio, bestTotal: best.total };
+}
+
 // 金額だけを k で割る（割合・番号はそのまま）
-const KEEP = new Set(["ratio", "kid", "spouseRatio", "bestRatio", "heirKids", "heirKidIdx", "kidShares"]);
+const KEEP = new Set(["ratio", "kid", "spouseRatio", "bestRatio", "heirKids", "heirKidIdx", "kidShares", "mode"]);
 function scaleMoney<T>(v: T, k: number, key = ""): T {
   if (k === 1 || KEEP.has(key)) return v;
   if (typeof v === "number") return (v / k) as T;
@@ -357,13 +407,8 @@ export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: b
     const { second, secondEstate } = secondFor(b, first, ratio, nKids, hasSpouse);
     return { b, first, second, secondEstate, total: first.payable + (second?.payable ?? 0) };
   };
-  const scan = hasSpouse && nKids > 0
-    ? Array.from({ length: 21 }, (_, i) => i * 0.05).map((ratio) => {
-        const c = calc(ratio);
-        return { ratio, first: c.first.payable, second: c.second?.payable ?? 0, total: c.total };
-      })
-    : [];
-  const bestRatio = scan.length ? scan.reduce((m, x) => (x.total < m.total ? x : m), scan[0]).ratio : 0;
+  // 配偶者の取得割合ごとの比較と、おすすめ（一次＋二次が最も少ない割合）
+  const { scan, options, bestRatio, bestTotal } = scanSpouseRatios(b0, hasSpouse, nKids, kidAges);
   const ratio = !hasSpouse
     ? 0
     : nKids === 0
@@ -375,8 +420,10 @@ export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: b
           : s.spouseMode === "none"
             ? 0
             : s.spouseMode === "cap16"
-              ? Math.min(1, (16000 * MAN) / Math.max(1, b0.total))
-              : s.spouseMode === "custom" && kidShares
+              ? cap16Ratio(b0.total)
+              : s.spouseMode === "best"
+                ? bestRatio
+                : s.spouseMode === "custom" && kidShares
                   ? customRatio
                   : 0.5;
   const c = calc(ratio, kidShares);
@@ -391,7 +438,9 @@ export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: b
     secondEstate: c.secondEstate,
     total: c.total,
     scan,
+    options,
     bestRatio,
+    bestTotal,
   };
   return scaleMoney(out, deflate);
 }

@@ -84,7 +84,7 @@ export function Section({
             }
           : {
               background: "#f0f0ee",
-              border: "2.5px solid #0a0a0a",
+              border: "1.5px solid #0a0a0a",
               borderRadius: 12,
               scrollMarginTop: 24,
             }
@@ -102,10 +102,10 @@ export function Section({
                 top: `var(--lp-header-h, ${topPx}px)`,
                 zIndex: 10,
                 background: "#f0f0ee",
-                borderTop: "2.5px solid #0a0a0a",
-                borderLeft: "2.5px solid #0a0a0a",
-                borderRight: "2.5px solid #0a0a0a",
-                borderBottom: "2.5px solid #0a0a0a",
+                borderTop: "1.5px solid #0a0a0a",
+                borderLeft: "1.5px solid #0a0a0a",
+                borderRight: "1.5px solid #0a0a0a",
+                borderBottom: "1.5px solid #0a0a0a",
                 borderTopLeftRadius: 12,
                 borderTopRightRadius: 12,
                 borderBottomLeftRadius: open ? 0 : 12,
@@ -120,7 +120,7 @@ export function Section({
             style={{
               background: open ? "var(--lp-primary)" : "#ffffff",
               color: open ? "#ffffff" : "#0a0a0a",
-              border: "2.5px solid #0a0a0a",
+              border: "1.5px solid #0a0a0a",
               borderRadius: 12,
             }}
           >
@@ -154,13 +154,13 @@ export function Section({
             stickyEnabled
               ? {
                   background: "#f0f0ee",
-                  borderLeft: "2.5px solid #0a0a0a",
-                  borderRight: "2.5px solid #0a0a0a",
-                  borderBottom: "2.5px solid #0a0a0a",
+                  borderLeft: "1.5px solid #0a0a0a",
+                  borderRight: "1.5px solid #0a0a0a",
+                  borderBottom: "1.5px solid #0a0a0a",
                   borderBottomLeftRadius: 12,
                   borderBottomRightRadius: 12,
                 }
-              : { borderTop: "2.5px solid #0a0a0a" }
+              : { borderTop: "1.5px solid #0a0a0a" }
           }
         >
           <div className="pt-4">{children}</div>
@@ -218,7 +218,7 @@ function StatusPill({ status, jp = false, active = false }: { status: SectionSta
           height: 20,
           padding: "0 8px",
           background: "#c8383a",
-          border: "2.5px solid #0a0a0a",
+          border: "1.5px solid #0a0a0a",
           borderRadius: 12,
         }}
       >

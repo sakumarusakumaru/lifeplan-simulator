@@ -4,7 +4,11 @@
 //
 // 欄の区分（セキュリティ）
 //   text / select / amount / note … 画面で入力してよい（シミュレーターの入力と一緒に保存）
-//   secret … 口座番号・ログインIDなど。画面入力は任意（既定は印刷後に手書き）。入れた場合もこの端末の別の場所にだけ保存し、JSONには含めない
+//   secret … 口座番号・ログインIDなど。画面入力は任意（既定は印刷後に手書き）。入れた場合はこの端末の別の場所（secret-store）に保存し、
+//            「画面で入力する」がオンのときだけ、JSONの保存（handoverSecrets）にも含める。検証用の匿名化した書き出しには含めない
+//
+// どの区分にも「URL（公式サイト・マイページ）」「電話番号（問い合わせ窓口）」の欄がある（CONTACT_FIELDS）。
+// 自動で調べられる信頼できるデータ源がないので、本人が手で書く
 //   hand   … パスワード・ロック解除コードなど。画面では入力できない。本体ではなく巻末の「別紙」に手で書き、封をして別に保管する
 //   never  … キャッシュカードの暗証番号・カード番号の全桁など。家族の手続きに要らず、悪用の危険だけがあるので書かせない（理由を出す）
 
@@ -36,7 +40,20 @@ export interface CategoryDef {
 const amount = (label = "金額の目安"): FieldDef => ({ key: "amount", label, type: "amount" });
 const memo: FieldDef = { key: "memo", label: "備考", type: "note", wide: true };
 
-export const CATEGORIES: CategoryDef[] = [
+// 連絡先（すべての区分・保険・年金に共通）。自動では入れない。家族が「どこに連絡すればいいか」をすぐ分かるように
+export const CONTACT_FIELDS: FieldDef[] = [
+  { key: "url", label: "URL（公式サイト・マイページ）", type: "text", placeholder: "例：公式サイトの『お問い合わせ』『相続手続き』のページ" },
+  { key: "phone", label: "電話番号（問い合わせ窓口）", type: "text", placeholder: "例：0120-○○○-○○○（相続・解約の窓口）" },
+];
+
+// 区分の欄に連絡先の2欄を足す。名前・支店などの「どこの」の欄の後ろ、金額・番号・備考の前に置く
+const withContact = (fields: FieldDef[]): FieldDef[] => {
+  const at = fields.findIndex((d) => d.type === "amount" || d.type === "secret" || d.type === "hand" || d.type === "never" || d.key === "memo");
+  const i = at < 0 ? fields.length : at;
+  return [...fields.slice(0, i), ...CONTACT_FIELDS, ...fields.slice(i)];
+};
+
+const RAW_CATEGORIES: CategoryDef[] = [
   // ── 資産（プラスの財産） ──
   {
     id: "bank",
@@ -256,11 +273,15 @@ export const CATEGORIES: CategoryDef[] = [
     hint: "団信（団体信用生命保険）があれば、亡くなったときに残りのローンは保険で返済されます。銀行に連絡すれば手続きが始まります。",
     nameKey: "bank",
     addLabel: "住宅ローンを追加",
+    // 残高・毎月の返済・金利・完済予定は「入力 → 住まい」の住宅ローン（ミックスローンは1本ずつ）から自動で入る。借入先は手で書く
     fields: [
-      { key: "bank", label: "金融機関・支店", type: "text" },
+      { key: "bank", label: "金融機関名", type: "text", placeholder: "例：○○銀行" },
+      { key: "branch", label: "支店名", type: "text", placeholder: "例：玉造支店" },
       { key: "danshin", label: "団信", type: "select", options: ["あり", "なし", "わからない"] },
       { key: "guarantor", label: "保証会社", type: "text" },
       { key: "payFrom", label: "返済している口座", type: "text" },
+      { key: "monthly", label: "毎月の返済", type: "text", placeholder: "例：月85,000円" },
+      { key: "rate", label: "金利", type: "text", placeholder: "例：0.6%・変動" },
       { key: "end", label: "完済予定", type: "text", placeholder: "例：2055年" },
       amount("残高の目安"),
       { key: "number", label: "ローンの契約番号", type: "secret" },
@@ -274,10 +295,14 @@ export const CATEGORIES: CategoryDef[] = [
     hint: "マイナスの財産が多いときは、3か月以内なら相続放棄ができます。見落としやすいのはカードローン・奨学金・事業の借入。家族は信用情報機関（KSC・JICC・CIC）に開示請求して調べられます。",
     nameKey: "lender",
     addLabel: "借入を追加",
+    // 不動産投資のローン（残高・毎月の返済・金利・完済予定）と「その他のローン」（毎月の返済×残り回数）は入力から自動で入る。借入先は手で書く
     fields: [
       { key: "kind", label: "種類", type: "select", options: ["自動車ローン", "教育ローン", "カードローン", "奨学金", "不動産ローン", "事業の借入", "その他"] },
-      { key: "lender", label: "借入先", type: "text" },
+      { key: "lender", label: "借入先", type: "text", placeholder: "例：○○銀行、○○ファイナンス" },
+      { key: "branch", label: "支店名", type: "text" },
       { key: "monthly", label: "毎月の返済", type: "text", placeholder: "例：月3万円・残り24回" },
+      { key: "rate", label: "金利", type: "text", placeholder: "例：2.5%・固定" },
+      { key: "end", label: "完済予定", type: "text", placeholder: "例：2030年3月" },
       { key: "payFrom", label: "引き落とし口座", type: "text" },
       { key: "insurance", label: "保険（団信など）", type: "select", options: ["なし", "あり", "わからない"] },
       amount("残高の目安"),
@@ -288,13 +313,14 @@ export const CATEGORIES: CategoryDef[] = [
   {
     id: "card",
     side: "debt",
-    title: "クレジットカード",
-    hint: "分割・リボ払いの残りは借入と同じ扱いです。カード会社に連絡して解約すると、引き落としが止まります。",
+    title: "クレジットカード・電子マネー（後払い）",
+    hint: "分割・リボ払いの残りは借入と同じ扱いです。カード会社に連絡して解約すると、引き落としが止まります。後払いの電子マネー・スマホ決済（翌月まとめて払うもの）もここ。",
     nameKey: "issuer",
     addLabel: "カードを追加",
     fields: [
       { key: "issuer", label: "カード会社・カード名", type: "text", placeholder: "例：○○カード（ゴールド）" },
       { key: "payFrom", label: "引き落とし口座", type: "text" },
+      { key: "monthlyUse", label: "月々の利用額の目安", type: "text", placeholder: "例：月5万円（公共料金・携帯の支払いに使っている）" },
       { key: "revo", label: "分割・リボ", type: "select", options: ["なし", "あり", "わからない"] },
       { key: "fee", label: "年会費・付帯保険", type: "text" },
       amount("分割・リボの残りの目安"),
@@ -406,6 +432,9 @@ export const CATEGORIES: CategoryDef[] = [
   },
 ];
 
+// すべての区分に連絡先（URL・電話番号）の欄を足したもの
+export const CATEGORIES: CategoryDef[] = RAW_CATEGORIES.map((c) => ({ ...c, fields: withContact(c.fields) }));
+
 export const SIDE_TITLE: Record<Side, string> = {
   asset: "資産（プラスの財産）",
   debt: "負債（マイナスの財産）",
@@ -418,7 +447,9 @@ export const catOf = (id: string) => CATEGORIES.find((c) => c.id === id);
 // ── 保険・公的年金に足す欄（保険の中身は入力画面の保険の一覧から自動で入る） ──
 export const INSURANCE_EXTRA: FieldDef[] = [
   { key: "place", label: "証券の保管場所", type: "text", placeholder: "例：書斎の引き出し" },
-  { key: "agent", label: "担当者・連絡先", type: "text" },
+  { key: "agent", label: "担当者", type: "text", placeholder: "例：○○支社の△△さん" },
+  { key: "url", label: "URL（公式サイト・マイページ）", type: "text", placeholder: "例：公式サイトの『保険金のご請求』のページ" },
+  { key: "phone", label: "電話番号（問い合わせ窓口）", type: "text", placeholder: "例：0120-○○○-○○○（保険金請求の窓口）" },
   { key: "number", label: "証券番号", type: "secret" },
 ];
 
@@ -427,6 +458,8 @@ export const PENSION_FIELDS: FieldDef[] = [
   { key: "amount", label: "受給額（受け取っている場合）", type: "text", placeholder: "例：月15万円（偶数月に2か月分）" },
   { key: "account", label: "受取口座", type: "text", placeholder: "例：○○銀行 玉造支店" },
   { key: "papers", label: "年金手帳・基礎年金番号通知書・年金証書の保管場所", type: "text", wide: true },
+  { key: "url", label: "URL（ねんきんネットなど）", type: "text", placeholder: "例：ねんきんネット、企業年金のマイページ" },
+  { key: "phone", label: "電話番号（年金事務所・年金基金の窓口）", type: "text", placeholder: "例：管轄の年金事務所、企業年金基金の電話番号" },
   { key: "number", label: "基礎年金番号", type: "secret" },
   { key: "corp", label: "企業年金・年金基金", type: "text", placeholder: "例：○○企業年金基金" },
 ];

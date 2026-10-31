@@ -67,7 +67,8 @@ export interface RealEstate {
   loanRateAfter?: number;       // 当初固定: 固定が終わったあとの金利の見込み（%）
   loanMethod?: LoanMethod;
   loanRule5y?: boolean;
-  loanPrepays?: LoanPrepay[];   // 繰上返済の予定（この物件のローンに対して）
+  loanPrepays?: LoanPrepay[];   // 繰上返済の予定（この物件のローンに対して。part で何本目かを指定）
+  loanParts?: HomeLoanPart[];   // ミックスローン（固定＋変動など複数本）。あるときは bal/rate/term は合計の目安
   // 評価額算定（簿価計算）用
   propType: RealEstateType;       // 物件種別
   structure: BuildingStructure;   // 建物構造（戸建てのみ意味あり）

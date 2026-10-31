@@ -38,7 +38,7 @@ export function PercentField({
     <Field label={label} hint={hint} className={className}>
       <div
         className="flex overflow-hidden bg-white focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#c8383a]"
-        style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
+        style={{ border: "1.5px solid #0a0a0a", borderRadius: 8 }}
       >
         <input
           type="number"
@@ -57,7 +57,7 @@ export function PercentField({
         />
         <span
           className="flex items-center px-2 text-[10px] font-bold uppercase tracking-[0.1em]"
-          style={{ borderLeft: "2px solid #0a0a0a", background: "#f0f0ee", color: "#0a0a0a" }}
+          style={{ borderLeft: "1.5px solid #0a0a0a", background: "#f0f0ee", color: "#0a0a0a" }}
         >
           %
         </span>

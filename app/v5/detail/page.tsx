@@ -32,6 +32,20 @@ const BLOCKS: { id: SectionId; label: string; desc: string; Comp: ComponentType 
 const INK = "#0a0a0a";
 const LINE = "1.5px solid #0a0a0a";
 
+// 組ごとの「入力済み」の目安（はじめの入力を終えたあとに使う）
+function filledByContent(plan: ReturnType<typeof usePlanStore.getState>["plan"], id: SectionId): boolean {
+  switch (id) {
+    case "ch-settings":
+      return !!plan.selfBirth;
+    case "ch-income":
+      return plan.jobs.some((j) => j.inc > 0) || plan.sideJobs.some((j) => j.inc > 0) || plan.selfPension.mode === "manual";
+    case "ch-assets":
+      return plan.cashBal > 0 || plan.nisaBal > 0 || plan.tokuBal > 0 || plan.dcBal > 0;
+    case "ch-expense":
+      return plan.livingM > 0;
+  }
+}
+
 function CheckIcon({ color = INK }: { color?: string }) {
   return (
     <svg aria-hidden width="12" height="12" viewBox="0 0 12 12" fill="none" stroke={color} strokeWidth="1.8">
@@ -160,16 +174,18 @@ export default function DetailPage() {
 
           <LiteHandoffNote />
 
-          {/* 4ブロックのタブ（状態つき） */}
-          {/* 4ブロックのタブは、スクロールしても画面の上（ヘッダーの下）に残す */}
+          {/* 4ブロックのタブ（状態つき）。スクロールしても画面の上（ヘッダーの下）に残す。
+              白地の帯ごと固定して、下を流れる文字がタブの上や隙間に見えないようにする */}
+          <div className="sticky z-30 -mx-1 px-1 pt-2 pb-2" style={{ top: "var(--lp-header-h, 56px)", background: "#ffffff" }}>
           <nav
             aria-label="入力ブロック"
-            className="sticky z-30 grid grid-cols-4 overflow-hidden rounded-xl bg-white"
-            style={{ border: LINE, top: "calc(var(--lp-header-h, 56px) + 8px)", boxShadow: "0 4px 10px -6px rgba(10,10,10,0.25)" }}
+            className="grid grid-cols-4 overflow-hidden rounded-xl bg-white"
+            style={{ border: LINE, boxShadow: "0 4px 10px -6px rgba(10,10,10,0.25)" }}
           >
             {BLOCKS.map((b, i) => {
               const isCur = i === active;
-              const ok = !!confirmed[b.id];
+              // 入力済み: 「OK・次へ」で確認した組か、（はじめの入力を終えた人は）中身が入っている組
+              const ok = !!confirmed[b.id] || (!stepping && filledByContent(plan, b.id));
               const state = isCur ? "入力中" : ok ? "完了" : stepping ? "未入力" : "";
               return (
                 <button
@@ -179,16 +195,16 @@ export default function DetailPage() {
                   aria-current={isCur ? "step" : undefined}
                   className="flex min-h-14 flex-col items-start justify-center gap-0.5 px-2 py-2 text-left sm:px-4"
                   style={{
-                    background: isCur ? "var(--lp-primary)" : "#ffffff",
+                    background: isCur ? "var(--lp-primary)" : ok ? "#f0fff4" : "#ffffff",
                     color: isCur ? "#ffffff" : INK,
-                    borderLeft: i === 0 ? "none" : "1px solid #0a0a0a33",
+                    borderLeft: i === 0 ? "none" : "1px solid #0a0a0a22",
                   }}
                 >
                   <span
                     className="flex items-center gap-1 text-[10px] font-bold sm:text-[11px]"
-                    style={{ color: isCur ? "#ffffffcc" : "#55555a" }}
+                    style={{ color: isCur ? "#ffffffcc" : ok ? "#22863a" : "#55555a" }}
                   >
-                    {ok && !isCur ? <CheckIcon /> : null}
+                    {ok && !isCur ? <CheckIcon color="#22863a" /> : null}
                     {state || `0${i + 1}`}
                   </span>
                   <span className="text-[12px] font-bold leading-tight sm:text-sm">
@@ -199,6 +215,7 @@ export default function DetailPage() {
               );
             })}
           </nav>
+          </div>
 
           <header className="flex flex-col gap-1.5">
             <p className="text-[11px] font-bold tracking-[0.14em] text-[#0a0a0a]/55">

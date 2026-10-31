@@ -33,7 +33,7 @@ export function ResultsPanel() {
 
       <div
         style={{
-          border: "2px solid #0a0a0a",
+          border: "1.5px solid #0a0a0a",
           borderRadius: 12,
           overflow: "hidden",
         }}
@@ -129,7 +129,7 @@ function YearlyTable({ rows }: { rows: YearlyResult[] }) {
     ({ ...cBase, color: "rgba(10,10,10,0.68)", ...extra });
 
   return (
-    <div className="overflow-x-auto" style={{ borderTop: "2px solid #0a0a0a" }}>
+    <div className="overflow-x-auto" style={{ borderTop: "1.5px solid #0a0a0a" }}>
       <table className="border-collapse" style={{ minWidth: 680, width: "100%" }}>
         <thead>
           {/* 1段目: グループヘッダー */}

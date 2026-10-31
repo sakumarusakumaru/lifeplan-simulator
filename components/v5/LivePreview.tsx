@@ -250,7 +250,7 @@ export function LivePreview({
           onClick={onShowNow}
           disabled={!ready}
           className="rounded-lg px-3 py-2.5 text-[12px] font-bold transition-colors hover:bg-[var(--lp-primary)] hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
-          style={{ border: "2px solid #0a0a0a" }}
+          style={{ border: "1.5px solid #0a0a0a" }}
         >
           {actionLabel}
         </button>
@@ -275,7 +275,7 @@ export function LivePreview({
             type="button"
             onClick={onShowNow}
             className="rounded-lg px-3 py-2.5 text-[12px] font-bold"
-            style={{ border: "2px solid #0a0a0a" }}
+            style={{ border: "1.5px solid #0a0a0a" }}
           >
             {actionLabel}
           </button>

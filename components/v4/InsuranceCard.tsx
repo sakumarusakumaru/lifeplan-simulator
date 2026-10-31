@@ -347,7 +347,7 @@ export function InsuranceCard({
                 <button
                   type="button"
                   className="mb-0.5 rounded-md px-2 py-1.5 text-[10px] font-bold"
-                  style={{ border: `2px solid ${INK}` }}
+                  style={{ border: `1.5px solid ${INK}` }}
                   onClick={() => onChange({ eduPayouts: p.eduPayouts.filter((_, k) => k !== j) })}
                   aria-label="この受取を消す"
                 >

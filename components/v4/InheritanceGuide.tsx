@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 
-import { CARD, INNER, note } from "@/components/v4/frame";
+import { CARD, INNER, INNER2, note } from "@/components/v4/frame";
 import { useVBase } from "@/components/v4/useVBase";
 import { ageOn } from "@/lib/v4/calc/age";
 import { DEFAULT_INHERIT, basicDeduction, legalHeirs, legalSharesPct, planInheritance, realEstateEval } from "@/lib/v4/calc/inheritance";
 import { deflator } from "@/lib/v4/calc/realValue";
+import type { SplitMode } from "@/lib/v4/calc/inheritance";
 import type { InheritSettings, PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
 
@@ -135,7 +136,21 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
   const hk = P.heirKids;
   const kidOrphan = P.heirKidIdx.length === 0 && hk > 0; // 親・兄弟姉妹が相続する仮定
   const twoStep = hasSpouse && hk > 0;
-  const best = P.scan.find((x) => x.ratio === P.bestRatio);
+  // 分け方ごとの一次・二次の税（配偶者と子がいるときだけ）
+  const optOf = (m: SplitMode) => P.options.find((o) => o.mode === m);
+  const best = optOf("best");
+  const legalOpt = optOf("legal");
+  const anyTax = P.scan.some((x) => x.total > 0);
+  const splitLabel = (m: SplitMode, ratio: number) =>
+    m === "legal"
+      ? "法定相続分（配偶者50%）"
+      : m === "all"
+        ? "配偶者が全部（100%）"
+        : m === "cap16"
+          ? `配偶者は1億6,000万円まで（${pct(ratio)}）`
+          : m === "none"
+            ? "子だけ（配偶者0%）"
+            : `おすすめ（配偶者${pct(ratio)}）`;
   // 分け方を選べるのは、配偶者と子がいる場合と、子が2人以上いる場合
   const canSplit = twoStep || (!hasSpouse && !kidOrphan && hk >= 2);
   const isCustom = set.spouseMode === "custom" && canSplit;
@@ -257,7 +272,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-bold text-[#0a0a0a]/70">{twoStep ? "一次相続の分け方" : "子の分け方"}</span>
               <select
-                value={(canSplit && !twoStep && set.spouseMode !== "custom") || set.spouseMode === "best" ? "legal" : set.spouseMode}
+                value={canSplit && !twoStep && set.spouseMode !== "custom" ? "legal" : set.spouseMode === "best" && !best ? "legal" : set.spouseMode}
                 onChange={(e) => setMode(e.target.value as InheritSettings["spouseMode"])}
                 className="rounded-md bg-white px-2 py-1.5 text-[12px] font-bold"
                 style={{ border: `2px solid ${INK}` }}
@@ -268,6 +283,11 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
                     <option value="all">配偶者が全部</option>
                     <option value="cap16">配偶者は1億6,000万円まで</option>
                     <option value="none">配偶者は相続しない（子だけ）</option>
+                    {best ? (
+                      <option value="best">
+                        おすすめ: 配偶者{pct(best.ratio)}（{best.total > 0 ? `一次＋二次の税 約${man(best.total)}` : "一次・二次とも税はかからない見込み"}）
+                      </option>
+                    ) : null}
                   </>
                 ) : (
                   <option value="legal">法定相続分（子で等分）</option>
@@ -460,62 +480,98 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
         ) : null}
 
         {twoStep ? (
-          <div className="mt-2 p-3" style={note("red")}>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <div>
-                <p className="text-[10px] font-bold text-[#0a0a0a]/55">二次相続（配偶者がその後亡くなったとき）</p>
-                <p className="text-base font-bold tabular-nums" style={{ color: (P.second?.payable ?? 0) > 0 ? RED : GREEN }}>
-                  {(P.second?.payable ?? 0) > 0 ? man(P.second?.payable ?? 0) : "かからない見込み"}
-                </p>
-                <p className="text-[9px] text-[#0a0a0a]/50">
-                  配偶者の財産 {man(P.secondEstate)}・相続人は子{hk}人
+          <div className="mt-2 p-3" style={INNER}>
+            <p className="text-[11px] font-bold">二次相続（配偶者がその後亡くなったとき）まで合わせて考える</p>
+            {/* (a) まず一文で、一次と二次のトレードオフ */}
+            <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/75">
+              一次相続で配偶者が多く受け取るほど一次の税は軽くなりますが、その分が二次相続で子に重くかかります。だから、一次と二次を合わせた税で比べます。
+            </p>
+
+            {/* いま選んでいる分け方の結果 */}
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              <div className="p-2" style={INNER2}>
+                <p className="text-[9px] font-bold text-[#0a0a0a]/55">一次の税</p>
+                <p className="text-[13px] font-bold tabular-nums" style={{ color: P.first.payable > 0 ? RED : GREEN }}>
+                  {man(P.first.payable)}
                 </p>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-[#0a0a0a]/55">一次＋二次の合計</p>
-                <p className="text-lg font-bold tabular-nums" style={{ color: P.total > 0 ? RED : GREEN }}>
+              <div className="p-2" style={INNER2}>
+                <p className="text-[9px] font-bold text-[#0a0a0a]/55">二次の税</p>
+                <p className="text-[13px] font-bold tabular-nums" style={{ color: (P.second?.payable ?? 0) > 0 ? RED : GREEN }}>
+                  {man(P.second?.payable ?? 0)}
+                </p>
+                <p className="text-[9px] text-[#0a0a0a]/50">配偶者の財産 {man(P.secondEstate)}・子{hk}人</p>
+              </div>
+              <div className="p-2" style={INNER2}>
+                <p className="text-[9px] font-bold text-[#0a0a0a]/55">合計</p>
+                <p className="text-[13px] font-bold tabular-nums" style={{ color: P.total > 0 ? RED : GREEN }}>
                   {man(P.total)}
                 </p>
-                <p className="text-[9px] text-[#0a0a0a]/50">配偶者が {pct(P.spouseRatio)} 相続した場合</p>
+                <p className="text-[9px] text-[#0a0a0a]/50">配偶者が{pct(P.spouseRatio)}受け取る場合</p>
               </div>
-              {best && P.scan.some((x) => x.total > 0) ? (
-                <div className="col-span-2 sm:col-span-1">
-                  <p className="text-[10px] font-bold text-[#0a0a0a]/55">下の表で合計が最も少なかった割合（参考）</p>
-                  <p className="text-base font-bold tabular-nums" style={{ color: GREEN }}>
-                    配偶者 {pct(best.ratio)}：{man(best.total)}
-                  </p>
-                  <p className="text-[9px] text-[#0a0a0a]/50">この試算の条件での参考です。実際の分け方は、税理士などの専門家に確かめてください</p>
+            </div>
+
+            {/* (b) 分け方ごとの比較（おすすめの行を強調） */}
+            {P.options.length > 0 ? (
+              <div className="mt-2">
+                <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-2 pb-1 text-[9px] font-bold text-[#0a0a0a]/55">
+                  <span>分け方</span>
+                  <span className="w-16 text-right">一次の税</span>
+                  <span className="w-16 text-right">二次の税</span>
+                  <span className="w-16 text-right">合計</span>
                 </div>
-              ) : null}
-            </div>
-            <div className="mt-2 overflow-x-auto">
-              <table className="w-full text-[10px] tabular-nums">
-                <thead>
-                  <tr className="text-[#0a0a0a]/55">
-                    <th className="py-1 text-left font-bold">配偶者が相続する割合</th>
-                    {P.scan.filter((_, i) => i % 5 === 0).map((x) => (
-                      <th key={x.ratio} className="py-1 text-right font-bold">
-                        {pct(x.ratio)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(["first", "second", "total"] as const).map((k) => (
-                    <tr key={k} className="border-t" style={{ borderColor: "#0a0a0a15" }}>
-                      <td className="py-1 font-bold">{k === "first" ? "一次相続" : k === "second" ? "二次相続" : "合計"}</td>
-                      {P.scan.filter((_, i) => i % 5 === 0).map((x) => (
-                        <td key={x.ratio} className="py-1 text-right" style={{ fontWeight: k === "total" ? 700 : 400 }}>
-                          {man(x[k])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-1 text-[9px] leading-relaxed text-[#0a0a0a]/55">
-              一次相続で配偶者が多く相続するほど一次の税は軽くなりますが、その分が二次相続で子にかかります。二次相続は、配偶者の財産がその後増えも減りもしない前提の目安です（実際は生活費で減ったり、運用で増えたりします）。
+                <div className="flex flex-col gap-1">
+                  {P.options.map((o) => {
+                    const isBest = o.mode === "best";
+                    const selected = set.spouseMode === o.mode;
+                    return (
+                      <div
+                        key={o.mode}
+                        className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 px-2 py-1.5 text-[11px] tabular-nums"
+                        style={isBest ? note("green") : INNER2}
+                      >
+                        <span className="min-w-0">
+                          <span className="font-bold" style={{ color: isBest ? GREEN : INK }}>
+                            {splitLabel(o.mode, o.ratio)}
+                          </span>
+                          {selected ? (
+                            <span className="ml-1.5 text-[9px] font-bold" style={{ color: "var(--lp-primary)" }}>
+                              いまの選択
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="w-16 text-right">{man(o.first)}</span>
+                        <span className="w-16 text-right">{man(o.second)}</span>
+                        <span className="w-16 text-right font-bold" style={{ color: isBest ? GREEN : o.total > 0 ? RED : GREEN }}>
+                          {man(o.total)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {/* (c) 結論を一文で */}
+            {best ? (
+              <div className="mt-2 p-2.5" style={note("green")}>
+                <p className="text-[12px] font-bold leading-relaxed" style={{ color: GREEN }}>
+                  {!anyTax
+                    ? "この試算では、どの分け方でも一次・二次とも相続税はかからない見込みです。"
+                    : `配偶者が${pct(best.ratio)}受け取ると、${best.total > 0 ? `一次と二次を合わせた税が最も少なく 約${man(best.total)}` : "一次と二次を合わせて相続税はかからない見込み"}${
+                        legalOpt && legalOpt.total - best.total > 0 ? `（法定相続分より約${man(legalOpt.total - best.total)}少ない）` : "（法定相続分と同じ）"
+                      }。`}
+                </p>
+                {anyTax && set.spouseMode !== "best" ? (
+                  <button type="button" onClick={() => setMode("best")} className="mt-1 text-[10px] font-bold underline" style={{ color: INK }}>
+                    この分け方で試算する
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            <p className="mt-1.5 text-[9px] leading-relaxed text-[#0a0a0a]/55">
+              「おすすめ」は相続税の合計だけで選んだ割合です。配偶者の生活費、遺留分、遺産分割の実務（誰が自宅を継ぐかなど）は別に考える必要があり、実際の分け方は税理士などの専門家に確かめてください。
+              二次相続は、配偶者の財産がその後増えも減りもしない前提の目安です（実際は生活費で減ったり、運用で増えたりします）。
             </p>
           </div>
         ) : null}

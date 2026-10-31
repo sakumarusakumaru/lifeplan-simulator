@@ -8,6 +8,8 @@ import { TextField } from "@/components/v4/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { LoanDetailFields } from "@/components/v4/LoanDetailFields";
+import { LoanPartsEditor } from "@/components/v4/LoanPartsEditor";
+import { loanTotals } from "@/lib/v4/calc/homeLoan";
 import { Section } from "@/components/v4/Section";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { computeRealEstateValue } from "@/lib/v4/calc/finance";
@@ -211,6 +213,12 @@ function HoldingsTotal({ total, r }: { total: number; r: number }) {
       </span>
     </div>
   );
+}
+
+// ミックスローンの各本から、物件の合計の欄（残高・平均金利・最長の期間）を作る
+function reLoanTotals(parts: import("@/lib/v4/calc/types").HomeLoanPart[]) {
+  const t = loanTotals(parts);
+  return { bal: t.hlBal, rate: t.hlRate, term: t.hlTerm };
 }
 
 export function AssetsMegaSection() {
@@ -737,35 +745,60 @@ export function AssetsMegaSection() {
                     />
 
                     {/* ローン */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <NumberField
-                        label="ローン残高"
-                        value={r.bal}
-                        onChange={(v) => updateRe(i, { bal: v })}
-                        unit="円"
+                    {r.loanParts?.length ? (
+                      <LoanPartsEditor
+                        parts={r.loanParts}
+                        setParts={(next) => updateRe(i, { loanParts: next, ...reLoanTotals(next) })}
+                        prepays={r.loanPrepays ?? []}
+                        setPrepays={(next) => updateRe(i, { loanPrepays: next.length ? next : undefined })}
+                        curAge={plan.curAge}
+                        start={typeof r.start === "number" ? r.start : Number(r.start) || plan.curAge}
+                        onSimple={() => {
+                          if ((r.loanParts?.length ?? 0) > 1 && !confirm("くわしい設定（2本目以降・返済方法など）を消して、1本の簡単な入力に戻しますか？")) return;
+                          const first = r.loanParts?.[0];
+                          updateRe(i, {
+                            loanParts: undefined,
+                            ...reLoanTotals(r.loanParts ?? []),
+                            ...(first ? { loanRateType: first.rateType, loanFixedUntilAge: first.fixedUntilAge, loanRateAfter: first.rateAfter, loanMethod: first.method, loanRule5y: first.rule5y } : {}),
+                          });
+                        }}
                       />
-                      <PercentField
-                        label="金利"
-                        value={r.rate}
-                        onChange={(v) => updateRe(i, { rate: v })}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <NumberField
-                        label="ローン期間"
-                        value={r.term}
-                        onChange={(v) => updateRe(i, { term: v })}
-                        unit="年"
-                      />
-                      <NumberField
-                        label="開始年齢"
-                        value={typeof r.start === "number" ? r.start : Number(r.start) || 0}
-                        onChange={(v) => updateRe(i, { start: v })}
-                        unit="歳"
-                        hint="運用開始年齢"
-                      />
-                    </div>
-                    {r.bal > 0 ? (
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <NumberField label="ローン残高" value={r.bal} onChange={(v) => updateRe(i, { bal: v })} unit="円" />
+                          <PercentField label="金利" value={r.rate} onChange={(v) => updateRe(i, { rate: v })} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <NumberField label="ローン期間" value={r.term} onChange={(v) => updateRe(i, { term: v })} unit="年" />
+                          <NumberField
+                            label="開始年齢"
+                            value={typeof r.start === "number" ? r.start : Number(r.start) || 0}
+                            onChange={(v) => updateRe(i, { start: v })}
+                            unit="歳"
+                            hint="運用開始年齢"
+                          />
+                        </div>
+                        {r.bal > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateRe(i, {
+                                loanParts: [{
+                                  label: "ローン1", bal: r.bal, years: r.term, rate: r.rate,
+                                  rateType: r.loanRateType ?? "variable", fixedUntilAge: r.loanFixedUntilAge, rateAfter: r.loanRateAfter,
+                                  method: r.loanMethod ?? "annuity", rule5y: r.loanRule5y ?? true,
+                                }],
+                              })
+                            }
+                            className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#c8383a]"
+                          >
+                            固定と変動のミックスローンにする（2本以上に分ける）
+                          </button>
+                        ) : null}
+                      </>
+                    )}
+                    {r.bal > 0 && !r.loanParts?.length ? (
                       <LoanDetailFields
                         curAge={plan.curAge}
                         curRate={r.rate}

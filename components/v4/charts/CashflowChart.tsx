@@ -89,7 +89,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
     <div
       className="p-5"
       // ver5: グラフは「カード」（枠のルール2）
-      style={jp ? CARD : { background: "#f0f0ee", border: isV3 ? "none" : "2.5px solid #0a0a0a", borderRadius: 12 }}
+      style={jp ? CARD : { background: "#f0f0ee", border: isV3 ? "none" : "1.5px solid #0a0a0a", borderRadius: 12 }}
     >
       <div className="mb-3 flex items-center justify-between">
         <span className={jp ? "text-[13px] font-bold text-[#0a0a0a]" : "text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]"}>
@@ -144,7 +144,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                   <div
                     style={{
                       background: "#ffffff",
-                      border: "2.5px solid #0a0a0a",
+                      border: "1.5px solid #0a0a0a",
                       borderRadius: 12,
                       padding: compact ? "6px 9px" : "8px 12px",
                       minWidth: compact ? 0 : 240,
@@ -228,7 +228,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                       }}
                     >
                       {cf < 0
-                        ? "⚠ 収支マイナス → 資産を取り崩す年"
+                        ? "● 収支マイナス → 資産を取り崩す年"
                         : "✓ 収支プラス → 現金が積み上がる年"}
                     </div>
                   </div>
@@ -326,7 +326,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
             {/* 収入ゾーン（上） */}
             <div
               className="flex items-center gap-2 px-3 py-2"
-              style={{ background: "#f8f9fb", borderBottom: "2px solid #0a0a0a" }}
+              style={{ background: "#f8f9fb", borderBottom: "1.5px solid #0a0a0a" }}
             >
               <span
                 style={{ background: FILLS.income, width: 12, height: 12, display: "inline-block", flexShrink: 0 }}

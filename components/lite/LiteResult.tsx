@@ -20,7 +20,7 @@ export function LiteResult() {
 
   if (!r) {
     return (
-      <div className="rounded-2xl bg-white p-5" style={{ border: `2.5px solid ${INK}` }}>
+      <div className="rounded-2xl bg-white p-5" style={{ border: `1.5px solid ${INK}` }}>
         <p className="text-sm font-bold">年収と毎月の生活費を入れると、ここに結果が出ます</p>
         <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/60">
           入れた数字は、このブラウザの中だけに保存されます。外には送られません。
@@ -104,7 +104,7 @@ export function LiteResult() {
       </div>
 
       {/* 一生で動かすお金の総額（ここでしか見られない「発見」） */}
-      <div className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `2.5px solid ${INK}` }}>
+      <div className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `1.5px solid ${INK}` }}>
         <p className="text-sm font-bold">あなたが一生で動かすお金</p>
         <p className="mt-0.5 text-[11px] text-[#0a0a0a]/60">今から{A.endAge}歳までの合計（今の価値）。毎年の計算を足し上げた数字です</p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -250,7 +250,7 @@ function Teasers({ teasers, onMore }: { teasers: { key: string; title: string; v
   const qKey = JSON.stringify(q);
   const mcNow = mc && mc.key === qKey ? mc : null;
   return (
-    <div className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `2.5px solid ${INK}` }}>
+    <div className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `1.5px solid ${INK}` }}>
       <p className="text-sm font-bold">詳細版でわかること（あなたの数字で）</p>
       <p className="mt-0.5 text-[11px] text-[#0a0a0a]/60">Liteの答えから出した概算です。詳細版で条件を足すと、ここから先まで確かめられます</p>
       <ul className="mt-3 flex flex-col gap-2.5">
@@ -277,7 +277,7 @@ function Teasers({ teasers, onMore }: { teasers: { key: string; title: string; v
               type="button"
               onClick={() => setMc({ key: qKey, ...liteMonteCarlo(q) })}
               className="mt-1 rounded-lg px-3 py-1.5 text-[12px] font-bold"
-              style={{ border: `2px solid ${INK}` }}
+              style={{ border: `1.5px solid ${INK}` }}
             >
               1,000通り計算してみる
             </button>

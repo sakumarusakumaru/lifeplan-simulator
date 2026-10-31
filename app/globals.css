@@ -47,7 +47,9 @@ button {
   font-family: inherit;
 }
 
-/* PDF出力用：画面レイアウトをそのままA4横に縮小して書き出す */
+/* PDF出力用：画面レイアウトをそのままA4横に縮小して書き出す（レポートなど）。
+   引き継ぎ書（html.lp-print-doc のとき）は紙の書類としてA4縦・等倍で印刷するので、
+   縮小・余白・改ページのルールは効かせない。@page は引き継ぎ書の page.tsx の <style> が後から上書きする */
 @media print {
   @page {
     size: A4 landscape;
@@ -55,7 +57,7 @@ button {
   }
   /* 画面全体を約75%に縮小してA4横幅（297mm）に収める。
      グリッドやチャートのレイアウトは一切崩さない。 */
-  html {
+  html:not(.lp-print-doc) {
     zoom: 0.72;
   }
   html,
@@ -67,10 +69,10 @@ button {
   .no-print {
     display: none !important;
   }
-  main {
+  html:not(.lp-print-doc) main {
     padding: 8px !important;
   }
-  section {
+  html:not(.lp-print-doc) section {
     page-break-inside: avoid;
   }
 }

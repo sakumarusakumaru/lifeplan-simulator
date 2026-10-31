@@ -27,7 +27,7 @@ function SecretInput({ label, value, onChange }: { label: string; value: string;
     if (!focused) setText(value);
   }
   return (
-    <Field label={`🔑 ${label}`} hint="この端末だけに保存・JSONには含めない">
+    <Field label={`🔑 ${label}`} hint="この端末に保存。「画面で入力する」がオンのときはJSONの保存にも入る（検証用の書き出しには入らない）">
       <input
         // type="password" にするとブラウザがパスワードとして保存しようとするので、text のまま入力中以外は●で表示する
         type="text"
@@ -95,6 +95,7 @@ export function FieldInput({
   secretValue,
   onSecret,
   autoAmount,
+  hint,
 }: {
   def: FieldDef;
   value: string;
@@ -103,6 +104,7 @@ export function FieldInput({
   secretValue: string;
   onSecret: (v: string) => void;
   autoAmount?: number; // シミュレーターの入力から自動で入る金額（amount の欄）
+  hint?: string; // text の欄の説明（入力から自動で入っている、など）
 }) {
   const cls = def.wide || def.type === "note" ? "sm:col-span-2" : "";
   if (def.type === "hand") return <div className={cls}><HandBox label={def.label} /></div>;
@@ -138,7 +140,7 @@ export function FieldInput({
       </div>
     );
   }
-  return <TextField className={cls} label={def.label} value={value} onChange={onChange} placeholder={def.placeholder} />;
+  return <TextField className={cls} label={def.label} value={value} onChange={onChange} placeholder={def.placeholder} hint={hint} />;
 }
 
 // 印刷用の1欄。hand は別紙の番号だけを出す。maskPrint なら番号も伏せて印刷（家族に渡す写し用）
@@ -158,7 +160,7 @@ export function FieldView({
   const wide = def.wide || def.type === "note";
   const box = (inner: React.ReactNode, hand?: boolean) => (
     <div className={`flex flex-col ${wide ? "col-span-2" : ""}`}>
-      <span className="text-[9px] font-bold text-[#0a0a0a]/50">
+      <span className="hv-2xs font-bold text-[#0a0a0a]/50">
         {def.label}
         {hand ? "（手書き）" : ""}
       </span>
@@ -168,27 +170,27 @@ export function FieldView({
   if (def.type === "hand")
     return (
       <div className="flex flex-col">
-        <span className="text-[9px] font-bold text-[#0a0a0a]/50">{def.label}</span>
-        <span className="text-[11px] font-bold">→ 別紙 No.{handNo ?? "—"} に手書き</span>
+        <span className="hv-2xs font-bold text-[#0a0a0a]/50">{def.label}</span>
+        <span className="hv-sm font-bold">→ 別紙 No.{handNo ?? "—"} に手書き</span>
       </div>
     );
   if (def.type === "never")
     return (
       <div className="flex flex-col">
-        <span className="text-[9px] font-bold text-[#0a0a0a]/50">{def.label}</span>
-        <span className="text-[11px]">書かない（手続きに使わない）</span>
+        <span className="hv-2xs font-bold text-[#0a0a0a]/50">{def.label}</span>
+        <span className="hv-sm">書かない（手続きに使わない）</span>
       </div>
     );
   if (def.type === "secret") {
     if (!secretValue) return box(<span className="mt-0.5 block h-[22px] border-b" style={{ borderColor: `${INK}60`, borderBottomStyle: "dotted" }} />, true);
     const masked = secretValue.length > 4 ? `${"●".repeat(Math.min(8, secretValue.length - 4))}${secretValue.slice(-4)}` : "●●●●";
     return box(
-      <span className="text-[12px] font-bold tabular-nums">
+      <span className="hv-md font-bold tabular-nums">
         <span className="print:hidden">{masked}</span>
         <span className="hidden print:inline">{maskPrint ? masked : secretValue}</span>
       </span>,
     );
   }
   if (!value) return null;
-  return box(<span className="whitespace-pre-wrap text-[12px] leading-snug">{value}</span>);
+  return box(<span className="whitespace-pre-wrap hv-md leading-snug">{value}</span>);
 }

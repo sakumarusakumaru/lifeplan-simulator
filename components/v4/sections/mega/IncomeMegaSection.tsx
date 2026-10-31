@@ -260,7 +260,7 @@ function SeverancePicker({ plan, index, update }: { plan: PlanInput; index: numb
             <li
               key={c.key}
               className="rounded-md bg-white px-2.5 py-2"
-              style={{ border: selected ? "2px solid #0a0a0a" : "1px solid #0a0a0a20" }}
+              style={{ border: selected ? "1.5px solid #0a0a0a" : "1px solid #0a0a0a20" }}
             >
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[12px] font-bold">{c.label}</span>

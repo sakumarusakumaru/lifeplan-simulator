@@ -4,7 +4,7 @@
 //   変動・元利均等は、5年ルール（返済額は5年ごとに見直す）と125%ルール（見直しの上げ幅は1.25倍まで）。
 //   返済額で利息を払いきれない月は、その分を残高に足す（未払利息）。最後の回で残りをまとめて払う
 import { pmt } from "./finance";
-import type { HomeLoanPart, LoanPrepay, PlanInput } from "./types";
+import type { HomeLoanPart, LoanMethod, LoanPrepay, LoanRateType, PlanInput } from "./types";
 
 export interface LoanYear {
   pay: number;       // 毎月の返済の合計（繰上返済を除く）
@@ -122,12 +122,10 @@ export function schedulePart(p: HomeLoanPart, start: number, prepays: LoanPrepay
   return { years, summary: { firstMonthly, payoffAge, totalInterest } as LoanPartSummary };
 }
 
-// すべてのローンを合わせた年ごとの予定と、ローンごとのまとめ
-export function scheduleLoans(plan: PlanInput) {
-  const parts = loanParts(plan);
-  const start = Math.max(plan.hlStart, plan.curAge);
-  const prepays = plan.hlPrepays ?? [];
-  const each = parts.map((p, i) => schedulePart(p, start, prepays, i));
+// 複数本のローンを合わせた年ごとの予定と、ローンごとのまとめ（住宅ローン・不動産投資のローンで共用）
+export function scheduleParts(parts: HomeLoanPart[], start: number, prepays: LoanPrepay[]) {
+  const live = parts.filter((p) => p.bal > 0 && p.years > 0);
+  const each = live.map((p, i) => schedulePart(p, start, prepays, i));
   const byAge = new Map<number, LoanYear>();
   for (const e of each) {
     for (const [age, y] of e.years) {
@@ -135,9 +133,28 @@ export function scheduleLoans(plan: PlanInput) {
       byAge.set(age, { pay: t.pay + y.pay, interest: t.interest + y.interest, prepay: t.prepay + y.prepay, bal: t.bal + y.bal });
     }
   }
-  const startBal = parts.reduce((a, p) => a + p.bal, 0);
+  const startBal = live.reduce((a, p) => a + p.bal, 0);
   const payoffAge = each.length ? Math.max(...each.map((e) => e.summary.payoffAge ?? start)) : null;
-  return { parts, start, startBal, byAge, summaries: each.map((e) => e.summary), payoffAge };
+  return { parts: live, start, startBal, byAge, summaries: each.map((e) => e.summary), payoffAge };
+}
+
+// 住宅ローン: すべてのローンを合わせた年ごとの予定と、ローンごとのまとめ
+export function scheduleLoans(plan: PlanInput) {
+  return scheduleParts(loanParts(plan), Math.max(plan.hlStart, plan.curAge), plan.hlPrepays ?? []);
+}
+
+// 不動産投資のローン: 複数本（ミックス）なら各本、1本なら物件の欄から
+export function propertyLoanParts(r: {
+  name: string; bal: number; rate: number; term: number;
+  loanRateType?: LoanRateType; loanFixedUntilAge?: number; loanRateAfter?: number; loanMethod?: LoanMethod; loanRule5y?: boolean; loanParts?: HomeLoanPart[];
+}): HomeLoanPart[] {
+  if (r.loanParts?.length) return r.loanParts.filter((p) => p.bal > 0 && p.years > 0);
+  if (!(r.bal > 0 && r.term > 0)) return [];
+  return [{
+    label: r.name, bal: r.bal, years: r.term, rate: r.rate,
+    rateType: r.loanRateType ?? "variable", fixedUntilAge: r.loanFixedUntilAge, rateAfter: r.loanRateAfter,
+    method: r.loanMethod ?? "annuity", rule5y: r.loanRule5y,
+  }];
 }
 
 // 画面の入力から、合計の欄（hlBal・hlRate・hlTerm）を作る（ほかの画面・旧い計算との互換）

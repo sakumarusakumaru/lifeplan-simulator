@@ -77,7 +77,7 @@ export function DrawOrderEditor() {
               type="button"
               onClick={() => setField("drawOrder", o.v)}
               className="rounded-lg px-2 py-2 text-left"
-              style={{ background: active ? "var(--lp-primary)" : "#fff", color: active ? "#fff" : INK, border: `2px solid ${INK}` }}
+              style={{ background: active ? "var(--lp-primary)" : "#fff", color: active ? "#fff" : INK, border: `1.5px solid ${INK}` }}
             >
               <span className="block text-[12px] font-bold">{o.label}</span>
               <span className="block text-[10px] opacity-70">{o.sub}</span>
@@ -120,10 +120,10 @@ export function DrawOrderEditor() {
         <div className="flex flex-col gap-1.5 p-2" style={INNER}>
           <p className="px-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/55">上から先に売る（現金のあと）</p>
           {plan.drawCustomOrder.map((code, i) => (
-            <div key={code} className="flex items-center gap-2 rounded-lg bg-white px-2.5 py-1.5" style={{ border: `2px solid ${INK}` }}>
+            <div key={code} className="flex items-center gap-2 rounded-lg bg-white px-2.5 py-1.5" style={{ border: `1.5px solid ${INK}` }}>
               <span className="text-[9px] font-bold text-[#66666a]">{String(i + 1).padStart(2, "0")}</span>
               <span className="flex-1 text-xs font-bold">{DRAW_LABEL[code]}</span>
-              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded-md px-2 py-0.5 text-[10px] font-bold disabled:opacity-30" style={{ border: `2px solid ${INK}` }} aria-label="上へ">
+              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded-md px-2 py-0.5 text-[10px] font-bold disabled:opacity-30" style={{ border: `1.5px solid ${INK}` }} aria-label="上へ">
                 ↑
               </button>
               <button
@@ -131,7 +131,7 @@ export function DrawOrderEditor() {
                 onClick={() => move(i, 1)}
                 disabled={i === plan.drawCustomOrder.length - 1}
                 className="rounded-md px-2 py-0.5 text-[10px] font-bold disabled:opacity-30"
-                style={{ border: `2px solid ${INK}` }}
+                style={{ border: `1.5px solid ${INK}` }}
                 aria-label="下へ"
               >
                 ↓

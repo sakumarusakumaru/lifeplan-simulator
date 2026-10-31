@@ -81,7 +81,7 @@ export function AddButton({ label, onClick }: AddButtonProps) {
       style={{
         background: "#f0f0ee",
         color: "#0a0a0a",
-        border: "2.5px solid #0a0a0a",
+        border: "1.5px solid #0a0a0a",
         borderRadius: 12,
       }}
     >

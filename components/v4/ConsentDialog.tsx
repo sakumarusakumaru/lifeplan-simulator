@@ -41,7 +41,7 @@ export function ConsentDialog() {
     >
       <div
         className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6"
-        style={{ border: "2.5px solid #0a0a0a", boxShadow: "0 16px 48px rgba(0,0,0,0.25)" }}
+        style={{ border: "1.5px solid #0a0a0a", boxShadow: "0 16px 48px rgba(0,0,0,0.25)" }}
       >
         <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
           重要 ／ ご利用にあたって

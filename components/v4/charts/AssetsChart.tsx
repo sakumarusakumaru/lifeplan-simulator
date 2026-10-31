@@ -22,6 +22,7 @@ import type { LifeEvent, YearlyResult } from "@/lib/v4/calc/types";
 interface AssetsChartProps {
   rows: YearlyResult[];
   lifeEvents?: LifeEvent[];
+  highlightAge?: number; // 「いまの状況」のスライダーで選んだ年齢（縦線で示す）
 }
 
 const yenToOkuMan = (yen: number): string => {
@@ -78,7 +79,7 @@ const KEY_TO_FILL: Record<string, keyof typeof FILLS> = {
   DC: "dc",
 };
 
-export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
+export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChartProps) {
   const pathname = usePathname();
   const isV3 = (pathname?.startsWith("/v4") || pathname?.startsWith("/v5")) ?? false;
   // ver5 は見出しを日本語にして、何のグラフか一言添える（ver4 は英語の見出しのまま）
@@ -109,7 +110,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
     <div
       className="p-5"
       // ver5: グラフは「カード」（枠のルール2）
-      style={jp ? CARD : { background: "#f0f0ee", border: isV3 ? "none" : "2.5px solid #0a0a0a", borderRadius: 12 }}
+      style={jp ? CARD : { background: "#f0f0ee", border: isV3 ? "none" : "1.5px solid #0a0a0a", borderRadius: 12 }}
     >
       <div className="mb-3 flex items-center justify-between">
         <span className={jp ? "text-[13px] font-bold text-[#0a0a0a]" : "text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]"}>
@@ -158,7 +159,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                   <div
                     style={{
                       background: "#ffffff",
-                      border: "2.5px solid #0a0a0a",
+                      border: "1.5px solid #0a0a0a",
                       borderRadius: 12,
                       padding: compact ? "6px 9px" : "8px 12px",
                       minWidth: compact ? 0 : 170,
@@ -238,7 +239,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                       }}
                     >
                       {nw < 0
-                        ? "⚠ 負債が資産を上回っています"
+                        ? "● 負債が資産を上回っています"
                         : jp ? "預金と投資 − ローン = 金融純資産（赤線）" : "全資産 − 全負債 = 純資産（赤線）"}
                     </p>
                   </div>
@@ -326,6 +327,14 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
               activeDot={{ r: 5, stroke: "#0a0a0a", strokeWidth: 2.5, fill: FILLS.nw }}
             />
 
+            {highlightAge !== undefined ? (
+              <ReferenceLine
+                x={highlightAge}
+                stroke="#2b4a6f"
+                strokeWidth={2}
+                label={{ value: `${highlightAge}歳`, position: "insideTopRight", fill: "#2b4a6f", fontSize: 10, fontWeight: 700 }}
+              />
+            ) : null}
             {lifeEvents.map((ev, idx) => (
               <ReferenceLine
                 key={`${ev.age}-${ev.label}`}

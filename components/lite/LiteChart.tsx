@@ -46,7 +46,7 @@ export function LiteChart({
             labelFormatter={(l) => `${l}歳`}
             offset={48}
             wrapperStyle={{ pointerEvents: "none" }}
-            contentStyle={{ fontSize: 10, borderRadius: 8, border: `2px solid ${INK}`, padding: "4px 8px" }}
+            contentStyle={{ fontSize: 10, borderRadius: 8, border: `1.5px solid ${INK}`, padding: "4px 8px" }}
           />
           <ReferenceLine y={0} stroke={INK} strokeWidth={1.5} />
           {events.length ? (

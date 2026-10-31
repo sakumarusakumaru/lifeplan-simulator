@@ -15,7 +15,7 @@ export const man = (yen: number) => {
 
 export function Card({ no, title, note, children }: { no: string; title: string; note?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `2.5px solid ${INK}` }}>
+    <section className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `1.5px solid ${INK}` }}>
       <div className="mb-3 flex items-baseline gap-2">
         <span className="text-[11px] font-bold tracking-[0.14em]" style={{ color: RED }}>
           {no}
@@ -57,7 +57,7 @@ export function NumField({
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[12px] font-bold text-[#0a0a0a]">{label}</span>
-      <span className="flex items-stretch overflow-hidden rounded-lg" style={{ border: `2px solid ${INK}` }}>
+      <span className="flex items-stretch overflow-hidden rounded-lg" style={{ border: `1.5px solid ${INK}` }}>
         <input
           type="text"
           inputMode="decimal"
@@ -103,7 +103,7 @@ export function Choice<T extends string>({
             style={{
               background: value === o.value ? "var(--lp-primary)" : "#fff",
               color: value === o.value ? "#fff" : INK,
-              border: `2px solid ${INK}`,
+              border: `1.5px solid ${INK}`,
             }}
           >
             {o.label}

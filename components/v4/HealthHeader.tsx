@@ -170,7 +170,7 @@ export function HealthHeader({
     return (
       <div
         className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl px-3 py-2"
-        style={{ background: "#ffffff", border: "2px solid #0a0a0a" }}
+        style={{ background: "#ffffff", border: "1.5px solid #0a0a0a" }}
       >
         {/* スコアバッジ */}
         <div className="flex shrink-0 items-center gap-2">
@@ -220,7 +220,7 @@ export function HealthHeader({
       className="overflow-hidden rounded-xl"
       style={{
         background: "#ffffff",
-        border: isV3 ? "none" : "2.5px solid #0a0a0a",
+        border: isV3 ? "none" : "1.5px solid #0a0a0a",
       }}
     >
       {/* 上段: 左右2カラム */}
@@ -434,7 +434,7 @@ function KpiInline({
           ? "#c8383a"
           : "#9ca3af";
   const valueColor = status === "alert" ? "#c8383a" : "#0a0a0a";
-  const icon = status === "ok" ? "✓" : status === "alert" ? "⚠" : "";
+  const icon = status === "ok" ? "✓" : status === "alert" ? "●" : "";
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex items-center gap-1">

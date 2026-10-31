@@ -106,3 +106,17 @@ test("HL-08 繰上返済は simulate でその年の住居費（支出）にな�
   assert.equal(Math.round(r1.hlPrepay ?? 0), 2_000_000);
   assert.ok(r1.hlBal < r0.hlBal - 1_900_000); // 残高が減る
 });
+
+test("HL-09 不動産投資のミックスローン: 2本の合計が物件のローンの残高・返済になる（変動1,000万＋固定500万）", () => {
+  const re = {
+    name: "物件A", rent: 100_000, cost: 120_000, propTax: 60_000, bal: 15_000_000, rate: 1.5, term: 20, start: 35,
+    loanParts: [part({ bal: 10_000_000, years: 20, rate: 1.2, rateType: "variable" }), part({ bal: 5_000_000, years: 20, rate: 2.0, rateType: "fixed" })],
+    propType: "condo" as const, structure: "rc" as const, builtYear: 2015, purchasePrice: 20_000_000, landRatio: 0,
+  };
+  const plan: PlanInput = { ...DEFAULT_PLAN, selfBirth: "1991-05-10", curAge: 35, res: [re as unknown as PlanInput["res"][number]] };
+  const one = schedulePart(re.loanParts[0], 35, [], 0);
+  const two = schedulePart(re.loanParts[1], 35, [], 1);
+  const row = simulate(plan).rows.find((x) => x.age === 40)!;
+  const reBal = row.reD.reduce((a, d) => a + d.bal, 0);
+  near(reBal, one.years.get(40)!.bal + two.years.get(40)!.bal, 1);
+});

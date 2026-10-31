@@ -587,7 +587,7 @@ export default function SuggestPage() {
             <p className="mt-0.5 text-sm font-bold text-white">最後の年の金融純資産</p>
             {base.shortfallAge && (
               <p className="mt-0.5 text-[10px] text-[#f87171]">
-                ⚠ {base.shortfallAge}歳で資金ショート
+                ● {base.shortfallAge}歳で資金ショート
               </p>
             )}
             <p className="mt-1 text-[10px] text-white/50">
@@ -720,7 +720,7 @@ export default function SuggestPage() {
                                 {shortfallFixed
                                   ? `✓ 資金ショート（${base.shortfallAge}歳）が解消されます`
                                   : shortfallWorsened
-                                    ? `⚠ 資金ショートが${sc.result.shortfallAge}歳に発生します`
+                                    ? `● 資金ショートが${sc.result.shortfallAge}歳に発生します`
                                     : `資金ショート ${base.shortfallAge}歳 → ${sc.result.shortfallAge}歳`}
                               </div>
                             )}
@@ -778,7 +778,7 @@ export default function SuggestPage() {
           href="/v5/result"
           className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[var(--lp-primary)] hover:text-white"
           style={{
-            border: "2.5px solid #0a0a0a",
+            border: "1.5px solid #0a0a0a",
             borderRadius: 10,
             color: "#0a0a0a",
           }}
@@ -790,7 +790,7 @@ export default function SuggestPage() {
           className="flex-1 py-3 text-center text-xs font-bold text-white transition-colors hover:opacity-80"
           style={{
             background: "var(--lp-primary)",
-            border: "2.5px solid #0a0a0a",
+            border: "1.5px solid #0a0a0a",
             borderRadius: 10,
           }}
         >

@@ -1,7 +1,9 @@
 // 「お金の引き継ぎ書」の財産・負債の一覧。金額はシミュレーターの入力（作成日時点）から自動で入る
+import { parseYMD, yearToStartAge } from "./age";
 import { computeRealEstateValue, ownsHomeAt } from "./finance";
+import { propertyLoanParts, scheduleLoans, scheduleParts, type LoanPartSummary } from "./homeLoan";
 import { HAS, deathBenefitAt, deathCoverActive, normalizeInsurance, premiumAt, typeLabel } from "./insurance";
-import type { DcType, HandoverInput, HandoverItem, Insurance, PlanInput, RealEstate, YearlyResult } from "./types";
+import type { DcType, HandoverInput, HandoverItem, HomeLoanPart, Insurance, PlanInput, RealEstate, YearlyResult } from "./types";
 
 const MAN = 10000;
 const manS = (yen: number) => `${Math.round(yen / MAN).toLocaleString()}万円`;
@@ -215,19 +217,44 @@ export const AFTER_DEATH_STEPS: { when: string; items: string[] }[] = [
 
 export const newItemId = () => `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-interface AutoSource {
+export interface AutoSource {
   src: string;
   cat: string;
   amount: number;
-  f: Record<string, string>; // はじめて作るときに入れておく値
+  f: Record<string, string>;     // はじめて作るときに入れておく値（本人が書き換えてよい）
+  live?: Record<string, string>; // 毎回シミュレーターの入力から出し直す値（毎月の返済・金利・完済予定など）。本人が欄に書いたらそちらを優先
+}
+
+// 項目の欄の値。本人が書いた値がなければ、入力から出した値（live）
+export function itemField(item: HandoverItem, key: string, sources: AutoSource[]): string {
+  const own = item.f[key];
+  if (own) return own;
+  if (!item.src) return "";
+  return sources.find((s) => s.src === item.src)?.live?.[key] ?? "";
 }
 
 const loanKindOf = (label: string) =>
   /車|カー/.test(label) ? "自動車ローン" : /奨学/.test(label) ? "奨学金" : /教育|学資/.test(label) ? "教育ローン" : /カード/.test(label) ? "カードローン" : "その他";
 
+const RATE_TYPE_LABEL = { variable: "変動", fixedPeriod: "当初固定", fixed: "全期間固定" } as const;
+
+// ローン1本の、毎月の返済・金利・完済予定の文字（返済予定 homeLoan.ts から）
+function loanLive(p: HomeLoanPart, s: LoanPartSummary, plan: PlanInput, baseYear: number): Record<string, string> {
+  const rate = [`${p.rate}%`, RATE_TYPE_LABEL[p.rateType] ?? ""];
+  if (p.rateType === "fixedPeriod" && p.fixedUntilAge !== undefined) rate.push(`${baseYear + (p.fixedUntilAge - plan.curAge)}年まで。その後 ${p.rateAfter ?? p.rate}%の見込み`);
+  if (p.method === "principal") rate.push("元金均等");
+  const end = s.payoffAge !== null ? `${baseYear + (s.payoffAge - plan.curAge)}年ごろ（${s.payoffAge}歳）` : "";
+  return {
+    monthly: s.firstMonthly > 0 ? `月${Math.round(s.firstMonthly).toLocaleString()}円` : "",
+    rate: rate.filter(Boolean).join("・"),
+    end,
+  };
+}
+
 // シミュレーターの入力から作る項目
 export function autoSources(plan: PlanInput): AutoSource[] {
   const year = new Date().getFullYear();
+  const baseYear = (parseYMD(plan.baseDate) ?? new Date()).getFullYear();
   const job = currentJobs(plan)[0]?.name ?? "";
   const oldNisa = plan.nisaSplit?.on ? Math.min(Math.max(0, plan.nisaBal), Math.max(0, plan.nisaSplit.oldBal ?? 0)) : 0;
   const out: AutoSource[] = [
@@ -275,32 +302,50 @@ export function autoSources(plan: PlanInput): AutoSource[] {
       },
     }),
   );
+  // 住宅ローン: 返済中のもの。ミックスローン（hlParts が2本以上）は1本ずつ。1本目は前からの "hl" のまま（作った項目を引き継ぐ）
   if (plan.useHomeLoan && plan.hlBal > 0 && plan.hlStart <= plan.curAge) {
-    out.push({
-      src: "hl",
-      cat: "housingLoan",
-      amount: plan.hlBal,
-      f: { danshin: plan.risk?.danshin ? "あり" : "なし", memo: `金利${plan.hlRate}%・残り約${plan.hlTerm}年` },
+    const sched = scheduleLoans(plan);
+    sched.parts.forEach((p, i) => {
+      out.push({
+        src: i === 0 ? "hl" : `hl-${i}`,
+        cat: "housingLoan",
+        amount: p.bal,
+        f: { danshin: plan.risk?.danshin ? "あり" : "なし", memo: sched.parts.length > 1 ? `ミックスローンの${p.label || `${i + 1}本目`}` : "" },
+        live: loanLive(p, sched.summaries[i], plan, baseYear),
+      });
     });
   }
+  // 不動産投資のローン: 物件ごと。ミックスローンなら1本ずつ（2本目からは "reloan-物件-本"）
   plan.res.forEach((r, i) => {
-    if (r.bal > 0)
+    const parts = propertyLoanParts(r);
+    if (!parts.length) return;
+    const name = r.name || `投資用不動産${i + 1}`;
+    const sched = scheduleParts(parts, Math.max(yearToStartAge(r.start, plan), plan.curAge), r.loanPrepays ?? []);
+    sched.parts.forEach((p, j) => {
       out.push({
-        src: `reloan-${i}`,
+        src: j === 0 ? `reloan-${i}` : `reloan-${i}-${j}`,
         cat: "loan",
-        amount: r.bal,
-        f: { kind: "不動産ローン", memo: `${r.name || `物件${i + 1}`}・金利${r.rate}%・期間${r.term}年` },
+        amount: p.bal,
+        f: { kind: "不動産ローン", memo: sched.parts.length > 1 ? `${name}・ミックスローンの${p.label || `${j + 1}本目`}` : name },
+        live: loanLive(p, sched.summaries[j], plan, baseYear),
       });
+    });
   });
+  // その他のローン: 入力は「毎月の返済×残り回数」だけなので、残高はその掛け算（利息を含む目安）。金利は入力にないので手で書く
   plan.otherLoans.forEach((ln, i) => {
     const amount = ln.monthlyPay * ln.remainMonths;
-    if (amount > 0)
-      out.push({
-        src: `loan-${i}`,
-        cat: "loan",
-        amount,
-        f: { kind: loanKindOf(ln.label), memo: ln.label, monthly: `月${(ln.monthlyPay / MAN).toFixed(1)}万円・残り${ln.remainMonths}回` },
-      });
+    if (amount <= 0) return;
+    const endDate = new Date(year, new Date().getMonth() + ln.remainMonths, 1);
+    out.push({
+      src: `loan-${i}`,
+      cat: "loan",
+      amount,
+      f: { kind: loanKindOf(ln.label), memo: ln.label },
+      live: {
+        monthly: `月${Math.round(ln.monthlyPay).toLocaleString()}円・残り${ln.remainMonths}回`,
+        end: `${endDate.getFullYear()}年${endDate.getMonth() + 1}月ごろ`,
+      },
+    });
   });
   return out;
 }

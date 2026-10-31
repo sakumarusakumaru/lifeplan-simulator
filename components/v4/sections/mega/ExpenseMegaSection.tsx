@@ -243,7 +243,7 @@ export function ExpenseMegaSection() {
               style={{ background: "#fff8e7", border: "1.5px solid #d4a017" }}
             >
               <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#a07900]">
-                ⚠ 重複入力を防ぐため、ここに含めるもの／含めないものを確認
+                ● 重複入力を防ぐため、ここに含めるもの／含めないものを確認
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div>

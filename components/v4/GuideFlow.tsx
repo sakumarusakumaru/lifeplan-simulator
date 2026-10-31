@@ -40,7 +40,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   return (
     <div
       className={`rounded-xl bg-white p-4 sm:p-5 ${className}`}
-      style={{ border: `2.5px solid ${INK}` }}
+      style={{ border: `1.5px solid ${INK}` }}
     >
       {children}
     </div>
@@ -320,7 +320,7 @@ function StepInput() {
             style={{
               background: tab === i ? "var(--lp-primary)" : "#fff",
               color: tab === i ? "#fff" : INK,
-              border: `2px solid ${INK}`,
+              border: `1.5px solid ${INK}`,
             }}
           >
             <span className="text-[10px] font-bold tracking-[0.14em]" style={{ color: tab === i ? "#ffffff99" : RED }}>
@@ -492,7 +492,7 @@ function StepAccount() {
               style={{
                 background: inc === i ? "var(--lp-primary)" : "#fff",
                 color: inc === i ? "#fff" : INK,
-                border: `2px solid ${INK}`,
+                border: `1.5px solid ${INK}`,
               }}
             >
               {it.label}
@@ -555,7 +555,7 @@ function StepResult() {
           赤い丸を押すと、それぞれの見どころが表示されます。
         </p>
       </div>
-      <div className="relative rounded-xl p-3" style={{ background: CREAM, border: `2.5px solid ${INK}` }}>
+      <div className="relative rounded-xl p-3" style={{ background: CREAM, border: `1.5px solid ${INK}` }}>
         {/* ミニ模型 */}
         <div className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: `2px solid ${INK}20` }}>
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-bold text-white" style={{ background: GREEN }}>
@@ -750,7 +750,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
               type="button"
               onClick={onClose}
               className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold"
-              style={{ border: `2px solid ${INK}`, background: "#fff" }}
+              style={{ border: `1.5px solid ${INK}`, background: "#fff" }}
               aria-label="使い方を閉じる"
             >
               ✕ 閉じる
@@ -813,7 +813,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
   const nav = showBottomNav ? (
     <div
       className={mode === "modal" ? "sticky bottom-0 z-10 px-4 py-3 sm:px-8" : "fixed inset-x-0 bottom-0 z-40 px-4 py-3 sm:px-8"}
-      style={{ background: CREAM, borderTop: `2.5px solid ${INK}` }}
+      style={{ background: CREAM, borderTop: `1.5px solid ${INK}` }}
     >
       <div className="mx-auto flex max-w-2xl items-center gap-2">
         <button
@@ -821,7 +821,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           disabled={step === 0}
           className="rounded-xl px-4 py-3 text-xs font-bold disabled:opacity-30"
-          style={{ border: `2.5px solid ${INK}`, background: "#fff" }}
+          style={{ border: `1.5px solid ${INK}`, background: "#fff" }}
         >
           ← 戻る
         </button>
@@ -833,7 +833,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             type="button"
             onClick={onClose}
             className="rounded-xl px-5 py-3 text-xs font-bold text-white"
-            style={{ border: `2.5px solid ${INK}`, background: "var(--lp-primary)" }}
+            style={{ border: `1.5px solid ${INK}`, background: "var(--lp-primary)" }}
           >
             閉じて続ける
           </button>
@@ -842,7 +842,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             type="button"
             onClick={() => setStep((s) => Math.min(lastIdx, s + 1))}
             className="rounded-xl px-5 py-3 text-xs font-bold text-white"
-            style={{ border: `2.5px solid ${INK}`, background: "var(--lp-primary)" }}
+            style={{ border: `1.5px solid ${INK}`, background: "var(--lp-primary)" }}
           >
             次へ →
           </button>
@@ -866,7 +866,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
         <div
           ref={scrollRef}
           className="relative flex h-full w-full max-w-3xl flex-col overflow-y-auto sm:h-auto sm:max-h-[92vh] sm:rounded-2xl"
-          style={{ background: CREAM, border: `2.5px solid ${INK}` }}
+          style={{ background: CREAM, border: `1.5px solid ${INK}` }}
         >
           <div className="flex-1 px-4 pt-4 pb-6 sm:px-8 sm:pt-6">{body}</div>
           {nav}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { ConsentDialog } from "@/components/v4/ConsentDialog";
 import { Footer } from "@/components/v4/Footer";
@@ -13,7 +13,7 @@ import type { PlanInput } from "@/lib/v4/calc/types";
 import { anonymizePlan } from "@/lib/v4/calc/anonymize";
 import { DEFAULT_PLAN, EMPTY_PLAN } from "@/lib/v4/calc/defaults";
 import { migrateV3Plan, normalizePlan, usePlanStore } from "@/store/v4/plan-store";
-import { useSecretStore } from "@/store/v4/secret-store";
+import { parseHandoverSecrets, useSecretStore } from "@/store/v4/secret-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
 const TABS = [
@@ -21,6 +21,7 @@ const TABS = [
   { href: "/v5/result", label: "レポート" },
   { href: "/v5/suggest", label: "比較" },
   { href: "/v5/risk", label: "もしも" },
+  { href: "/v5/handover", label: "引き継ぎ" },
 ];
 
 export default function V5Layout({ children }: { children: React.ReactNode }) {
@@ -106,6 +107,9 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
   // 入力データをJSONでDL（detailタブ用）
   const exportPlan = (forReview = false) => {
     // 検証用は、名前・連絡先・メッセージなどを消し、ほかのAIや専門家に渡しやすい形にする
+    // 引き継ぎ書の口座番号・ログインIDなど（secret-store）は、「画面で入力する」がオンのときだけ handoverSecrets として含める（検証用には含めない）
+    const secret = useSecretStore.getState();
+    const withSecrets = !forReview && secret.enabled && Object.keys(secret.values).length > 0;
     const json = JSON.stringify(
       forReview
         ? {
@@ -113,7 +117,9 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
             _exportedAt: new Date().toISOString(),
             plan: anonymizePlan(plan),
           }
-        : plan,
+        : withSecrets
+          ? { ...plan, handoverSecrets: { enabled: true, values: secret.values } }
+          : plan,
       null,
       2,
     );
@@ -146,11 +152,16 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
         // ver3 で保存したJSONも読めるように変換する
         const isV3 = "fundBal" in data || "fundNisaBal" in data;
         if (isReview && !confirm("検証用のファイルには、名前・引き継ぎ書の中身が入っていません。読み込むと、今の入力と引き継ぎ書はこのファイルの内容に置き換わります。続けますか？")) return;
+        // 引き継ぎ書の口座番号など（保存時に「画面で入力する」がオンだったときだけ入っている）は、入力とは別の保存場所に戻す。
+        // 入力の方（lp_v4）に混ざらないよう、先に取り出して消しておく
+        const secrets = parseHandoverSecrets((data as { handoverSecrets?: unknown }).handoverSecrets);
+        delete (data as { handoverSecrets?: unknown }).handoverSecrets;
         // 読み込んだ内容に足りない項目は、今の入力ではなく空の値で埋める（前の人の入力が混ざらないように）
         replacePlan(normalizePlan(isV3 ? migrateV3Plan(data) : (data as Partial<PlanInput>), { ...DEFAULT_PLAN, ...EMPTY_PLAN }));
-        // 引き継ぎ書の口座番号などは今の入力の項目に結びついているので、入れ替えたら消す
-        useSecretStore.getState().clear();
-        alert("データを読み込みました");
+        // 引き継ぎ書の口座番号などは今の入力の項目に結びついているので、入れ替えたら消す。ファイルに入っていればそれに置き換える
+        if (secrets && Object.keys(secrets.values).length) useSecretStore.getState().restore(secrets.values);
+        else useSecretStore.getState().clear();
+        alert(secrets && Object.keys(secrets.values).length ? `データを読み込みました（引き継ぎ書の口座番号・ID ${Object.keys(secrets.values).length}件もこの端末に戻しました）` : "データを読み込みました");
       } catch (err) {
         alert(
           "読み込みに失敗しました：" +
@@ -164,15 +175,15 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
   const headerBtnStyle = {
     background: "#ffffff",
     color: "#0a0a0a",
-    border: "2px solid #0a0a0a",
+    border: "1.5px solid #0a0a0a",
     borderRadius: 8,
   };
 
   // ステップのタブ。PCではヘッダー1段目に、スマホでは独立した行に出す
   // スマホ用のタブ: 4等分のセグメント。短い名前でスクロールせずに全部見える
-  const SHORT = ["入力", "レポート", "比較", "もしも"];
+  const SHORT = ["入力", "レポート", "比較", "もしも", "引き継ぎ"];
   const renderMobileTabs = () => (
-    <nav className="grid grid-cols-4 gap-1 rounded-xl bg-white p-1" style={{ border: "2px solid #0a0a0a" }}>
+    <nav className="grid grid-cols-5 gap-0.5 rounded-xl bg-white p-1" style={{ border: "1.5px solid #0a0a0a30" }}>
       {TABS.map((tab, i) => {
         const active = i === activeIdx;
         return (
@@ -183,33 +194,40 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
             className="flex flex-col items-center justify-center rounded-lg py-1 transition-colors"
             style={{ background: active ? "var(--lp-primary)" : "transparent", color: active ? "#ffffff" : "#0a0a0a" }}
           >
-            <span className="whitespace-nowrap py-1 text-[12px] font-bold leading-none">{SHORT[i]}</span>
+            <span className="whitespace-nowrap py-1 text-[11px] font-bold leading-none">{SHORT[i]}</span>
           </Link>
         );
       })}
     </nav>
   );
 
-  // ver5: 上のタブは画面の切り替えだけ（番号・矢印なし）。入力の進み具合は入力画面の4ブロックのタブで見せる
+  // ver5: 上のタブは5つの画面を「›」でつないだ流れ（入力 › レポート › 比較 › もしも › 引き継ぎ）。
+  // 入力の進み具合は入力画面の4ブロックのタブで見せる
   const renderTabs = (className: string) => (
     <nav className={className} aria-label="画面">
       {TABS.map((tab, i) => {
         const active = i === activeIdx;
         return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            aria-current={active ? "page" : undefined}
-            className="shrink-0 px-3 py-1 text-xs font-bold tracking-wide transition-opacity hover:opacity-80"
-            style={{
-              color: active ? "#ffffff" : "#0a0a0a",
-              background: active ? "var(--lp-primary)" : "transparent",
-              border: `1.5px solid ${active ? "#0a0a0a" : "#0a0a0a40"}`,
-              borderRadius: 8,
-            }}
-          >
-            {tab.label}
-          </Link>
+          <Fragment key={tab.href}>
+            {i > 0 ? (
+              <span aria-hidden className="shrink-0 text-[12px] text-[#0a0a0a]/35">
+                ›
+              </span>
+            ) : null}
+            <Link
+              href={tab.href}
+              aria-current={active ? "page" : undefined}
+              className="shrink-0 px-3 py-1 text-xs font-bold tracking-wide transition-opacity hover:opacity-80"
+              style={{
+                color: active ? "#ffffff" : "#0a0a0a",
+                background: active ? "var(--lp-primary)" : "transparent",
+                border: `1.5px solid ${active ? "var(--lp-primary)" : "#0a0a0a30"}`,
+                borderRadius: 8,
+              }}
+            >
+              {tab.label}
+            </Link>
+          </Fragment>
         );
       })}
     </nav>
@@ -220,7 +238,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
       <header
         ref={headerRef}
         className="fixed inset-x-0 top-0 z-50 print:static"
-        style={{ background: "#ffffff", borderBottom: "2.5px solid #0a0a0a" }}
+        style={{ background: "#ffffff", borderBottom: "1.5px solid #0a0a0a" }}
       >
         <div className="flex items-center gap-3 px-4 py-2 sm:px-8">
           <Link
