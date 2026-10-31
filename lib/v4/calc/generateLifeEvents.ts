@@ -1,4 +1,5 @@
 import { ageOn } from "./age";
+import { scheduleLoans } from "./homeLoan";
 import type { LifeEvent, PlanInput } from "./types";
 
 export function generateLifeEvents(plan: PlanInput): LifeEvent[] {
@@ -45,8 +46,10 @@ export function generateLifeEvents(plan: PlanInput): LifeEvent[] {
   }
 
   // 住宅ローン完済
-  if (plan.useHomeLoan && plan.hlStart > 0 && plan.hlTerm > 0) {
-    add(plan.hlStart + plan.hlTerm, "ローン完済");
+  // 住宅ローン完済（ミックスローン・繰上返済も含めて、返し終わる年）
+  if (plan.useHomeLoan) {
+    const s = scheduleLoans(plan);
+    if (s.parts.length && s.payoffAge !== null) add(s.payoffAge + 1, "ローン完済");
   }
 
   // 子ども（大学入学 = 親の年齢 = kid.offset + 18）

@@ -379,10 +379,14 @@ export interface PlanInput {
   homeBuyAge?: number;
   homeTaxY: number;
   useHomeLoan: boolean;
+  // 住宅ローンの合計（hlParts があるときは、その合計・平均で自動で入れる。ほかの画面の表示用）
   hlBal: number;
   hlRate: number;
   hlTerm: number;
-  hlStart: number;
+  hlStart: number;           // 返済を始めた（始める）年齢。ミックスローンも同じ
+  // 住宅ローンの中身（ミックスローンなら2本以上）。空なら hlBal・hlRate・hlTerm の1本として計算する
+  hlParts?: HomeLoanPart[];
+  hlPrepays?: LoanPrepay[];  // 繰上返済の予定
 
   // 持ち家（自宅）の評価額算定用 - BSの資産側に計上
   homeOwned: boolean;             // 持ち家かどうか
@@ -474,6 +478,7 @@ export interface YearlyResult {
   homeRent: number;
   homeTax: number;
   homePay: number;
+  hlPrepay?: number;     // 当年の繰上返済額（homePay の内数）
   ins: number;
   insPayout: number;      // 保険の満期金・解約返戻金・祝い金・年金（税引き前）
   basic: number;
@@ -530,4 +535,31 @@ export interface SimulationSummary {
   totalHome: number;
   shortfallAge: number | null;
   warnings: SimulationWarning[];
+}
+
+// ── 住宅ローン ──
+// 金利タイプ: 変動／固定期間選択（○年固定のあと変動など）／全期間固定
+export type LoanRateType = "variable" | "fixedPeriod" | "fixed";
+// 返済方法: 元利均等（毎月の返済額が同じ）／元金均等（毎月の元金が同じ。はじめの返済が多い）
+export type LoanMethod = "annuity" | "principal";
+
+export interface HomeLoanPart {
+  label: string;            // 例: 変動分・固定分
+  bal: number;              // 今の残高（返済を始める前なら借入額）
+  years: number;            // 残りの返済年数（返済を始める前なら返済期間）
+  rate: number;             // 今の金利（%）。固定期間選択型は固定期間の金利
+  rateType: LoanRateType;
+  fixedUntilAge?: number;   // 固定期間選択型: 固定が終わる年齢
+  rateAfter?: number;       // 固定期間選択型: 固定が終わったあとの金利の見込み（%）
+  method: LoanMethod;
+  rule5y?: boolean;         // 変動・元利均等: 返済額は5年ごとに見直し、上げ幅は1.25倍まで（5年ルール・125%ルール）。既定はあり
+}
+
+// 繰上返済: 一部（期間短縮型・返済額軽減型）／全額（一括返済）
+export type PrepayKind = "shorten" | "reduce" | "full";
+export interface LoanPrepay {
+  age: number;              // その年のはじめに返す
+  amount: number;           // 一部繰上返済の額（全額のときは使わない）
+  kind: PrepayKind;
+  part?: number;            // どのローンに（hlParts の番号。既定は0）
 }

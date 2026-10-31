@@ -89,6 +89,11 @@ export function applyEnvPlan(plan: PlanInput, env: EnvInput): PlanInput {
   const p: PlanInput = { ...plan };
   if (env.rateUp) {
     p.hlRate = plan.hlRate + env.rateUp;
+    // ミックスローン: 全期間固定の分は上がらない。固定期間選択型は固定が終わってからの金利だけ上がる
+    if (plan.hlParts?.length)
+      p.hlParts = plan.hlParts.map((x) =>
+        x.rateType === "fixed" ? x : x.rateType === "fixedPeriod" ? { ...x, rateAfter: (x.rateAfter ?? x.rate) + env.rateUp } : { ...x, rate: x.rate + env.rateUp },
+      );
     p.res = plan.res.map((r) => ({ ...r, rate: r.rate + env.rateUp }));
     p.cashRate = plan.cashRate + env.rateUp / 2 / 100;
   }

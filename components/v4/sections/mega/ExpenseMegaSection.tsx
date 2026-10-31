@@ -5,11 +5,11 @@ import { useState } from "react";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { DateField } from "@/components/v4/inputs/DateField";
 import { NumberField } from "@/components/v4/inputs/NumberField";
-import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { TextField } from "@/components/v4/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
+import { HomeLoanEditor } from "@/components/v4/HomeLoanEditor";
 import { InsuranceCard } from "@/components/v4/InsuranceCard";
 import { Section } from "@/components/v4/Section";
 import { deathCoverAt, newInsurance, normalizeInsurance, premiumAt } from "@/lib/v4/calc/insurance";
@@ -138,6 +138,7 @@ const NEW_CARE = (): CareEvent => ({
 export function ExpenseMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
+  const patchPlan = usePlanStore((s) => s.patch);
   const [showLivingGuide, setShowLivingGuide] = useState(false);
 
   const updateLoan = (i: number, patch: Partial<OtherLoan>) =>
@@ -468,33 +469,7 @@ export function ExpenseMegaSection() {
             />
             {plan.useHomeLoan ? (
               <div className="flex flex-col gap-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <NumberField
-                    label="ローン残高"
-                    value={plan.hlBal}
-                    onChange={(v) => setField("hlBal", v)}
-                    unit="円"
-                  />
-                  <PercentField
-                    label="金利"
-                    value={plan.hlRate}
-                    onChange={(v) => setField("hlRate", v)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <NumberField
-                    label="返済開始"
-                    value={plan.hlStart}
-                    onChange={(v) => setField("hlStart", v)}
-                    unit="歳"
-                  />
-                  <NumberField
-                    label="ローン期間"
-                    value={plan.hlTerm}
-                    onChange={(v) => setField("hlTerm", v)}
-                    unit="年"
-                  />
-                </div>
+                <HomeLoanEditor plan={plan} setField={setField} patch={patchPlan} />
                 <CheckboxField
                   label="住宅ローン控除を受けている"
                   value={plan.hlDeduct}

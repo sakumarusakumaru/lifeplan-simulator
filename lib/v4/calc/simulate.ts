@@ -1,6 +1,7 @@
 import { ageOn, parseYMD, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
 import { EDU, amortizeYear, pmt } from "./finance";
+import { scheduleLoans } from "./homeLoan";
 import { createInsuranceState, insuranceDeduction, insuranceYear, normalizeInsurance } from "./insurance";
 import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable, zaishokuTeishiAnnual } from "./pension";
 import {
@@ -118,11 +119,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
 
   const baseYear = (parseYMD(input.baseDate) ?? new Date()).getFullYear();
 
-  let hlBal = input.useHomeLoan ? input.hlBal : 0;
-  const hlPayY =
-    input.useHomeLoan && input.hlBal > 0
-      ? pmt(input.hlRate / 100 / 12, input.hlTerm * 12, input.hlBal) * 12
-      : 0;
+  // 住宅ローン: ミックスローン・金利タイプ・返済方法・繰上返済を含めた年ごとの予定を先に作る（homeLoan.ts）
+  const loans = scheduleLoans(input);
+  let hlBal = loans.startBal;
+  let hlCleared = false; // 団体信用生命保険で残債が0になった
 
   const rSims: RealEstateSim[] = input.res.map((r) => ({
     ...r,
@@ -245,7 +245,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     if (deathOn && age === deathAge) {
       deathLump += (risk.deathInsurance || 0) + (opts.extraInsurance ?? 0);
       // 団体信用生命保険: 本人が亡くなると住宅ローンの残債は0
-      if (selfDies && risk.danshin) hlBal = 0;
+      if (selfDies && risk.danshin) {
+        hlBal = 0;
+        hlCleared = true;
+      }
       // 本人のDC残高は死亡一時金として遺族へ
       if (selfDies && ass.dc > 0) {
         deathLump += ass.dc;
@@ -477,11 +480,13 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
 
     // ── 住宅ローン（返済は後で計上。控除は年末残高で）──
     let homePay = 0;
-    if (input.useHomeLoan && hlBal > 0 && age >= input.hlStart) {
-      // 毎月払いの元利均等。利息は月ごとに残高×年利÷12（以前は年1回・年初残高×年利で、完済が1年延びていた）
-      const y = amortizeYear(hlBal, input.hlRate, hlPayY / 12);
-      homePay = y.paid;
-      hlBal = y.bal;
+    let hlPrepay = 0;
+    if (!hlCleared && age >= loans.start) {
+      // 毎月の返済（月ごとに残高×年利÷12の利息）と、その年の繰上返済
+      const y = loans.byAge.get(age);
+      homePay = y ? y.pay + y.prepay : 0;
+      hlPrepay = y ? y.prepay : 0;
+      hlBal = y ? y.bal : 0;
     }
     const hlCredit =
       input.hlDeduct && input.useHomeLoan && age >= input.hlStart && age < input.hlDeductEndAge && !selfGone
@@ -806,6 +811,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       homeRent,
       homeTax,
       homePay,
+      hlPrepay,
       ins,
       basic,
       basicL,

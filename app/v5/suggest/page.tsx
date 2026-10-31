@@ -18,6 +18,7 @@ import { dcSelfLimit } from "@/lib/v4/calc/rules";
 import { simulate } from "@/lib/v4/calc/simulate";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { useDisplayConverter } from "@/store/v4/useSimResult";
+import { loanParts } from "@/lib/v4/calc/homeLoan";
 import type { DrawOrderMode, PlanInput } from "@/lib/v4/calc/types";
 
 const fmt = (yen: number) => {
@@ -307,15 +308,32 @@ export default function SuggestPage() {
         category: "spending",
       });
     }
-    // 今の預金から500万円を払って、借りている残高を減らす（返済額が減る型）。預金が500万円ない人・まだ借りていない人には出さない
-    if (plan.useHomeLoan && plan.hlBal > 5_000_000 && plan.hlStart <= plan.curAge && plan.cashBal >= 5_000_000) {
-      list.push({
-        id: "prepay",
-        title: "住宅ローンを500万円繰上返済した場合",
-        detail: `今の預金から500万円を払い、残高 ${(plan.hlBal / 10000).toFixed(0)}万 → ${((plan.hlBal - 5_000_000) / 10000).toFixed(0)}万（金利${plan.hlRate}%・返済期間はそのままで毎月の返済額が減る型）`,
-        mod: ((p) => ({ ...p, hlBal: Math.max(0, p.hlBal - 5_000_000), cashBal: p.cashBal - 5_000_000 })),
-        category: "spending",
-      });
+    // 今の預金から500万円を払って一部繰上返済（来年のはじめ）。預金が500万円ない人・まだ借りていない人には出さない
+    {
+      const hlTotal = loanParts(plan).reduce((a2, x) => a2 + x.bal, 0);
+      if (plan.useHomeLoan && hlTotal > 5_000_000 && plan.hlStart <= plan.curAge && plan.cashBal >= 5_000_000) {
+        // 繰上返済はその年の支出として計算される（預金から出る）ので、ここでは予定を足すだけ
+        const prepay = (kind: "shorten" | "reduce") => (p: PlanInput): PlanInput => ({
+          ...p,
+          hlPrepays: [...(p.hlPrepays ?? []), { age: p.curAge + 1, amount: 5_000_000, kind }],
+        });
+        list.push({
+          id: "prepayShorten",
+          group: "prepay",
+          title: "500万円を繰上返済した場合（期間短縮型）",
+          detail: `来年、預金から500万円を返す。毎月の返済額はそのままで、返し終わりが早くなる（利息の減りはこちらが大きい）`,
+          mod: prepay("shorten"),
+          category: "spending",
+        });
+        list.push({
+          id: "prepay",
+          group: "prepay",
+          title: "500万円を繰上返済した場合（返済額軽減型）",
+          detail: `来年、預金から500万円を返す。返し終わる時期はそのままで、毎月の返済額が減る`,
+          mod: prepay("reduce"),
+          category: "spending",
+        });
+      }
     }
 
     // ─────────────────────────
