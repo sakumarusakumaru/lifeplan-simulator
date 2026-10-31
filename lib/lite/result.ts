@@ -1,7 +1,9 @@
 // ver4 Lite の結果: ver4 の計算エンジンで試算し、はじめての人向けの数字だけを取り出す（金額は今の価値）
+import { generateLifeEvents } from "@/lib/v4/calc/generateLifeEvents";
+import { runMonteCarlo } from "@/lib/v4/calc/montecarlo";
 import { toRealValue } from "@/lib/v4/calc/realValue";
-import { simulate } from "@/lib/v4/calc/simulate";
-import type { YearlyResult } from "@/lib/v4/calc/types";
+import { requiredCoverage, simulate } from "@/lib/v4/calc/simulate";
+import type { PlanInput, YearlyResult } from "@/lib/v4/calc/types";
 
 import { liteToPlan } from "./toPlan";
 import type { LiteInput } from "./types";
@@ -72,7 +74,142 @@ export function liteResult(q: LiteInput) {
       const r = run(v.q);
       return { label: v.label, shortfallAge: r.shortfallAge, final: r.final, gain: r.final - base.final };
     });
-  return { ...base, tips, needMonthly, room, accuracy: liteAccuracy(q) };
+  return {
+    ...base,
+    tips,
+    needMonthly,
+    room,
+    accuracy: liteAccuracy(q),
+    events: liteEvents(base.plan),
+    lifetime: liteLifetime(base.rows),
+    teasers: liteTeasers(q, base),
+  };
+}
+
+// グラフに付ける、その人のできごと（子どもの大学入学・家を買う・ローン完済・働き終わる・年金など）
+export function liteEvents(plan: PlanInput): { age: number; label: string }[] {
+  const ev = generateLifeEvents(plan).map((e) => ({
+    age: e.age,
+    label: e.label.replace(/^(勤務先|事業)退職/, "働き終わる").replace("年金受給", "年金が始まる").replace("配偶者年金", "配偶者の年金が始まる"),
+  }));
+  if (plan.homeBuyAge && plan.homeBuyAge > plan.curAge) ev.push({ age: plan.homeBuyAge, label: "家を買う" });
+  // 同じ年齢はまとめる
+  const byAge = new Map<number, string>();
+  for (const e of ev) byAge.set(e.age, byAge.has(e.age) ? `${byAge.get(e.age)}・${e.label}` : e.label);
+  return [...byAge].map(([age, label]) => ({ age, label })).sort((a, b) => a.age - b.age).slice(0, 8);
+}
+
+// 一生で動かすお金の総額（今の価値）
+export function liteLifetime(rows: YearlyResult[]) {
+  const sum = (f: (r: YearlyResult) => number) => rows.reduce((a, r) => a + f(r), 0);
+  return {
+    income: sum((r) => r.income), // 手取りの収入（給与・年金・退職金など、税と社会保険料を引いたあと）
+    tax: sum((r) => r.taxWage + r.sevTax + r.dcTax + r.saleTax), // 税金と社会保険料
+    edu: sum((r) => r.edu),
+    home: sum((r) => r.home),
+    pension: sum((r) => r.penNet),
+    living: sum((r) => r.basic + r.special),
+  };
+}
+
+export interface LiteTeaser {
+  key: string;
+  title: string; // 何についての数字か
+  value: string; // その人の数字
+  note: string; // 何を前提にした粗い数字か
+  more: string; // 詳細版で何ができるか
+}
+
+const manOf = (yen: number) => {
+  const v = Math.round(yen / 10000);
+  return Math.abs(v) >= 10000 ? `${(v / 10000).toFixed(1)}億円` : `${v.toLocaleString()}万円`;
+};
+
+// 詳細版でわかることを、その人の数字で予告する（Liteの少ない入力から出した粗い数字）
+export function liteTeasers(q: LiteInput, base: ReturnType<typeof run>): LiteTeaser[] {
+  const plan = base.plan;
+  const out: LiteTeaser[] = [];
+  const r0 = base.rows[0];
+
+  // 税金と社会保険料（今年）
+  const gross = (q.income + (q.hasSpouse && q.spouseWork !== "none" ? q.spouseIncome : 0)) * 10000;
+  if (r0 && gross > 0 && r0.taxWage > 0) {
+    const pct = Math.round((1 - r0.taxWage / gross) * 100);
+    out.push({
+      key: "tax",
+      title: "いまの手取り",
+      value: `額面の約${pct}%（税金と社会保険料は年約${manOf(r0.taxWage)}）`,
+      note: "所得税・住民税・社会保険料を2026年の制度で計算。控除は基本的なものだけ",
+      more: "iDeCo・住宅ローン控除・生命保険料控除・副業まで入れると、手取りが変わります",
+    });
+  }
+
+  // もしも（配偶者か子どもがいる人）
+  if (q.hasSpouse || q.kidAges.length + q.futureKids > 0) {
+    const dPlan: PlanInput = { ...plan, risk: { ...plan.risk, who: "self", deathAge: q.age } };
+    const dead = simulate(dPlan, { death: true }).rows.find((r) => r.dead && r.survKiso + r.survKosei + r.survChukorei > 0);
+    const monthly = dead ? Math.round((dead.survKiso + dead.survKosei + dead.survChukorei) / 12) : 0;
+    const need = requiredCoverage(dPlan);
+    out.push({
+      key: "death",
+      title: "あなたが今亡くなった場合",
+      value: `${monthly > 0 ? `遺族年金は月約${manOf(monthly)}` : "遺族年金はほぼ出ない計算"}。${need > 0 ? `足りない保障の目安は約${manOf(need)}` : "保険がなくても足りる計算"}`,
+      note: "加入中の保険は入れていない（Liteでは聞いていないため）。配偶者が妻、生活費は今の7割として計算",
+      more: "入っている保険・団信・亡くなる年齢・配偶者が亡くなった場合まで入れて、必要な保障額と相続を確かめられます",
+    });
+  }
+
+  // 条件を重ねる
+  if (q.penStart < 70 && q.retireAge + 2 <= 75) {
+    const r = run({ ...q, retireAge: q.retireAge + 2, penStart: 70 });
+    out.push({
+      key: "combo",
+      title: "2年長く働き、年金を70歳から受け取ると",
+      value:
+        r.shortfallAge === base.shortfallAge
+          ? `${r.shortfallAge === null ? `${plan.endAge}歳まで足りるのは同じで` : `足りなくなる年齢は${r.shortfallAge}歳のままで`}、${plan.endAge}歳のお金が約${manOf(Math.abs(r.final - base.final))}${r.final >= base.final ? "多く" : "少なく"}なる`
+          : r.shortfallAge === null
+            ? `${plan.endAge}歳まで足りる計算になる（いまは${base.shortfallAge}歳で足りなくなる）`
+            : `足りなくなる年齢が${r.shortfallAge}歳に（いまは${base.shortfallAge ?? `${plan.endAge}歳まで足りる`}${base.shortfallAge ? "歳" : ""}）`,
+      note: "2つの条件を同時に変えた試算",
+      more: "働く年数・年金・積立・生活費など20近い条件を、いくつでも重ねて比べられます",
+    });
+  }
+
+  // 教育費のピーク
+  if (q.kidAges.length + q.futureKids > 0) {
+    const peak = base.rows.reduce((m, r) => (r.edu > m.edu ? r : m), base.rows[0]);
+    if (peak && peak.edu > 0) {
+      out.push({
+        key: "edu",
+        title: "教育費がいちばん多い年",
+        value: `あなたが${peak.age}歳の年に、年約${manOf(peak.edu)}`,
+        note: "学校の選び方の答えと、文部科学省などの調査の平均から",
+        more: "子どもごとに、幼稚園から大学院まで公立・私立・下宿・浪人・塾代を選べます",
+      });
+    }
+  }
+
+  // 金利が上がったら（ローンがある人）
+  if (plan.useHomeLoan) {
+    const up = toRealValue(simulate({ ...plan, hlRate: plan.hlRate + 1 }), plan);
+    const last = up.rows[up.rows.length - 1];
+    const diff = (last ? finOf(last) : 0) - base.final;
+    out.push({
+      key: "rate",
+      title: "住宅ローンの金利が1%上がると",
+      value: `100歳のお金が約${manOf(Math.abs(diff))}${diff < 0 ? "少なくなる" : "変わる"}${up.shortfallAge && up.shortfallAge !== base.shortfallAge ? `。${up.shortfallAge}歳で足りなくなる計算` : ""}`,
+      note: "今から返し終わるまで、ずっと1%高い場合",
+      more: "金利の上昇・物価の上昇・大暴落・年金の目減りを選んで、全部の結果を計算し直せます",
+    });
+  }
+  return out;
+}
+
+// 運用が毎年上下した場合（1,000通り）。重いので、押したときだけ計算する
+export function liteMonteCarlo(q: LiteInput) {
+  const r = runMonteCarlo(liteToPlan(q), "balanced");
+  return { rate: Math.round(r.successRate * 100), worst: r.worstDepletionAge };
 }
 
 export type LiteResult = ReturnType<typeof liteResult>;

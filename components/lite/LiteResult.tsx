@@ -1,9 +1,9 @@
 "use client";
 
-import { useDeferredValue, useMemo } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { finOf, liteBase, liteResult } from "@/lib/lite/result";
+import { finOf, liteBase, liteMonteCarlo, liteResult } from "@/lib/lite/result";
 import { LITE_ASSUMPTIONS as A } from "@/lib/lite/types";
 import { useLiteStore } from "@/store/lite/lite-store";
 
@@ -67,8 +67,19 @@ export function LiteResult() {
         </div>
 
         <div className="mt-3">
-          <LiteChart data={data} retireAge={Math.max(q.age, q.retireAge)} />
+          <LiteChart data={data} retireAge={Math.max(q.age, q.retireAge)} events={r.events} />
         </div>
+        {r.events.length ? (
+          <ol className="mt-1.5 grid grid-cols-1 gap-x-4 gap-y-0.5 text-[11px] text-[#0a0a0a]/70 sm:grid-cols-2">
+            {r.events.map((e, i) => (
+              <li key={e.age} className="flex gap-1.5">
+                <span className="w-4 shrink-0 text-right font-bold text-[#0a0a0a]">{i + 1}</span>
+                <span className="tabular-nums">{e.age}歳</span>
+                <span className="min-w-0">{e.label}</span>
+              </li>
+            ))}
+          </ol>
+        ) : null}
 
         {/* 次にやること: 足りない人は積立をあといくら、足りる人は生活費の余裕 */}
         <div className="mt-3 rounded-lg px-3 py-2.5" style={{ background: ok ? "#f0fff4" : "#fff1f1" }}>
@@ -88,6 +99,40 @@ export function LiteResult() {
           </p>
         </div>
       </div>
+
+      {/* 一生で動かすお金の総額（ここでしか見られない「発見」） */}
+      <div className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `2.5px solid ${INK}` }}>
+        <p className="text-sm font-bold">あなたが一生で動かすお金</p>
+        <p className="mt-0.5 text-[11px] text-[#0a0a0a]/60">今から{A.endAge}歳までの合計（今の価値）。毎年の計算を足し上げた数字です</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {[
+            { label: "手取りの収入", v: r.lifetime.income, sub: "給与・年金・退職金など" },
+            { label: "税金と社会保険料", v: r.lifetime.tax, sub: "所得税・住民税・年金・健康保険など（消費税は除く）", red: true },
+            { label: "受け取る年金", v: r.lifetime.pension, sub: "手取り" },
+            { label: "暮らしのお金", v: r.lifetime.living, sub: "生活費（住まい・教育を除く）" },
+            { label: "住まいのお金", v: r.lifetime.home, sub: "家賃・ローン・税・維持費" },
+            ...(r.lifetime.edu > 0 ? [{ label: "教育費", v: r.lifetime.edu, sub: "幼稚園〜大学・塾" }] : []),
+          ].map((x) => (
+            <div key={x.label} className="rounded-lg p-2.5" style={{ background: "#f0f0ee" }}>
+              <p className="text-[10px] font-bold leading-tight text-[#0a0a0a]/55">{x.label}</p>
+              <p className="mt-0.5 text-base font-bold tabular-nums" style={{ color: x.red ? RED : INK }}>
+                {man(x.v)}
+              </p>
+              <p className="text-[9px] leading-tight text-[#0a0a0a]/45">{x.sub}</p>
+            </div>
+          ))}
+        </div>
+        {r.lifetime.tax > 0 && r.lifetime.pension > 0 ? (
+          <p className="mt-2.5 text-[12px] font-bold leading-relaxed">
+            {r.lifetime.tax >= r.lifetime.pension
+              ? `一生で払う税金と社会保険料は、受け取る年金の約${(r.lifetime.tax / r.lifetime.pension).toFixed(1)}倍です`
+              : `受け取る年金は、一生で払う税金と社会保険料の約${(r.lifetime.pension / r.lifetime.tax).toFixed(1)}倍です`}
+          </p>
+        ) : null}
+      </div>
+
+      {/* 詳細版でわかることを、その人の数字で予告する */}
+      <Teasers teasers={r.teasers} onMore={goV4} />
 
       {/* 精度メーター: 任意の項目に答えるほど上がる */}
       <div className="rounded-2xl bg-white p-4" style={{ border: `2px solid ${INK}30` }}>
@@ -188,5 +233,59 @@ export function LiteBar() {
       </span>
       {r ? <span className="shrink-0 text-[11px] font-bold text-white/70">{A.endAge}歳のお金 {man(r.final)} ↓</span> : null}
     </button>
+  );
+}
+
+// 詳細版でわかること。Liteの入力から出した本物の数字を1つずつ見せ、続きは詳細版へ
+function Teasers({ teasers, onMore }: { teasers: { key: string; title: string; value: string; note: string; more: string }[]; onMore: () => void }) {
+  const q = useDeferredValue(useLiteStore((s) => s.q));
+  // 運用の振れ幅（1,000通り）は重いので、押したときだけ計算する
+  const [mc, setMc] = useState<{ key: string; rate: number; worst: number | null } | null>(null);
+  const qKey = JSON.stringify(q);
+  const mcNow = mc && mc.key === qKey ? mc : null;
+  return (
+    <div className="rounded-2xl bg-white p-4 sm:p-5" style={{ border: `2.5px solid ${INK}` }}>
+      <p className="text-sm font-bold">詳細版でわかること（あなたの数字で）</p>
+      <p className="mt-0.5 text-[11px] text-[#0a0a0a]/60">Liteの答えから出した概算です。詳細版で条件を足すと、ここから先まで確かめられます</p>
+      <ul className="mt-3 flex flex-col gap-2.5">
+        {teasers.map((t) => (
+          <li key={t.key} className="rounded-lg p-3" style={{ background: "#f7f7f5", border: `1px solid ${INK}15` }}>
+            <p className="text-[11px] font-bold text-[#0a0a0a]/60">{t.title}</p>
+            <p className="mt-0.5 text-[14px] font-bold leading-snug">{t.value}</p>
+            <p className="mt-1 text-[10px] leading-relaxed text-[#0a0a0a]/50">{t.note}</p>
+            <p className="mt-1.5 text-[11px] leading-relaxed">
+              <span className="font-bold">詳細版では：</span>
+              {t.more}
+            </p>
+          </li>
+        ))}
+        <li className="rounded-lg p-3" style={{ background: "#f7f7f5", border: `1px solid ${INK}15` }}>
+          <p className="text-[11px] font-bold text-[#0a0a0a]/60">運用が毎年上がったり下がったりしたら</p>
+          {mcNow ? (
+            <p className="mt-0.5 text-[14px] font-bold leading-snug">
+              1,000通りのうち{mcNow.rate}%で、{A.endAge}歳まで足りる計算
+              {mcNow.worst !== null ? `（悪いほうから1割の場合は${mcNow.worst}歳で足りなくなる）` : ""}
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMc({ key: qKey, ...liteMonteCarlo(q) })}
+              className="mt-1 rounded-lg px-3 py-1.5 text-[12px] font-bold"
+              style={{ border: `2px solid ${INK}` }}
+            >
+              1,000通り計算してみる
+            </button>
+          )}
+          <p className="mt-1 text-[10px] leading-relaxed text-[#0a0a0a]/50">利回り4%が、毎年±12%前後で上下する場合（株式5〜6割の運用の目安）。起こる確率そのものではありません</p>
+          <p className="mt-1.5 text-[11px] leading-relaxed">
+            <span className="font-bold">詳細版では：</span>
+            値動きの大きさ（安定・バランス・積極）や口座ごとの利回りを変えて、帯グラフで見られます
+          </p>
+        </li>
+      </ul>
+      <button type="button" onClick={onMore} className="mt-3 w-full rounded-lg px-4 py-2.5 text-[13px] font-bold text-white" style={{ background: INK }}>
+        この答えのまま、詳細版で続きを見る →
+      </button>
+    </div>
   );
 }

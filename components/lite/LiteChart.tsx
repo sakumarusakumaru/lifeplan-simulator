@@ -5,7 +5,15 @@ import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Too
 import { GREEN, INK, RED, man } from "./controls";
 
 // 年齢ごとの「お金（預金＋投資）」。0を下回ったところが足りなくなる年齢
-export function LiteChart({ data, retireAge }: { data: { age: number; fin: number }[]; retireAge: number }) {
+export function LiteChart({
+  data,
+  retireAge,
+  events = [],
+}: {
+  data: { age: number; fin: number }[];
+  retireAge: number;
+  events?: { age: number; label: string }[]; // その人のできごと（番号の印をつけ、下に一覧）
+}) {
   const min = Math.min(0, ...data.map((d) => d.fin));
   const max = Math.max(0, ...data.map((d) => d.fin));
   // 0の位置でグラデーションの色を切り替える（プラスは緑、マイナスは赤）
@@ -13,7 +21,7 @@ export function LiteChart({ data, retireAge }: { data: { age: number; fin: numbe
   return (
     <div className="h-56 w-full sm:h-64">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+        <AreaChart data={data} margin={{ top: 16, right: 8, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="liteFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset={0} stopColor={GREEN} stopOpacity={0.55} />
@@ -39,7 +47,20 @@ export function LiteChart({ data, retireAge }: { data: { age: number; fin: numbe
             contentStyle={{ fontSize: 11, borderRadius: 8, border: `2px solid ${INK}` }}
           />
           <ReferenceLine y={0} stroke={INK} strokeWidth={1.5} />
-          <ReferenceLine x={retireAge} stroke={INK} strokeDasharray="4 3" label={{ value: "働き終わる", fontSize: 10, position: "insideTopRight" }} />
+          {events.length ? (
+            events.map((e, i) => (
+              <ReferenceLine
+                key={e.age}
+                x={e.age}
+                stroke={INK}
+                strokeOpacity={0.35}
+                strokeDasharray="3 3"
+                label={{ value: `${i + 1}`, fontSize: 10, fontWeight: 700, fill: INK, position: "top" }}
+              />
+            ))
+          ) : (
+            <ReferenceLine x={retireAge} stroke={INK} strokeDasharray="4 3" label={{ value: "働き終わる", fontSize: 10, position: "insideTopRight" }} />
+          )}
           <Area type="monotone" dataKey="fin" stroke="url(#liteStroke)" strokeWidth={2.5} fill="url(#liteFill)" isAnimationActive={false} />
         </AreaChart>
       </ResponsiveContainer>
