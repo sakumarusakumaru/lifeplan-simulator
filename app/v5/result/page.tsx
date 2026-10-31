@@ -302,7 +302,7 @@ export default function ResultPage() {
               label="お金が足りなくなる年齢"
               value={result.shortfallAge ? `${result.shortfallAge}歳` : "なし"}
               alert={!!result.shortfallAge}
-              sub={result.shortfallAge ? "預金も投資もなくなる年齢" : `${plan.endAge}歳まで`}
+              sub={result.shortfallAge ? "預金と、売って使える投資が尽きる年（iDeCo・DCは除く）" : `${plan.endAge}歳まで`}
             />
             <KpiCard
               label="金融資産がいちばん少ない年"

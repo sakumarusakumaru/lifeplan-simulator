@@ -75,7 +75,7 @@ export function EnvironmentPanel({
             ) : null}
           </p>
           <p className="mt-0.5 text-[11px] leading-relaxed text-[#0a0a0a]/60">
-            自分では選べない世の中の変化を重ねると、上のグラフと全ての打ち手がその環境で計算し直されます。
+            {jp ? "自分では選べない世の中の変化を重ねると、上のグラフとすべての条件がその環境で計算し直されます。" : "自分では選べない世の中の変化を重ねると、上のグラフと全ての打ち手がその環境で計算し直されます。"}
           </p>
         </button>
         {on ? (
@@ -144,7 +144,7 @@ export function EnvironmentPanel({
             資金ショート:{" "}
             {normal.shortfallAge ? `${normal.shortfallAge}歳` : "なし"} →{" "}
             <b>{current.shortfallAge ? `${current.shortfallAge}歳` : "なし"}</b>
-            。打ち手はこの環境での効果の大きい順に並び替わります。
+            {jp ? "。条件はこの環境での差の大きい順に並び替わります。" : "。打ち手はこの環境での効果の大きい順に並び替わります。"}
           </p>
           {env.crashEvery ? (
             <p className="mt-1 text-[10px] leading-relaxed text-[#0a0a0a]/60">

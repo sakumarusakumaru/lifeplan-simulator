@@ -112,8 +112,12 @@ export function survivorBenefitForYear(
     if (eligible) {
       const own = s.spouseOwnKoseiAnnual;
       const base = koseiBase * index;
-      if (own > 0) {
+      if (own > 0 && s.spouseAge >= 65) {
+        // 65歳からは自分の老齢厚生年金を先に受け、遺族厚生年金はその差額（2/3＋1/2の比較あり）
         kosei = Math.max(0, Math.max(base, base * (2 / 3) + own / 2) - own);
+      } else if (own > 0) {
+        // 65歳前は、遺族厚生年金と自分の老齢厚生年金（繰上げ）のどちらか一方を選ぶ。多い方を受けるとみなし、差額だけ足す
+        kosei = Math.max(0, base - own);
       } else {
         kosei = base;
       }

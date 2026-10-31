@@ -134,7 +134,7 @@ export function ScenarioPreviewChart({
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-0.5 w-4" style={{ background: color }} />
-          {preview ? (kept ? "打ち手を重ねた場合" : "打ち手を試した場合") : envOn ? "選んだ外的環境" : "（押すとここが変わる）"}
+          {preview ? (kept ? (jp ? "条件を重ねた場合" : "打ち手を重ねた場合") : jp ? "条件を変えた場合" : "打ち手を試した場合") : envOn ? "選んだ外的環境" : "（押すとここが変わる）"}
         </span>
         {crashAges.length ? (
           <span className="flex items-center gap-1">

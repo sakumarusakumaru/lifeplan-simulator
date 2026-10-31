@@ -23,7 +23,7 @@ import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { ageOn } from "@/lib/v4/calc/age";
 import { deflator } from "@/lib/v4/calc/realValue";
-import { requiredCoverage } from "@/lib/v4/calc/simulate";
+import { requiredCoverage, simulate } from "@/lib/v4/calc/simulate";
 import { buildSurvivorPhases as buildPhases } from "@/lib/v4/calc/survivor";
 import type { RiskInput, YearlyResult } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
@@ -103,8 +103,10 @@ export default function RiskPage() {
   const base = useSimResult(effPlan);
   const death = useSimResult(effPlan, { death: true });
   const needNominal = useMemo(() => requiredCoverage(effPlan), [effPlan]);
+  // 相続の計算は名目の金額で行い、最後に「今の価値」に割り戻す（換算済みの行を渡すと二重に割り戻してしまう）
+  const baseNominal = useMemo(() => simulate(effPlan), [effPlan]);
   // 保険金は死亡時に受け取る額。「今の価値」表示なら死亡時点までの物価で割り戻す
-  const need = real ? needNominal / deflator(effPlan, deathAge) : needNominal;
+  const need = needNominal === null ? null : real ? needNominal / deflator(effPlan, deathAge) : needNominal;
 
   if (!hydrated) {
     return (
@@ -135,13 +137,19 @@ export default function RiskPage() {
   const survivorLabel = who === "self" ? (risk.spouseSex === "female" ? "妻" : "夫") : risk.spouseSex === "female" ? "夫" : "妻";
   const noSurvivor = !hasSpouse && plan.kids.length === 0;
 
-  const chartData = base.rows.map((r, i) => ({
-    age: r.age,
-    いまのプラン: Math.round(financial(r)),
-    亡くなった場合: Math.round(financial(death.rows[i])),
-  }));
+  // 亡くなった場合は、年下の配偶者が最終年齢になるまで計算が続く（本人の年齢の軸で、最終年齢より先まで）
+  const chartData = death.rows.map((r) => {
+    const b = base.rows.find((x) => x.age === r.age);
+    return {
+      age: r.age,
+      いまのプラン: b ? Math.round(financial(b)) : null,
+      亡くなった場合: Math.round(financial(r)),
+    };
+  });
 
   const covered = need === 0;
+  // 本人が亡くなる試算は、年下の配偶者が最終年齢になるまで続ける
+  const untilText = who === "self" && death.rows.length > base.rows.length ? `配偶者が${plan.endAge}歳になるまで` : `${plan.endAge}歳（本人の年齢換算）まで`;
 
   return (
     <main className="px-4 py-6 sm:px-8">
@@ -269,21 +277,21 @@ export default function RiskPage() {
                 style={{ background: covered ? "#f0fff4" : "#fff1f1", border: `2.5px solid ${covered ? GREEN : RED}` }}
               >
                 <p className="text-[11px] font-bold" style={{ color: covered ? GREEN : RED }}>
-                  {covered ? "今の備えで足りています" : "今の備えに上乗せして必要な死亡保障"}
+                  {need === null ? "必要保障額は出していません" : covered ? "今の備えで足りています" : "今の備えに上乗せして必要な死亡保障"}
                 </p>
                 <p className="text-3xl font-bold tabular-nums" style={{ color: covered ? GREEN : RED }}>
-                  {covered ? "0円" : man(need)}
+                  {need === null ? "―" : covered ? "0円" : need === Infinity ? "20億円を超える" : man(need)}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/65">
-                  {covered
-                    ? `遺族は${plan.endAge}歳（本人の年齢換算）まで資金ショートしない見込みです。`
-                    : `この金額の保険金が${deathAge}歳で入れば、遺族が${plan.endAge}歳（本人の年齢換算）まで資金ショートしない計算です。`}
+                  {need === null
+                    ? `亡くならなくても${base.shortfallAge}歳でお金が足りなくなるプランのため、死亡保障で埋める額としては出していません。`
+                    : covered
+                      ? `遺族は${untilText}資金ショートしない見込みです。`
+                      : need === Infinity
+                        ? "保険金をいくら足しても、遺族の暮らしが最後まで続かない計算です。生活費の割合などの条件を確かめてください。"
+                        : `この金額の保険金が${deathAge}歳で入れば、遺族が${untilText}資金ショートしない計算です。`}
                 </p>
-                {base.shortfallAge !== null ? (
-                  <p className="mt-2 text-[11px] font-bold leading-relaxed text-[#a07900]">
-                    ※ 亡くならなくても{base.shortfallAge}歳で資金ショートするプランです。必要保障額にはその不足分も含まれるため大きめに出ます。先に「レポート」でプランを見直すのがおすすめです。
-                  </p>
-                ) : null}
+
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <Kpi
@@ -395,7 +403,7 @@ export default function RiskPage() {
               </>
             )}
 
-            <InheritanceGuide plan={plan} base={base} real={real} no={noSurvivor ? "01" : "04"} />
+            <InheritanceGuide plan={plan} base={baseNominal} real={real} no={noSurvivor ? "01" : "04"} />
 
 
 

@@ -47,7 +47,10 @@ export function LiteResult() {
               : `${r.shortfallAge}歳で、お金が足りなくなる見込み`}
         </p>
         <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/60">
-          金額はすべて「今の価値」です（物価が毎年{A.infl}%上がる分を割り戻した額）。家やローンは入れず、預金と投資だけを見ています。
+          「足りなくなる」は、預金と、売って使える投資が尽きる年です。金額はすべて「今の価値」です（物価が毎年{A.infl}%上がる分を割り戻した額）。家やローンは入れず、預金と投資だけを見ています。
+          {!ok && (r.rows.find((row) => row.age === r.shortfallAge)?.ass.dc ?? 0) > 0
+            ? " グラフにはiDeCo・企業型DCも入っていますが、受け取る年齢（65歳）まで引き出せないため、グラフが0より上でも足りなくなることがあります。"
+            : ""}
         </p>
 
         <div className="mt-3 grid grid-cols-3 gap-2">
@@ -137,7 +140,7 @@ export function LiteResult() {
       {/* 精度メーター: 任意の項目に答えるほど上がる */}
       <div className="rounded-2xl bg-white p-4" style={{ border: `2px solid ${INK}30` }}>
         <div className="flex items-baseline justify-between">
-          <p className="text-sm font-bold">精度の目安</p>
+          <p className="text-sm font-bold">入力の充実度</p>
           <p className="text-lg font-bold tabular-nums">{r.accuracy.pct}%</p>
         </div>
         <div className="mt-1.5 h-2.5 overflow-hidden rounded-full" style={{ background: "#0a0a0a12" }}>
@@ -145,9 +148,10 @@ export function LiteResult() {
         </div>
         <p className="mt-1.5 text-[11px] leading-relaxed text-[#0a0a0a]/60">
           {r.accuracy.next
-            ? `次は「${r.accuracy.next}」を入れると、いちばん精度が上がります（カード05・06）`
+            ? `次は「${r.accuracy.next}」を入れると、試算にあなたの事情がより多く入ります（カード05・06）`
             : "Liteで入れられることは全部入っています。もっと細かくは詳細版で"}
         </p>
+        <p className="mt-1 text-[10px] leading-relaxed text-[#0a0a0a]/45">どれだけ答えたかの目安です。計算が正しい度合いではありません（計算の前提や省略は、下の「この計算で置いている前提」に）</p>
       </div>
 
       {r.tips.length > 0 ? (
@@ -263,7 +267,7 @@ function Teasers({ teasers, onMore }: { teasers: { key: string; title: string; v
           <p className="text-[11px] font-bold text-[#0a0a0a]/60">運用が毎年上がったり下がったりしたら</p>
           {mcNow ? (
             <p className="mt-0.5 text-[14px] font-bold leading-snug">
-              1,000通りのうち{mcNow.rate}%で、{A.endAge}歳まで足りる計算
+              設定した運用条件で1,000通りの試算をした結果、{mcNow.rate}%で{A.endAge}歳までお金が残りました
               {mcNow.worst !== null ? `（悪いほうから1割の場合は${mcNow.worst}歳で足りなくなる）` : ""}
             </p>
           ) : (
@@ -276,7 +280,7 @@ function Teasers({ teasers, onMore }: { teasers: { key: string; title: string; v
               1,000通り計算してみる
             </button>
           )}
-          <p className="mt-1 text-[10px] leading-relaxed text-[#0a0a0a]/50">利回り4%が、毎年±12%前後で上下する場合（株式5〜6割の運用の目安）。起こる確率そのものではありません</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#0a0a0a]/50">利回り4%が、毎年±12%前後で上下する場合（株式5〜6割の運用の目安）。物価・金利は固定。実際の将来の確率を示すものではありません</p>
           <p className="mt-1.5 text-[11px] leading-relaxed">
             <span className="font-bold">詳細版では：</span>
             値動きの大きさ（安定・バランス・積極）や口座ごとの利回りを変えて、帯グラフで見られます

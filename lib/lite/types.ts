@@ -8,6 +8,7 @@ export interface LiteInput {
   age: number;
   hasSpouse: boolean;
   spouseAge: number;
+  spouseSex: "female" | "male"; // 配偶者は妻か夫か（遺族年金の計算に使う）
   kidAges: number[];
   edu: LiteEdu;
 
@@ -63,6 +64,7 @@ export const LITE_DEFAULT: LiteInput = {
   age: 35,
   hasSpouse: false,
   spouseAge: 35,
+  spouseSex: "female",
   kidAges: [],
   edu: "public",
   work: "employee",

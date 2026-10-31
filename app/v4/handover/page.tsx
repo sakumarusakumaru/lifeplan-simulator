@@ -660,10 +660,16 @@ export default function HandoverPage() {
               <p className="text-[10px] font-bold text-[#0a0a0a]/55">毎月の遺族年金（最初）</p>
               <p className="text-lg font-bold tabular-nums">{phases[0] ? `${((phases[0].kiso + phases[0].kosei + phases[0].chukorei) / 12 / 10000).toFixed(1)}万円` : "対象外"}</p>
             </div>
-            <div className="rounded-lg p-3" style={{ background: need > 0 ? "#fff1f1" : "#f0fff4" }}>
+            <div className="rounded-lg p-3" style={{ background: need === 0 ? "#f0fff4" : "#fff1f1" }}>
               <p className="text-[10px] font-bold text-[#0a0a0a]/55">暮らしの見通し</p>
-              <p className="text-[13px] font-bold" style={{ color: need > 0 ? RED : GREEN }}>
-                {need > 0 ? `あと${man(need)}の備えがあると安心` : `${plan.endAge}歳まで資金は足りる見込み`}
+              <p className="text-[13px] font-bold" style={{ color: need === 0 ? GREEN : RED }}>
+                {need === null
+                  ? "亡くならなくても足りなくなる計算のため、必要な保障額は出していません"
+                  : need === 0
+                    ? `${plan.endAge}歳まで資金は足りる見込み`
+                    : need === Infinity
+                      ? "保険金をいくら足しても、最後まで足りない計算"
+                      : `上乗せが必要な死亡保障の目安 ${man(need)}`}
               </p>
             </div>
           </div>

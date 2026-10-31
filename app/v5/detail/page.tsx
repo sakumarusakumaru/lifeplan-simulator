@@ -92,7 +92,13 @@ export default function DetailPage() {
   const isLast = active === BLOCKS.length - 1;
 
   // 進めない理由・念のための確認（ver4 と同じ条件）
-  const blocked = stepping && block.id === "ch-settings" && !plan.selfBirth ? "本人の生年月日を入れると次へ進めます" : null;
+  // 生年月日がないと計算できないので、最初のブロックの「次へ」と、最後の「入力完了」は止める（タブで飛んでも抜けられないように）
+  const blocked =
+    stepping && !plan.selfBirth && (block.id === "ch-settings" || isLast)
+      ? block.id === "ch-settings"
+        ? "本人の生年月日を入れると次へ進めます"
+        : "本人の生年月日（1 基本設定）を入れると、結果を見られます"
+      : null;
   const note =
     block.id === "ch-income" && plan.jobs.every((j) => !j.inc) && plan.sideJobs.every((j) => !j.inc)
       ? "年収が0円のままです。働いている方は「年収（額面）」を入れてください（収入がない場合はこのままでOK）"

@@ -84,7 +84,8 @@ export default function SuggestPage() {
             simulate(applyEnvPlan(plan, env), {
               returns: envReturns(plan, env),
             }),
-            plan,
+            // 「今の価値」への割り戻しも、選んだ環境の物価で
+            applyEnvPlan(plan, env),
           )
         : normalBase,
     [plan, env, convert, normalBase],
@@ -94,7 +95,7 @@ export default function SuggestPage() {
   const candidates: Scenario[] = useMemo(() => {
     const returns = envReturns(plan, env);
     const sim = (mod: (p: PlanInput) => PlanInput) =>
-      convert(simulate(applyEnvPlan(mod(plan), env), { returns }), plan);
+      convert(simulate(applyEnvPlan(mod(plan), env), { returns }), applyEnvPlan(plan, env));
     const last =
       plan.jobs.length > 0
         ? Math.max(...plan.jobs.map((j) => j.end))
@@ -306,12 +307,13 @@ export default function SuggestPage() {
         category: "spending",
       });
     }
-    if (plan.useHomeLoan && plan.hlBal > 5_000_000) {
+    // 今の預金から500万円を払って、借りている残高を減らす（返済額が減る型）。預金が500万円ない人・まだ借りていない人には出さない
+    if (plan.useHomeLoan && plan.hlBal > 5_000_000 && plan.hlStart <= plan.curAge && plan.cashBal >= 5_000_000) {
       list.push({
         id: "prepay",
         title: "住宅ローンを500万円繰上返済した場合",
-        detail: `残債 ${(plan.hlBal / 10000).toFixed(0)}万 → ${((plan.hlBal - 5_000_000) / 10000).toFixed(0)}万。利息圧縮効果（金利${plan.hlRate}%）`,
-        mod: ((p) => ({ ...p, hlBal: Math.max(0, p.hlBal - 5_000_000) })),
+        detail: `今の預金から500万円を払い、残高 ${(plan.hlBal / 10000).toFixed(0)}万 → ${((plan.hlBal - 5_000_000) / 10000).toFixed(0)}万（金利${plan.hlRate}%・返済期間はそのままで毎月の返済額が減る型）`,
+        mod: ((p) => ({ ...p, hlBal: Math.max(0, p.hlBal - 5_000_000), cashBal: p.cashBal - 5_000_000 })),
         category: "spending",
       });
     }
@@ -396,7 +398,7 @@ export default function SuggestPage() {
     (list: Scenario[]) =>
       convert(
         simulate(applyEnvPlan(list.reduce((p, sc) => sc.mod(p), plan), env), { returns: envReturns(plan, env) }),
-        plan,
+        applyEnvPlan(plan, env),
       ),
     [plan, env, convert],
   );

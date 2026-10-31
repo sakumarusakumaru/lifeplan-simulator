@@ -48,7 +48,8 @@ export function liteToPlan(q: LiteInput): PlanInput {
     kokuminMonths: 480,
   };
   // 配偶者: 会社員なら厚生年金。パート・働いていない人は、本人が会社員なら扶養（第3号）、自営業なら国民年金
-  const spouseKosei = q.spouseWork === "employee";
+  // パートでも年収130万円以上なら、勤め先の社会保険（厚生年金）に入っているとみなす（給与として課税するため）
+  const spouseKosei = q.spouseWork === "employee" || (q.spouseWork === "part" && spouseIncome >= 130 * MAN);
   const spouseDependent = !spouseKosei && q.spouseWork !== "self" && employee && spouseIncome < 130 * MAN;
   const spousePension: PensionInput = {
     ...EMPTY_PLAN.spousePension,
@@ -159,6 +160,6 @@ export function liteToPlan(q: LiteInput): PlanInput {
     dcJoinAge: q.age,
     saveDcEndAge: Math.min(retire, 65),
     dcStartAge: 65,
-    risk: { ...EMPTY_PLAN.risk, deathAge: q.age },
+    risk: { ...EMPTY_PLAN.risk, deathAge: q.age, spouseSex: q.spouseSex },
   };
 }

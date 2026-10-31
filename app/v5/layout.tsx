@@ -13,6 +13,7 @@ import type { PlanInput } from "@/lib/v4/calc/types";
 import { anonymizePlan } from "@/lib/v4/calc/anonymize";
 import { DEFAULT_PLAN, EMPTY_PLAN } from "@/lib/v4/calc/defaults";
 import { migrateV3Plan, normalizePlan, usePlanStore } from "@/store/v4/plan-store";
+import { useSecretStore } from "@/store/v4/secret-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
 const TABS = [
@@ -147,6 +148,8 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
         if (isReview && !confirm("検証用のファイルには、名前・引き継ぎ書の中身が入っていません。読み込むと、今の入力と引き継ぎ書はこのファイルの内容に置き換わります。続けますか？")) return;
         // 読み込んだ内容に足りない項目は、今の入力ではなく空の値で埋める（前の人の入力が混ざらないように）
         replacePlan(normalizePlan(isV3 ? migrateV3Plan(data) : (data as Partial<PlanInput>), { ...DEFAULT_PLAN, ...EMPTY_PLAN }));
+        // 引き継ぎ書の口座番号などは今の入力の項目に結びついているので、入れ替えたら消す
+        useSecretStore.getState().clear();
         alert("データを読み込みました");
       } catch (err) {
         alert(
@@ -274,6 +277,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
                   )
                 ) {
                   loadSample();
+                  useSecretStore.getState().clear();
                   setUnlocked(true);
                 }
               }}
@@ -284,10 +288,11 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
               onReset={() => {
                 if (
                   confirm(
-                    "入力内容をすべて消して、はじめの状態に戻しますか？\nこの操作は取り消せません。\n（念のため、先に「入力データを保存」でバックアップできます）",
+                    "入力内容をすべて消して、はじめの状態に戻しますか？\n引き継ぎ書に入れた口座番号なども、この端末から消えます。\nこの操作は取り消せません。\n（念のため、先に「入力データを保存」でバックアップできます）",
                   )
                 ) {
                   reset();
+                  useSecretStore.getState().clear(); // 引き継ぎ書の口座番号など（別の保存場所）も消す
                   resetProgress();
                   closeAll();
                   router.push("/v5/detail");

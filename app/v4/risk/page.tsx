@@ -23,7 +23,7 @@ import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { ageOn } from "@/lib/v4/calc/age";
 import { deflator } from "@/lib/v4/calc/realValue";
-import { requiredCoverage } from "@/lib/v4/calc/simulate";
+import { requiredCoverage, simulate } from "@/lib/v4/calc/simulate";
 import { buildSurvivorPhases as buildPhases } from "@/lib/v4/calc/survivor";
 import type { RiskInput, YearlyResult } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
@@ -103,8 +103,10 @@ export default function RiskPage() {
   const base = useSimResult(effPlan);
   const death = useSimResult(effPlan, { death: true });
   const needNominal = useMemo(() => requiredCoverage(effPlan), [effPlan]);
+  // 相続の計算は名目の金額で行い、最後に「今の価値」に割り戻す（換算済みの行を渡すと二重に割り戻してしまう）
+  const baseNominal = useMemo(() => simulate(effPlan), [effPlan]);
   // 保険金は死亡時に受け取る額。「今の価値」表示なら死亡時点までの物価で割り戻す
-  const need = real ? needNominal / deflator(effPlan, deathAge) : needNominal;
+  const need = needNominal === null ? null : real ? needNominal / deflator(effPlan, deathAge) : needNominal;
 
   if (!hydrated) {
     return (
@@ -272,7 +274,7 @@ export default function RiskPage() {
                   {covered ? "今の備えで足りています" : "今の備えに上乗せして必要な死亡保障"}
                 </p>
                 <p className="text-3xl font-bold tabular-nums" style={{ color: covered ? GREEN : RED }}>
-                  {covered ? "0円" : man(need)}
+                  {need === null ? "―" : covered ? "0円" : need === Infinity ? "20億円を超える" : man(need)}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/65">
                   {covered
@@ -395,7 +397,7 @@ export default function RiskPage() {
               </>
             )}
 
-            <InheritanceGuide plan={plan} base={base} real={real} />
+            <InheritanceGuide plan={plan} base={baseNominal} real={real} />
 
 
 

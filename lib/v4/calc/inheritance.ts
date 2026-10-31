@@ -302,10 +302,16 @@ export interface InheritancePlan {
   bestRatio: number;             // 一次＋二次が最も少ない割合
 }
 
-// 小規模宅地等の特例は配偶者が自宅を相続する前提。配偶者が相続しない分け方では使わない
+// 小規模宅地等の特例は、配偶者が相続した自宅の土地の分だけに使う。
+// 配偶者は自宅から先に相続するとみなし、配偶者の取り分が自宅の評価額に届かない分には使わない（土地は330㎡以内とみなす）
 function withLandCut(b: EstateBreakdown, ratio: number): EstateBreakdown {
-  if (ratio > 0 || b.homeLandCut <= 0) return b;
-  return { ...b, home: b.home + b.homeLandCut, total: b.total + b.homeLandCut, homeLandCut: 0 };
+  if (b.homeLandCut <= 0) return b;
+  const homeFull = b.home + b.homeLandCut; // 本人名義の自宅（特例を使う前）
+  const spouseTake = Math.max(0, ratio) * (b.total + b.homeLandCut);
+  const f = homeFull > 0 ? Math.min(1, spouseTake / homeFull) : 0;
+  const back = b.homeLandCut * (1 - f);
+  if (back <= 0) return b;
+  return { ...b, home: b.home + back, total: b.total + back, homeLandCut: b.homeLandCut - back };
 }
 
 function secondFor(b: EstateBreakdown, first: InheritanceEstimate, ratio: number, kids: number, hasSpouse: boolean) {
@@ -370,9 +376,7 @@ export function planInheritance(plan: PlanInput, row: YearlyResult, hasSpouse: b
             ? 0
             : s.spouseMode === "cap16"
               ? Math.min(1, (16000 * MAN) / Math.max(1, b0.total))
-              : s.spouseMode === "best"
-                ? bestRatio
-                : s.spouseMode === "custom" && kidShares
+              : s.spouseMode === "custom" && kidShares
                   ? customRatio
                   : 0.5;
   const c = calc(ratio, kidShares);

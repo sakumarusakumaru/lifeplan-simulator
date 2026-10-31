@@ -153,8 +153,8 @@ export function liteTeasers(q: LiteInput, base: ReturnType<typeof run>): LiteTea
     out.push({
       key: "death",
       title: "あなたが今亡くなった場合",
-      value: `${monthly > 0 ? `遺族年金は月約${manOf(monthly)}` : "遺族年金はほぼ出ない計算"}。${need > 0 ? `足りない保障の目安は約${manOf(need)}` : "保険がなくても足りる計算"}`,
-      note: "加入中の保険は入れていない（Liteでは聞いていないため）。配偶者が妻、生活費は今の7割として計算",
+      value: `${monthly > 0 ? `遺族年金は月約${manOf(monthly)}` : "遺族年金はほぼ出ない計算"}。${need === null ? "亡くならなくても足りなくなる計算のため、足りない保障額は出していません" : need === Infinity ? "保険金をいくら足しても足りない計算" : need > 0 ? `足りない保障の目安は約${manOf(need)}` : "保険がなくても足りる計算"}`,
+      note: `加入中の保険は入れていない（Liteでは聞いていないため）。配偶者が${q.hasSpouse ? (q.spouseSex === "male" ? "夫" : "妻") : "いない"}、生活費は今の7割として計算`,
       more: "入っている保険・団信・亡くなる年齢・配偶者が亡くなった場合まで入れて、必要な保障額と相続を確かめられます",
     });
   }
@@ -214,10 +214,11 @@ export function liteMonteCarlo(q: LiteInput) {
 
 export type LiteResult = ReturnType<typeof liteResult>;
 
-// 精度メーター: 必須の14問で60%。任意の項目に答えるほど上がる（「ない」と答えたのも答えたことにする）
+// 入力の充実度: 必須の14問で60%。任意の項目に答えるほど上がる（「ない」と答えたのも答えたことにする）。計算の正しさではない
 export function liteAccuracy(q: LiteInput) {
   const items: { key: string; label: string; w: number; done: boolean }[] = [
-    { key: "pension", label: "ねんきん定期便の見込み額", w: 12, done: q.pensionSelf > 0 },
+    // 50歳未満は定期便の額を入れないほうが近い（自動計算をすすめている）ので、入れなくても達成とみなす
+    { key: "pension", label: "ねんきん定期便の見込み額", w: 12, done: q.pensionSelf > 0 || q.age < 50 },
     ...(q.hasSpouse ? [{ key: "pensionSpouse", label: "配偶者の年金の見込み額", w: 6, done: q.pensionSpouse > 0 }] : []),
     { key: "retireLiving", label: "働き終わったあとの生活費", w: 8, done: !!q.ans.retireLiving },
     { key: "dc", label: "iDeCo・企業型DC", w: 5, done: !!q.ans.dc },

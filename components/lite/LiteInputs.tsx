@@ -30,6 +30,17 @@ export function LiteInputs() {
           onChange={(v) => set({ hasSpouse: v === "yes" })}
         />
         {q.hasSpouse ? <NumField label="配偶者の年齢" value={q.spouseAge} onChange={(v) => set({ spouseAge: v })} unit="歳" min={18} max={90} /> : null}
+        {q.hasSpouse ? (
+          <Choice
+            label="配偶者は"
+            value={q.spouseSex}
+            options={[
+              { value: "female", label: "妻" },
+              { value: "male", label: "夫" },
+            ]}
+            onChange={(v) => set({ spouseSex: v as LiteInput["spouseSex"] })}
+          />
+        ) : null}
         <div className="flex flex-col gap-1">
           <span className="text-[12px] font-bold text-[#0a0a0a]">子ども（これから生まれる予定の子は、下の「予定があれば」で）</span>
           <div className="flex flex-wrap items-end gap-2">
@@ -279,7 +290,7 @@ export function LiteInputs() {
         ) : null}
       </Card>
 
-      <Card no="06" title="わかれば精度が上がる" note="手元に書類があれば。わからなければ空欄のままで大丈夫です。">
+      <Card no="06" title="わかれば、あなたの事情に近づく" note="手元に書類があれば。わからなければ空欄のままで大丈夫です。">
         <NumField
           label="ねんきん定期便の見込み額（あなた）"
           value={q.pensionSelf}

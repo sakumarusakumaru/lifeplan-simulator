@@ -166,7 +166,8 @@ export function ExpenseMegaSection() {
 
   const addIns = () => setField("ins", [...plan.ins, newInsurance("定期保険", plan.curAge, plan.endAge)]);
   const insList = plan.ins.map((p) => normalizeInsurance(p as never, plan.curAge, plan.endAge));
-  const insPremNow = insList.reduce((a, p) => a + premiumAt(p, plan.curAge, 1), 0);
+  // 「計算に含めない」にした保険は、合計に入れない
+  const insPremNow = insList.filter((p) => p.enabled !== false).reduce((a, p) => a + premiumAt(p, plan.curAge, 1), 0);
   const coverSelf = deathCoverAt(insList, "本人", plan.curAge);
   const coverSpouse = deathCoverAt(insList, "配偶者", plan.curAge);
   const removeIns = (i: number) => removeLinked("ins", i);
@@ -275,7 +276,7 @@ export function ExpenseMegaSection() {
               />
               <NumberField
                 label="切り替える年齢"
-                value={plan.livingRetireAge ?? plan.jobs[0]?.end ?? 65}
+                value={plan.livingRetireAge ?? (plan.jobs.length ? Math.max(...plan.jobs.map((j) => j.end)) : plan.penStartA)}
                 onChange={(v) => setField("livingRetireAge", v)}
                 unit="歳"
               />

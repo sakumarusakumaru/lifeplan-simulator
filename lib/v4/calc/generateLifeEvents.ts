@@ -1,3 +1,4 @@
+import { ageOn } from "./age";
 import type { LifeEvent, PlanInput } from "./types";
 
 export function generateLifeEvents(plan: PlanInput): LifeEvent[] {
@@ -29,11 +30,18 @@ export function generateLifeEvents(plan: PlanInput): LifeEvent[] {
 
   // 年金
   if (plan.penStartA > 0) add(plan.penStartA, "年金受給");
-  if (plan.useSpousePen && plan.penStartB > 0) add(plan.penStartB, "配偶者年金");
+  // 配偶者の年金開始・退職は配偶者の年齢で入っているので、本人の年齢に直して置く
+  const spouseNow = ageOn(plan.spouseBirth, plan.baseDate);
+  const toSelf = (spouseAge: number) => (spouseNow === null ? null : spouseAge + (plan.curAge - spouseNow));
+  if (plan.useSpousePen && plan.penStartB > 0) {
+    const a = toSelf(plan.penStartB);
+    if (a !== null) add(a, "配偶者年金");
+  }
 
   // 配偶者就労終了
   if (plan.spouseWork === "work" && plan.spouseIncEnd > 0) {
-    add(plan.spouseIncEnd, "配偶者退職");
+    const a = toSelf(plan.spouseIncEnd);
+    if (a !== null) add(a, "配偶者退職");
   }
 
   // 住宅ローン完済

@@ -46,6 +46,23 @@ interface LumpRecord {
   to: number;
 }
 
+// いくつかの勤続期間を重ねたときの長さ（重なりは1回、間の空白は数えない）
+function unionYears(parts: { from: number; to: number }[]): number {
+  const sorted = [...parts].filter((p) => p.to > p.from).sort((a, b) => a.from - b.from);
+  let total = 0;
+  let curFrom = -Infinity;
+  let curTo = -Infinity;
+  for (const p of sorted) {
+    if (p.from > curTo) {
+      if (curTo > curFrom) total += curTo - curFrom;
+      curFrom = p.from;
+      curTo = p.to;
+    } else curTo = Math.max(curTo, p.to);
+  }
+  if (curTo > curFrom) total += curTo - curFrom;
+  return total;
+}
+
 function overlapYears(a: [number, number], b: [number, number]): number {
   return Math.max(0, Math.min(a[1], b[1]) - Math.max(a[0], b[0]));
 }
@@ -181,10 +198,16 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
   const insState = createInsuranceState(insList, input.curAge);
   const insDeath = deathOn ? { who: selfDies ? ("本人" as const) : ("配偶者" as const), age: deathAge } : null;
 
+  // 働き終わる年齢（「働き終わったあとの生活費」の切り替え年齢を入れていないときに使う）
+  const lastWorkEnd = input.jobs.length ? Math.max(...input.jobs.map((j) => j.end)) : input.penStartA;
+
   // 子どもを年上から並べる（児童手当の「第何子」判定用）
   const kidsByAge = [...input.kids].sort((a, b) => a.offset - b.offset);
 
-  for (let age = input.curAge; age <= input.endAge; age++) {
+  // 本人が亡くなる試算では、年下の配偶者が最終年齢になるまで計算を続ける（遺族の晩年まで見る）
+  const loopEnd =
+    selfDies && spouseCurAge !== null && spouseCurAge < input.curAge ? input.endAge + (input.curAge - spouseCurAge) : input.endAge;
+  for (let age = input.curAge; age <= loopEnd; age++) {
     const t = age - input.curAge;
     const year = baseYear + t;
     const infl = Math.pow(1 + input.infl / 100, t);
@@ -302,9 +325,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       const survivorAgeAtDeath = selfGone
         ? spouseCurAge !== null ? spouseCurAge + (deathAge - input.curAge) : 0
         : deathAge;
+      // 遺族厚生年金と比べる自分の老齢厚生年金は、繰上げ・繰下げで増減する前の本来の額
       const ownKosei = selfGone
-        ? spousePenY > 0 ? spousePenBreak.koseiMonthly * 12 * penIdx : 0
-        : selfPenY > 0 ? selfPenBreak.koseiMonthly * 12 * penIdx : 0;
+        ? spousePenY > 0 ? (spousePenBreak.koseiMonthly * 12 * penIdx) / (spousePenBreak.adjustment || 1) : 0
+        : selfPenY > 0 ? (selfPenBreak.koseiMonthly * 12 * penIdx) / (selfPenBreak.adjustment || 1) : 0;
       surv = survivorBenefitForYear(
         deceased,
         {
@@ -374,7 +398,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       if (dcLump > 0) parts.push({ from: input.dcJoinAge, to: dcPeriodEnd });
       const from = Math.min(...parts.map((p) => p.from));
       const to = Math.max(...parts.map((p) => p.to));
-      const years = Math.max(1, to - from);
+      // 勤続年数: 同じ年に受け取る分の期間を重ねた長さ（勤め先の間の空白は数えない）
+      const years = Math.max(1, unionYears(parts));
       let overlap = 0;
       for (const p of lumps) {
         // 今回がDC一時金を含む → 前年以前19年内の退職金等と重複調整
@@ -616,7 +641,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const livingFactor = dead ? Math.max(0, risk.livingRate) / 100 : 1;
     // 働き終わったあとの生活費を別に入れていれば、その年齢から切り替える
     const livingNow =
-      (input.livingRetireM ?? 0) > 0 && age >= (input.livingRetireAge ?? Infinity) ? (input.livingRetireM ?? 0) : input.livingM;
+      (input.livingRetireM ?? 0) > 0 && age >= (input.livingRetireAge ?? lastWorkEnd) ? (input.livingRetireM ?? 0) : input.livingM;
     const basicL = livingNow * 12 * infl * livingFactor;
     const special = input.specialY * infl * livingFactor;
     const basic = basicL + special;
@@ -860,15 +885,17 @@ function deceasedRecord(
 }
 
 // 必要保障額: 亡くなった場合に、遺族が最後まで資金ショートしないために
-// 「今の保険に上乗せして」必要な死亡保険金を二分探索で求める
-export function requiredCoverage(input: PlanInput): number {
+// 「今の保険に上乗せして」必要な死亡保険金を二分探索で求める。
+// 亡くならなくても足りなくなるプランは null（保険で埋める額として意味がない）、20億円を超えても足りなければ Infinity
+export function requiredCoverage(input: PlanInput): number | null {
+  if (simulate(input).shortfallAge !== null) return null;
   const ok = (x: number) => simulate(input, { death: true, extraInsurance: x }).shortfallAge === null;
   if (ok(0)) return 0;
   let lo = 0;
   let hi = 50_000_000;
   while (!ok(hi)) {
     hi *= 2;
-    if (hi > 2_000_000_000) return hi;
+    if (hi > 2_000_000_000) return Infinity;
   }
   for (let i = 0; i < 24 && hi - lo > 50_000; i++) {
     const mid = (lo + hi) / 2;

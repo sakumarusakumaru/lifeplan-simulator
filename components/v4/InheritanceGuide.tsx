@@ -256,7 +256,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
             <label className="flex flex-col gap-1">
               <span className="text-[10px] font-bold text-[#0a0a0a]/70">{twoStep ? "一次相続の分け方" : "子の分け方"}</span>
               <select
-                value={canSplit && !twoStep && set.spouseMode !== "custom" ? "legal" : set.spouseMode}
+                value={(canSplit && !twoStep && set.spouseMode !== "custom") || set.spouseMode === "best" ? "legal" : set.spouseMode}
                 onChange={(e) => setMode(e.target.value as InheritSettings["spouseMode"])}
                 className="rounded-md bg-white px-2 py-1.5 text-[12px] font-bold"
                 style={{ border: `2px solid ${INK}` }}
@@ -267,7 +267,6 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
                     <option value="all">配偶者が全部</option>
                     <option value="cap16">配偶者は1億6,000万円まで</option>
                     <option value="none">配偶者は相続しない（子だけ）</option>
-                    <option value="best">一次＋二次の税が最も少ない割合</option>
                   </>
                 ) : (
                   <option value="legal">法定相続分（子で等分）</option>
@@ -281,7 +280,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
               <input type="checkbox" checked={set.smallLand} onChange={(e) => updSet({ smallLand: e.target.checked })} className="mt-0.5" />
               <span>
                 自宅の土地に小規模宅地等の特例を使う
-                <span className="block text-[9px] font-normal text-[#0a0a0a]/55">配偶者が相続すると330㎡まで評価が8割減</span>
+                <span className="block text-[9px] font-normal text-[#0a0a0a]/55">配偶者が相続した分だけ、土地の評価が8割減（配偶者は自宅から先に相続し、土地は330㎡以内とみなす）</span>
               </span>
             </label>
           ) : null}
@@ -480,11 +479,11 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
               </div>
               {best && P.scan.some((x) => x.total > 0) ? (
                 <div className="col-span-2 sm:col-span-1">
-                  <p className="text-[10px] font-bold text-[#0a0a0a]/55">合計が最も少ない分け方</p>
+                  <p className="text-[10px] font-bold text-[#0a0a0a]/55">下の表で合計が最も少なかった割合（参考）</p>
                   <p className="text-base font-bold tabular-nums" style={{ color: GREEN }}>
                     配偶者 {pct(best.ratio)}：{man(best.total)}
                   </p>
-                  {best.total < P.total ? <p className="text-[9px] text-[#0a0a0a]/50">いまの分け方より {man(P.total - best.total)} 少ない</p> : null}
+                  <p className="text-[9px] text-[#0a0a0a]/50">この試算の条件での参考です。実際の分け方は、税理士などの専門家に確かめてください</p>
                 </div>
               ) : null}
             </div>

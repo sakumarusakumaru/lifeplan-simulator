@@ -89,7 +89,11 @@ export function SettingsMegaSection() {
   useEffect(() => {
     const a = ageOn(plan.selfBirth, undefined);
     if (a !== null && a !== plan.curAge) patch({ curAge: a });
-  }, [plan.selfBirth, plan.curAge, patch]);
+    // 子どもの生年月日を先に入れていた場合も、本人との年の差を入れ直す
+    if (a !== null && plan.kids.some((k) => k.birth && k.offset !== kidOffset(plan.selfBirth, plan.baseDate, k.birth))) {
+      patch({ kids: plan.kids.map((k) => (k.birth ? { ...k, offset: kidOffset(plan.selfBirth, plan.baseDate, k.birth) } : k)) });
+    }
+  }, [plan.selfBirth, plan.curAge, plan.kids, plan.baseDate, patch]);
 
   const detailed = plan.taxMode === "detailed";
   const tabMode = useContext(TabModeContext);
@@ -246,7 +250,7 @@ export function SettingsMegaSection() {
             <div className="flex flex-wrap items-center gap-3">
               <AddButton label="子どもを追加" onClick={() => setField("kids", [...plan.kids, { ...NEW_KID(), name: `子${plan.kids.length + 1}` }])} />
               <span className="text-[11px] text-[#0a0a0a]/60">
-                {plan.kids.length ? "進学（公立・私立）や塾代は「4 支出 ＞ 教育費」で。はじめは全部公立で計算します" : "いなければ、そのままで大丈夫です"}
+                {plan.kids.length ? "進学（公立・私立）や塾代は「4 支出 ＞ 教育費」で。はじめは全部公立・塾代は平均的な目安で計算します" : "いなければ、そのままで大丈夫です"}
               </span>
             </div>
           </CollapsibleSubGroup>
