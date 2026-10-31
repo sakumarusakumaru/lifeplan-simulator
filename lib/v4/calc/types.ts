@@ -59,8 +59,15 @@ export interface RealEstate {
   propTax: number;    // 年間固定資産税（円）
   bal: number;        // ローン残高（円）
   rate: number;       // 金利（%）
-  term: number;       // ローン期間（年）
+  term: number;       // ローン期間（年・残り）
   start: number | string;
+  // ローンのくわしい設定（住宅ローンと同じ仕組み。未設定なら 変動・元利均等・5年ルールあり）
+  loanRateType?: LoanRateType;
+  loanFixedUntilAge?: number;   // 当初固定: 固定が終わる年齢
+  loanRateAfter?: number;       // 当初固定: 固定が終わったあとの金利の見込み（%）
+  loanMethod?: LoanMethod;
+  loanRule5y?: boolean;
+  loanPrepays?: LoanPrepay[];   // 繰上返済の予定（この物件のローンに対して）
   // 評価額算定（簿価計算）用
   propType: RealEstateType;       // 物件種別
   structure: BuildingStructure;   // 建物構造（戸建てのみ意味あり）

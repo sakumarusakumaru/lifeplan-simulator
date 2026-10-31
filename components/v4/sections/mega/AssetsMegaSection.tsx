@@ -6,6 +6,7 @@ import { SelectField } from "@/components/v4/inputs/SelectField";
 import { TextField } from "@/components/v4/inputs/TextField";
 import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
+import { LoanDetailFields } from "@/components/v4/LoanDetailFields";
 import { Section } from "@/components/v4/Section";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { computeRealEstateValue } from "@/lib/v4/calc/finance";
@@ -763,6 +764,30 @@ export function AssetsMegaSection() {
                         hint="運用開始年齢"
                       />
                     </div>
+                    {r.bal > 0 ? (
+                      <LoanDetailFields
+                        curAge={plan.curAge}
+                        curRate={r.rate}
+                        value={{
+                          rateType: r.loanRateType ?? "variable",
+                          fixedUntilAge: r.loanFixedUntilAge,
+                          rateAfter: r.loanRateAfter,
+                          method: r.loanMethod ?? "annuity",
+                          rule5y: r.loanRule5y,
+                          prepays: r.loanPrepays ?? [],
+                        }}
+                        onChange={(v) =>
+                          updateRe(i, {
+                            ...(v.rateType !== undefined ? { loanRateType: v.rateType } : {}),
+                            ...(v.fixedUntilAge !== undefined ? { loanFixedUntilAge: v.fixedUntilAge } : {}),
+                            ...(v.rateAfter !== undefined ? { loanRateAfter: v.rateAfter } : {}),
+                            ...(v.method !== undefined ? { loanMethod: v.method } : {}),
+                            ...(v.rule5y !== undefined ? { loanRule5y: v.rule5y } : {}),
+                            ...(v.prepays !== undefined ? { loanPrepays: v.prepays } : {}),
+                          })
+                        }
+                      />
+                    ) : null}
                   </div>
                 </ListItemCard>
               );

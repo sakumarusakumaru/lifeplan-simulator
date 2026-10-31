@@ -157,27 +157,28 @@ export default function RiskPage() {
         <div className="mb-6 border-b-2 border-[#0a0a0a] pb-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">もしも</p>
           <h1 className="text-2xl font-bold text-[#0a0a0a]">
-            {who === "self" ? "本人" : "配偶者"}が{deathAge}歳（本人の年齢）で亡くなったら
+            もしも、{who === "self" ? "本人" : "配偶者"}が亡くなったら
           </h1>
           <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/65">
             遺族年金・死亡退職金・団信・保険を織り込んで、残された家族が最後まで暮らせるかを試算します。足りない分が「必要保障額」です。下には、年代ごとの「相続の備え」もまとめています。
           </p>
         </div>
 
+        {/* 引き継ぎ書への入口。濃い緑のべた塗りで、ほかのカードと違う特別な扱いに */}
         <Link
-              href="/v5/handover"
-              className="mb-6 flex items-center gap-3 rounded-xl px-4 py-4 transition-colors hover:bg-[#f6fff8]"
-              style={{ background: "#ffffff", border: "2.5px solid #22863a" }}
-            >
-              <span className="text-2xl" aria-hidden>✉</span>
-              <span className="flex flex-1 flex-col">
-                <span className="text-sm font-bold text-[#0a0a0a]">家族に渡す「お金の引き継ぎ書」をつくる</span>
-                <span className="text-[11px] leading-relaxed text-[#0a0a0a]/65">
-                  資産・負債・保険・毎月の契約・デジタル・重要書類の場所・手続きを、入力済みの内容から自動でまとめ、A4のPDFで保存・印刷できます
-                </span>
-              </span>
-              <span className="text-sm font-bold" aria-hidden>→</span>
-            </Link>
+          href="/v5/handover"
+          className="mb-6 flex items-center gap-3 rounded-xl px-4 py-4 transition-opacity hover:opacity-90"
+          style={{ background: "#1d5c30", border: "2.5px solid #14401f", boxShadow: "0 3px 0 #14401f" }}
+        >
+          <span className="text-2xl" aria-hidden>✉</span>
+          <span className="flex flex-1 flex-col">
+            <span className="text-sm font-bold text-white">家族に渡す「お金の引き継ぎ書」をつくる</span>
+            <span className="text-[11px] leading-relaxed text-white/75">
+              資産・負債・保険・毎月の契約・デジタル・重要書類の場所・手続きを、入力済みの内容から自動でまとめ、A4のPDFで保存・印刷できます
+            </span>
+          </span>
+          <span className="text-sm font-bold text-white" aria-hidden>→</span>
+        </Link>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[300px_1fr]">
           {/* 条件 */}
@@ -420,7 +421,7 @@ export default function RiskPage() {
 
             <div className="flex flex-wrap justify-between gap-2 text-[12px] font-bold">
               <Link href="/v5/suggest" className="underline hover:text-[#c8383a]">← 比較</Link>
-              <Link href="/v5/detail" className="underline hover:text-[#c8383a]">入力を修正する →</Link>
+              <Link href="/v5/handover" className="underline hover:text-[#c8383a]">家族に渡す引き継ぎ書 →</Link>
             </div>
           </div>
         </div>

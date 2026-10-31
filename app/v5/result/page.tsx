@@ -493,7 +493,7 @@ export default function ResultPage() {
       {/* Actions */}
       <div className="no-print mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
-          href="/v5/suggest"
+          href="/v5/detail"
           className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
           style={{
             border: "2.5px solid #0a0a0a",
@@ -501,10 +501,10 @@ export default function ResultPage() {
             color: "#0a0a0a",
           }}
         >
-          比較を見る →
+          ← 入力を修正する
         </Link>
         <Link
-          href="/v5/detail"
+          href="/v5/suggest"
           className="flex-1 py-3 text-center text-xs font-bold text-white transition-colors hover:opacity-80"
           style={{
             background: "#0a0a0a",
@@ -512,7 +512,7 @@ export default function ResultPage() {
             borderRadius: 10,
           }}
         >
-          入力を修正する →
+          比較を見る →
         </Link>
       </div>
 

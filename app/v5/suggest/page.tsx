@@ -759,7 +759,7 @@ export default function SuggestPage() {
           ← レポートに戻る
         </Link>
         <Link
-          href="/v5/detail"
+          href="/v5/risk"
           className="flex-1 py-3 text-center text-xs font-bold text-white transition-colors hover:opacity-80"
           style={{
             background: "#0a0a0a",
@@ -767,7 +767,7 @@ export default function SuggestPage() {
             borderRadius: 10,
           }}
         >
-          入力を修正する →
+          もしもを見る →
         </Link>
       </div>
 

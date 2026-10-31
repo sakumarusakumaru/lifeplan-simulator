@@ -148,11 +148,11 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                       background: "#ffffff",
                       border: "2.5px solid #0a0a0a",
                       borderRadius: 12,
-                      padding: compact ? "6px 9px" : "14px 18px",
+                      padding: compact ? "6px 9px" : "8px 12px",
                       minWidth: compact ? 0 : 240,
                     }}
                   >
-                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: compact ? "0 0 3px" : "0 0 12px", fontSize: compact ? 12 : 17 }}>
+                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: compact ? "0 0 3px" : "0 0 6px", fontSize: compact ? 12 : 12 }}>
                       {label}歳
                     </p>
                     {sorted.map((entry) => {
@@ -184,8 +184,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                           <span
                             style={{
                               display: "inline-block",
-                              width: compact ? 8 : 13,
-                              height: compact ? 8 : 13,
+                              width: compact ? 8 : 9,
+                              height: compact ? 8 : 9,
                               flexShrink: 0,
                               background: isCF ? "transparent" : (entry.color as string),
                               border: isCF
@@ -198,7 +198,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                             style={{
                               color: "#0a0a0a",
                               flex: 1,
-                              fontSize: compact ? 11 : isHovered ? 15 : 13,
+                              fontSize: compact ? 11 : isHovered ? 12 : 10.5,
                               fontWeight: isHovered ? 800 : 700,
                               transition: "all 0.12s",
                             }}
@@ -209,7 +209,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                             style={{
                               color: valueColor,
                               fontWeight: 800,
-                              fontSize: compact ? 11 : isHovered ? 18 : 16,
+                              fontSize: compact ? 11 : isHovered ? 13 : 11.5,
                               transition: "all 0.12s",
                             }}
                           >
@@ -224,7 +224,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                         marginTop: 10,
                         paddingTop: 10,
                         borderTop: "1.5px dashed #0a0a0a20",
-                        fontSize: 12,
+                        fontSize: 10,
                         fontWeight: 700,
                         color: cf < 0 ? "#c8383a" : "#22863a",
                       }}
@@ -237,7 +237,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                 );
               }}
               cursor={{ fill: "rgba(10,10,10,0.05)" }}
-              offset={compact ? 6 : 28}
+              offset={compact ? 6 : 72}
               wrapperStyle={{ pointerEvents: "none", zIndex: 5 }}
               position={compact ? { y: 0 } : undefined}
             />
@@ -314,16 +314,16 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
         </div>
       )}
 
-      {/* グラフの読み方 */}
-      <div
+      {/* グラフの読み方（折りたたみ。ふだんは1行だけ） */}
+      <details
         className="mt-4 overflow-hidden rounded-xl"
         style={{ border: "1.5px solid #0a0a0a20" }}
       >
+        <summary className="cursor-pointer bg-white px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/55">
+          {jp ? "グラフの見方" : "グラフの構造 ／ CHART STRUCTURE"}
+        </summary>
         {/* ゾーン構造図 */}
         <div style={{ background: "#ffffff", padding: "10px 14px", borderBottom: "1px solid #0a0a0a10" }}>
-          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/55">
-            {jp ? "グラフの見方" : "グラフの構造 ／ CHART STRUCTURE"}
-          </p>
           <div className="overflow-hidden rounded-lg" style={{ border: "1.5px solid #0a0a0a20" }}>
             {/* 収入ゾーン（上） */}
             <div
@@ -375,7 +375,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
             収入 − 支出 − 投資積立 の結果。線がマイナスの年は不足分を資産（貯蓄・投資）から取り崩します。
           </p>
         </div>
-      </div>
+      </details>
     </div>
   );
 }

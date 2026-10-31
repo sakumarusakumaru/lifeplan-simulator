@@ -162,11 +162,11 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                       background: "#ffffff",
                       border: "2.5px solid #0a0a0a",
                       borderRadius: 12,
-                      padding: compact ? "6px 9px" : "14px 18px",
-                      minWidth: compact ? 0 : 230,
+                      padding: compact ? "6px 9px" : "8px 12px",
+                      minWidth: compact ? 0 : 170,
                     }}
                   >
-                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: compact ? "0 0 3px" : "0 0 12px", fontSize: compact ? 12 : 17 }}>
+                    <p style={{ color: "#0a0a0a", fontWeight: 800, margin: compact ? "0 0 3px" : "0 0 6px", fontSize: compact ? 12 : 12 }}>
                       {label}歳
                     </p>
                     {sorted.map((entry) => {
@@ -185,7 +185,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                             display: "flex",
                             alignItems: "center",
                             gap: 8,
-                            marginBottom: compact ? 1 : 6,
+                            marginBottom: compact ? 1 : 3,
                             transform: isHovered ? "scale(1.08)" : "scale(1)",
                             transformOrigin: "left center",
                             transition: "transform 0.12s",
@@ -194,8 +194,8 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                           <span
                             style={{
                               display: "inline-block",
-                              width: compact ? 8 : 13,
-                              height: compact ? 8 : 13,
+                              width: compact ? 8 : 9,
+                              height: compact ? 8 : 9,
                               flexShrink: 0,
                               background: isNW ? "transparent" : (entry.color as string),
                               border: isNW
@@ -208,7 +208,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                             style={{
                               color: "#0a0a0a",
                               flex: 1,
-                              fontSize: compact ? 11 : isHovered ? 15 : 13,
+                              fontSize: compact ? 11 : isHovered ? 12 : 10.5,
                               fontWeight: isHovered ? 800 : 700,
                               transition: "all 0.12s",
                             }}
@@ -219,7 +219,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                             style={{
                               color: valueColor,
                               fontWeight: 800,
-                              fontSize: compact ? 11 : isHovered ? 18 : 16,
+                              fontSize: compact ? 11 : isHovered ? 13 : 11.5,
                               transition: "all 0.12s",
                             }}
                           >
@@ -234,7 +234,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                         marginTop: 8,
                         paddingTop: 8,
                         borderTop: "1.5px dashed #0a0a0a20",
-                        fontSize: 12,
+                        fontSize: 10,
                         fontWeight: 700,
                         color: nw < 0 ? "#c8383a" : "#22863a",
                       }}
@@ -247,7 +247,7 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
                 );
               }}
               cursor={{ stroke: "#0a0a0a", strokeWidth: 1, strokeDasharray: "2 2" }}
-              offset={compact ? 6 : 28}
+              offset={compact ? 6 : 72}
               wrapperStyle={{ pointerEvents: "none", zIndex: 5 }}
               position={compact ? { y: 0 } : undefined}
             />
@@ -378,14 +378,15 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
         </div>
       )}
 
-      {/* このグラフの読み方 */}
-      <div
+      {/* このグラフの読み方（折りたたみ。ふだんは1行だけ） */}
+      <details
         className="mt-4 rounded-xl p-3"
         style={{ background: "#ffffff", border: "1.5px solid #0a0a0a30" }}
       >
-        <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
+        <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
           {jp ? "このグラフの読み方" : "このグラフの読み方 ／ HOW TO READ"}
-        </p>
+        </summary>
+        <div className="mt-2">
 
         <p className="mb-1.5 text-[10px] font-bold text-[#0a0a0a]">■ 積み上げ面 ＝ その年の資産内訳</p>
         <ul className="mb-3 flex flex-col gap-1 pl-1">
@@ -427,7 +428,8 @@ export function AssetsChart({ rows, lifeEvents = [] }: AssetsChartProps) {
           全資産から住宅ローン・その他ローン・不動産ローンの負債を差し引いた金額。
           マイナス = 負債超過の状態。マウスオーバーで該当項目が拡大表示されます。
         </p>
-      </div>
+        </div>
+      </details>
     </div>
   );
 }

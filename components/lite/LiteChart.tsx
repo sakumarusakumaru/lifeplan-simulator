@@ -44,7 +44,9 @@ export function LiteChart({
           <Tooltip
             formatter={(v) => [man(Number(v)), "お金（預金＋投資）"]}
             labelFormatter={(l) => `${l}歳`}
-            contentStyle={{ fontSize: 11, borderRadius: 8, border: `2px solid ${INK}` }}
+            offset={48}
+            wrapperStyle={{ pointerEvents: "none" }}
+            contentStyle={{ fontSize: 10, borderRadius: 8, border: `2px solid ${INK}`, padding: "4px 8px" }}
           />
           <ReferenceLine y={0} stroke={INK} strokeWidth={1.5} />
           {events.length ? (

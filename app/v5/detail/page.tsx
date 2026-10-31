@@ -132,7 +132,7 @@ export default function DetailPage() {
 
   return (
     <main className="px-4 py-6 pb-36 sm:px-8 lg:py-10 lg:pb-16" style={{ background: "#ffffff" }}>
-      <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 lg:grid-cols-[minmax(0,9fr)_minmax(0,11fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-8">
+      <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 lg:grid-cols-[minmax(0,9fr)_minmax(0,11fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:gap-8">
         <div className="flex min-w-0 flex-col gap-6">
           {justDone ? (
             <div
@@ -160,7 +160,12 @@ export default function DetailPage() {
           <LiteHandoffNote />
 
           {/* 4ブロックのタブ（状態つき） */}
-          <nav aria-label="入力ブロック" className="grid grid-cols-4 overflow-hidden rounded-xl" style={{ border: LINE }}>
+          {/* 4ブロックのタブは、スクロールしても画面の上（ヘッダーの下）に残す */}
+          <nav
+            aria-label="入力ブロック"
+            className="sticky z-30 grid grid-cols-4 overflow-hidden rounded-xl bg-white"
+            style={{ border: LINE, top: "calc(var(--lp-header-h, 56px) + 8px)", boxShadow: "0 4px 10px -6px rgba(10,10,10,0.25)" }}
+          >
             {BLOCKS.map((b, i) => {
               const isCur = i === active;
               const ok = !!confirmed[b.id];

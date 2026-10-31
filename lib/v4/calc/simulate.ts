@@ -1,7 +1,7 @@
 import { ageOn, parseYMD, yearToStartAge } from "./age";
 import { resolveDrawOrder } from "./drawOrder";
 import { EDU, amortizeYear, pmt } from "./finance";
-import { scheduleLoans } from "./homeLoan";
+import { schedulePart, scheduleLoans } from "./homeLoan";
 import { createInsuranceState, insuranceDeduction, insuranceYear, normalizeInsurance } from "./insurance";
 import { KAKYUU_NENKIN_ANNUAL, calcPension, isKakyuuApplicable, zaishokuTeishiAnnual } from "./pension";
 import {
@@ -130,6 +130,27 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     payY: r.bal > 0 ? pmt(r.rate / 100 / 12, r.term * 12, r.bal) * 12 : 0,
     startA: yearToStartAge(r.start, input),
   }));
+  // 不動産投資のローンも住宅ローンと同じ仕組みで返済予定を作る（金利タイプ・返済方法・繰上返済）
+  const reSchedules = rSims.map((r) =>
+    r.bal > 0
+      ? schedulePart(
+          {
+            label: r.name,
+            bal: r.bal,
+            years: r.term,
+            rate: r.rate,
+            rateType: r.loanRateType ?? "variable",
+            fixedUntilAge: r.loanFixedUntilAge,
+            rateAfter: r.loanRateAfter,
+            method: r.loanMethod ?? "annuity",
+            rule5y: r.loanRule5y,
+          },
+          Math.max(r.startA, input.curAge),
+          r.loanPrepays ?? [],
+          0,
+        )
+      : null,
+  );
 
   const spouseCurAge = ageOn(input.spouseBirth, input.baseDate);
   const hasSpouse = spouseCurAge !== null;
@@ -456,7 +477,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     let reProfitTot = 0;
     const reD: RealEstateRowDetail[] = [];
     const reFlows: { rent: number; cost: number; pay: number; bal: number }[] = [];
-    for (const r of rSims) {
+    for (const [ri, r] of rSims.entries()) {
       // 家賃・経費・固定資産税・ローンは運用開始年齢から
       const active = age >= r.startA;
       const rent = active ? r.rent * 12 * infl : 0;
@@ -465,11 +486,11 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       let intr = 0;
       let pay = 0;
       if (r.bal > 0 && active) {
-        // 毎月払いの元利均等。利息は月ごとに残高×年利÷12
-        const y = amortizeYear(r.bal, r.rate, r.payY / 12);
-        intr = y.interest;
-        pay = y.paid;
-        r.bal = y.bal;
+        // 返済予定（金利タイプ・返済方法・繰上返済込み）から、その年の返済・利息・年末残高を取る
+        const y = reSchedules[ri]?.years.get(age);
+        intr = y?.interest ?? 0;
+        pay = y ? y.pay + y.prepay : 0;
+        r.bal = y ? y.bal : 0;
       }
       reProfitTot += rent - costY - propTax - intr;
       reRentTot += rent;

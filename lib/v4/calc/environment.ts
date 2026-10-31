@@ -94,7 +94,14 @@ export function applyEnvPlan(plan: PlanInput, env: EnvInput): PlanInput {
       p.hlParts = plan.hlParts.map((x) =>
         x.rateType === "fixed" ? x : x.rateType === "fixedPeriod" ? { ...x, rateAfter: (x.rateAfter ?? x.rate) + env.rateUp } : { ...x, rate: x.rate + env.rateUp },
       );
-    p.res = plan.res.map((r) => ({ ...r, rate: r.rate + env.rateUp }));
+    // 不動産投資のローンも、全期間固定は上がらず、当初固定は固定が終わってからの金利だけ上がる
+    p.res = plan.res.map((r) =>
+      r.loanRateType === "fixed"
+        ? r
+        : r.loanRateType === "fixedPeriod"
+          ? { ...r, loanRateAfter: (r.loanRateAfter ?? r.rate) + env.rateUp }
+          : { ...r, rate: r.rate + env.rateUp },
+    );
     p.cashRate = plan.cashRate + env.rateUp / 2 / 100;
   }
   if (env.infl && env.infl !== plan.infl) {
