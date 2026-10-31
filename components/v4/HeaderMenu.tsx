@@ -62,17 +62,20 @@ export function HeaderMenu({
   onImport,
   onPdf,
   onReset,
+  showHandover = true,
 }: {
   realValue: boolean;
   setRealValue: (v: boolean) => void;
   mcOn: boolean;
   setMcOn: (v: boolean) => void;
-  onSample: () => void;
+  // ver5.20: v5 では「サンプルを読み込む」「検証用に保存」「PDFで保存」「引き継ぎ書」はメニューに出さない（渡さなければ出ない）
+  onSample?: () => void;
   onExport: () => void;
-  onExportReview: () => void;
+  onExportReview?: () => void;
   onImport: () => void;
-  onPdf: () => void;
+  onPdf?: () => void;
   onReset: () => void;
+  showHandover?: boolean;
 }) {
   const base = useVBase();
   const [open, setOpen] = useState(false);
@@ -189,13 +192,24 @@ export function HeaderMenu({
               </span>
             </span>
           </button>
-          <button type="button" role="menuitem" className={item} onClick={run(onExportReview)}>
-            <span aria-hidden>⇩</span>
-            <span className="flex flex-col">
-              <span className="font-bold">検証用に保存（個人情報を除く）</span>
-              <span className="text-[10px] text-[#0a0a0a]/55">名前・連絡先・メッセージを消したJSON。ほかのAIや専門家に渡すとき用</span>
-            </span>
-          </button>
+          {onExportReview ? (
+            <button
+              type="button"
+              role="menuitem"
+              className={item}
+              onClick={run(onExportReview)}
+            >
+              <span aria-hidden>⇩</span>
+              <span className="flex flex-col">
+                <span className="font-bold">
+                  検証用に保存（個人情報を除く）
+                </span>
+                <span className="text-[10px] text-[#0a0a0a]/55">
+                  名前・連絡先・メッセージを消したJSON。ほかのAIや専門家に渡すとき用
+                </span>
+              </span>
+            </button>
+          ) : null}
           <button
             type="button"
             role="menuitem"
@@ -210,46 +224,59 @@ export function HeaderMenu({
               </span>
             </span>
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={run(onPdf)}
-          >
-            <span aria-hidden>⎙</span>
-            <span className="flex flex-col">
-              <span className="font-bold">この画面をPDFで保存</span>
-              <span className="text-[10px] text-[#0a0a0a]/55">
-                印刷画面で「PDFに保存」を選択
+          {onPdf ? (
+            <button
+              type="button"
+              role="menuitem"
+              className={item}
+              onClick={run(onPdf)}
+            >
+              <span aria-hidden>⎙</span>
+              <span className="flex flex-col">
+                <span className="font-bold">この画面をPDFで保存</span>
+                <span className="text-[10px] text-[#0a0a0a]/55">
+                  印刷画面で「PDFに保存」を選択
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+          ) : null}
 
           <div className="my-1 h-px bg-[#0a0a0a15]" />
           <p className="px-3 pt-1 pb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/45">
             その他
           </p>
-          <Link href={`${base}/handover`} role="menuitem" className={item} onClick={() => setOpen(false)}>
-            <span aria-hidden>✉</span>
-            <span className="flex flex-col">
-              <span className="font-bold">家族に渡す引き継ぎ書</span>
-              <span className="text-[10px] text-[#0a0a0a]/55">お金のありか・遺族年金・手続きをPDFに</span>
-            </span>
-          </Link>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={run(onSample)}
-          >
-            <span aria-hidden>☺</span>
-            <span className="flex flex-col">
-              <span className="font-bold">サンプルを読み込む</span>
-              <span className="text-[10px] text-[#0a0a0a]/55">
-                35歳・会社員・持ち家の例で試す（今の入力は上書き）
+          {showHandover ? (
+            <Link
+              href={`${base}/handover`}
+              role="menuitem"
+              className={item}
+              onClick={() => setOpen(false)}
+            >
+              <span aria-hidden>✉</span>
+              <span className="flex flex-col">
+                <span className="font-bold">家族に渡す引き継ぎ書</span>
+                <span className="text-[10px] text-[#0a0a0a]/55">
+                  お金のありか・遺族年金・手続きをPDFに
+                </span>
               </span>
-            </span>
-          </button>
+            </Link>
+          ) : null}
+          {onSample ? (
+            <button
+              type="button"
+              role="menuitem"
+              className={item}
+              onClick={run(onSample)}
+            >
+              <span aria-hidden>☺</span>
+              <span className="flex flex-col">
+                <span className="font-bold">サンプルを読み込む</span>
+                <span className="text-[10px] text-[#0a0a0a]/55">
+                  35歳・会社員・持ち家の例で試す（今の入力は上書き）
+                </span>
+              </span>
+            </button>
+          ) : null}
           <button
             type="button"
             role="menuitem"

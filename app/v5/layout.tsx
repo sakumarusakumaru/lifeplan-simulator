@@ -31,7 +31,6 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
   const plan = usePlanStore((s) => s.plan);
   const replacePlan = usePlanStore((s) => s.replace);
   const reset = usePlanStore((s) => s.reset);
-  const loadSample = usePlanStore((s) => s.loadSample);
   const planHydrated = usePlanStore((s) => s.hydrated);
   const uiHydrated = useUiStore((s) => s.hydrated);
   const unlocked = useUiStore((s) => s.unlocked);
@@ -287,22 +286,9 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
               setRealValue={setRealValue}
               mcOn={mcOn}
               setMcOn={setMcOn}
-              onSample={() => {
-                if (
-                  !plan.selfBirth ||
-                  confirm(
-                    "サンプル（35歳・会社員・持ち家）を読み込みます。\n今の入力内容は上書きされます。よろしいですか？",
-                  )
-                ) {
-                  loadSample();
-                  useSecretStore.getState().clear();
-                  setUnlocked(true);
-                }
-              }}
               onExport={() => exportPlan(false)}
-              onExportReview={() => exportPlan(true)}
               onImport={() => fileInputRef.current?.click()}
-              onPdf={() => window.print()}
+              showHandover={false}
               onReset={() => {
                 if (
                   confirm(
