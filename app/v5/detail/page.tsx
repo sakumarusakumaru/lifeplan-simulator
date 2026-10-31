@@ -156,7 +156,7 @@ export default function DetailPage() {
               role="status"
             >
               <p className="flex-1 text-[12px] leading-relaxed">
-                <span className="font-bold text-[#22863a]">あなたの結果が出ました。</span>
+                <span className="font-bold text-[#0072b2]">あなたの結果が出ました。</span>
                 <span className="hidden lg:inline">右</span>
                 <span className="lg:hidden">画面下</span>
                 の「いまの試算」が今の入力の結果です。入力を直すと、すぐに変わります。
@@ -195,16 +195,16 @@ export default function DetailPage() {
                   aria-current={isCur ? "step" : undefined}
                   className="flex min-h-14 flex-col items-start justify-center gap-0.5 px-2 py-2 text-left sm:px-4"
                   style={{
-                    background: isCur ? "var(--lp-primary)" : ok ? "#f0fff4" : "#ffffff",
+                    background: isCur ? "var(--lp-primary)" : ok ? "#e9f2fa" : "#ffffff",
                     color: isCur ? "#ffffff" : INK,
                     borderLeft: i === 0 ? "none" : "1px solid #0a0a0a22",
                   }}
                 >
                   <span
                     className="flex items-center gap-1 text-[10px] font-bold sm:text-[11px]"
-                    style={{ color: isCur ? "#ffffffcc" : ok ? "#22863a" : "#55555a" }}
+                    style={{ color: isCur ? "#ffffffcc" : ok ? "#0072b2" : "#55555a" }}
                   >
-                    {ok && !isCur ? <CheckIcon color="#22863a" /> : null}
+                    {ok && !isCur ? <CheckIcon color="#0072b2" /> : null}
                     {state || `0${i + 1}`}
                   </span>
                   <span className="text-[12px] font-bold leading-tight sm:text-sm">
@@ -225,18 +225,18 @@ export default function DetailPage() {
             <p className="text-[13px] leading-relaxed text-[#0a0a0a]/70">{block.desc}</p>
             {active === 0 && stepping ? (
               <p className="mt-1 text-[13px] leading-relaxed">
-                必須は<strong className="text-[#c8383a]">本人の生年月日</strong>。判定には<strong className="text-[#c8383a]">毎月の生活費</strong>も要ります。ほかの金額は、空欄なら0円として計算します。
+                必須は<strong className="text-[#d55e00]">本人の生年月日</strong>。判定には<strong className="text-[#d55e00]">毎月の生活費</strong>も要ります。ほかの金額は、空欄なら0円として計算します。
                 入れるたびに<span className="hidden lg:inline">右</span>
                 <span className="lg:hidden">画面下</span>の試算が動きます。
               </p>
             ) : null}
             {stepping ? (
               <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[12px] font-bold">
-                <button type="button" onClick={trySample} className="min-h-11 underline underline-offset-4 hover:text-[#c8383a]">
+                <button type="button" onClick={trySample} className="min-h-11 underline underline-offset-4 hover:text-[#d55e00]">
                   サンプルの人で試してみる
                 </button>
                 {plan.selfBirth ? (
-                  <button type="button" onClick={finish} className="min-h-11 text-[#0a0a0a]/65 underline underline-offset-4 hover:text-[#c8383a]">
+                  <button type="button" onClick={finish} className="min-h-11 text-[#0a0a0a]/65 underline underline-offset-4 hover:text-[#d55e00]">
                     途中でも、今の内容で結果を見る
                   </button>
                 ) : null}
@@ -253,9 +253,9 @@ export default function DetailPage() {
           {/* 戻る・次へ */}
           <div className="flex flex-col gap-2 border-t pt-5" style={{ borderTop: LINE }}>
             {blocked ? (
-              <p className="text-[12px] font-bold text-[#c8383a]">{blocked}</p>
+              <p className="text-[12px] font-bold text-[#d55e00]">{blocked}</p>
             ) : note ? (
-              <p className="text-[12px] font-bold text-[#a07900]">{note}</p>
+              <p className="text-[12px] font-bold text-[#8a5a00]">{note}</p>
             ) : (
               <p className="text-[12px] text-[#0a0a0a]/60">わからない項目は空欄・初期値のままで大丈夫です。あとからいつでも直せます。</p>
             )}
@@ -277,7 +277,7 @@ export default function DetailPage() {
                 disabled={!!blocked}
                 onClick={next}
                 className="min-h-13 flex-1 rounded-lg px-6 text-sm font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35 sm:flex-none"
-                style={{ background: isLast && stepping ? "#c8383a" : INK }}
+                style={{ background: isLast && stepping ? "#d55e00" : INK }}
               >
                 {nextLabel}
               </button>

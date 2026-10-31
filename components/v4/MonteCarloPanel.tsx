@@ -24,9 +24,9 @@ import { usePlanStore } from "@/store/v4/plan-store";
 import { useUiStore } from "@/store/v4/ui-store";
 
 const INK = "#0a0a0a";
-const BLUE = "#1a6fa8";
-const RED = "#c8383a";
-const GREEN = "#22863a";
+const BLUE = "#0072b2";
+const RED = "#d55e00";
+const GREEN = "#0072b2";
 
 const man = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
@@ -50,7 +50,7 @@ function useMonteCarlo(plan: PlanInput): MonteCarloResult {
 
 function rateColor(rate: number) {
   if (rate >= 0.85) return GREEN;
-  if (rate >= 0.6) return "#a07900";
+  if (rate >= 0.6) return "#8a5a00";
   return RED;
 }
 
@@ -138,7 +138,7 @@ export function MonteCarloPanel() {
         </div>
         <p className="mt-2 text-[10px] leading-relaxed text-[#0a0a0a]/60 sm:hidden">{MC_RISK[riskKey].note}</p>
         {mismatch ? (
-          <p className="mt-2 text-[10px] font-bold leading-relaxed" style={{ color: "#a07900" }}>
+          <p className="mt-2 text-[10px] font-bold leading-relaxed" style={{ color: "#8a5a00" }}>
             ※ NISAの想定利回り {plan.nisaR.toFixed(1)}% は「{MC_RISK[riskKey].label}」の目安（{lo}〜{hi}%）から外れています。
             値動きの小さい運用ほど期待できる利回りも低いので、両方をそろえると現実に近くなります（{plan.nisaR > hi ? "想定利回りを下げる" : "想定利回りを上げる"}のが目安。入力画面の「資産・運用」で変更）。
           </p>

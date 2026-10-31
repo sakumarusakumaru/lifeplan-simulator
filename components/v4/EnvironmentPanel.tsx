@@ -14,8 +14,8 @@ import {
 import type { SimulationSummary } from "@/lib/v4/calc/types";
 
 const INK = "#0a0a0a";
-const RED = "#c8383a";
-const GREEN = "#22863a";
+const RED = "#d55e00";
+const GREEN = "#0072b2";
 
 const fmt = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
@@ -132,7 +132,7 @@ export function EnvironmentPanel({
       {on ? (
         <div
           className="mt-3 rounded-lg px-3 py-2"
-          style={{ background: delta < 0 ? "#fff1f1" : "#f0fff4" }}
+          style={{ background: delta < 0 ? "#fdf0e7" : "#e9f2fa" }}
         >
           <p
             className="text-[12px] font-bold"

@@ -32,8 +32,8 @@ import { useSimResult } from "@/store/v4/useSimResult";
 import { useUiStore } from "@/store/v4/ui-store";
 
 const INK = "#0a0a0a";
-const RED = "#c8383a";
-const GREEN = "#22863a";
+const RED = "#d55e00";
+const GREEN = "#0072b2";
 
 const man = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
@@ -201,7 +201,7 @@ export default function RiskPage() {
                 max={Math.max(plan.curAge, Math.min(plan.endAge - 1, 85))}
                 value={deathAge}
                 onChange={(e) => update({ deathAge: Number(e.target.value) })}
-                className="w-full accent-[#c8383a]"
+                className="w-full accent-[#d55e00]"
               />
               <span className="text-[10px] text-[#0a0a0a]/50">FPは「今亡くなったら」を基準に考えるのが一般的</span>
             </label>
@@ -276,7 +276,7 @@ export default function RiskPage() {
             <Section no="01" title="必要保障額">
               <div
                 className="mb-3 rounded-xl p-4"
-                style={{ background: covered ? "#f0fff4" : "#fff1f1", border: `2.5px solid ${covered ? GREEN : RED}` }}
+                style={{ background: covered ? "#e9f2fa" : "#fdf0e7", border: `2.5px solid ${covered ? GREEN : RED}` }}
               >
                 <p className="text-[11px] font-bold" style={{ color: covered ? GREEN : RED }}>
                   {need === null ? "必要保障額は出していません" : covered ? "今の備えで足りています" : "今の備えに上乗せして必要な死亡保障"}
@@ -375,7 +375,7 @@ export default function RiskPage() {
               <div className="rounded-xl bg-white p-3" style={CARD}>
                 <div className="h-[260px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 4 }}>
+                    <LineChart data={chartData} margin={{ top: 24, right: 10, left: 0, bottom: 4 }}>
                       <CartesianGrid stroke="rgba(10,10,10,0.08)" strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="age" tick={{ fill: INK, fontSize: 9 }} tickLine={false} minTickGap={12} />
                       <YAxis tickFormatter={axisFmt} tick={{ fill: INK, fontSize: 9 }} width={48} tickLine={false} />
@@ -424,8 +424,8 @@ export default function RiskPage() {
             </Section>
 
             <div className="flex flex-wrap justify-between gap-2 text-[12px] font-bold">
-              <Link href="/v5/suggest" className="underline hover:text-[#c8383a]">← 比較</Link>
-              <Link href="/v5/handover" className="underline hover:text-[#c8383a]">家族に渡す引き継ぎ書 →</Link>
+              <Link href="/v5/suggest" className="underline hover:text-[#d55e00]">← 比較</Link>
+              <Link href="/v5/handover" className="underline hover:text-[#d55e00]">家族に渡す引き継ぎ書 →</Link>
             </div>
           </div>
         </div>

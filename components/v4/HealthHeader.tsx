@@ -113,9 +113,9 @@ function computeHealth(result: SimulationSummary, plan: PlanInput, real: boolean
 }
 
 const ALERT_COLORS: Record<AlertLevel, { main: string; light: string; text: string }> = {
-  good: { main: "#22863a", light: "#f0fff4", text: "#22863a" },
-  warn: { main: "#d4a017", light: "#fff8e7", text: "#a07900" },
-  bad: { main: "#c8383a", light: "#fff0f0", text: "#c8383a" },
+  good: { main: "#0072b2", light: "#e9f2fa", text: "#0072b2" },
+  warn: { main: "#e69f00", light: "#fff8e7", text: "#8a5a00" },
+  bad: { main: "#d55e00", light: "#fdf0e7", text: "#d55e00" },
 };
 
 export function HealthHeader({
@@ -205,7 +205,7 @@ export function HealthHeader({
             </p>
             <p
               className="text-xs font-bold tabular-nums leading-tight"
-              style={{ color: item.alert ? "#c8383a" : "#0a0a0a" }}
+              style={{ color: item.alert ? "#d55e00" : "#0a0a0a" }}
             >
               {item.value}
             </p>
@@ -293,7 +293,7 @@ export function HealthHeader({
               </p>
               <p
                 className="text-base font-bold tabular-nums leading-tight"
-                style={{ color: result.finalNetWorth < 0 ? "#c8383a" : "#0a0a0a" }}
+                style={{ color: result.finalNetWorth < 0 ? "#d55e00" : "#0a0a0a" }}
               >
                 {fmt(result.finalNetWorth)}
               </p>
@@ -377,9 +377,9 @@ function Sparkline({
     min < 0 && max > 0 ? height - 2 - ((0 - min) / range) * (height - 4) : null;
 
   const lastPoint = points[points.length - 1];
-  const lineColor = positive ? "#0a0a0a" : "#c8383a";
+  const lineColor = positive ? "#0a0a0a" : "#d55e00";
   const lastValue = values[values.length - 1];
-  const lastColor = lastValue >= 0 ? "#22863a" : "#c8383a";
+  const lastColor = lastValue >= 0 ? "#0072b2" : "#d55e00";
 
   return (
     <svg
@@ -427,13 +427,13 @@ function KpiInline({
 }) {
   const dotColor =
     status === "ok"
-      ? "#22863a"
+      ? "#0072b2"
       : status === "warn"
-        ? "#d4a017"
+        ? "#e69f00"
         : status === "alert"
-          ? "#c8383a"
+          ? "#d55e00"
           : "#9ca3af";
-  const valueColor = status === "alert" ? "#c8383a" : "#0a0a0a";
+  const valueColor = status === "alert" ? "#d55e00" : "#0a0a0a";
   const icon = status === "ok" ? "✓" : status === "alert" ? "●" : "";
   return (
     <div className="flex flex-col gap-0.5">

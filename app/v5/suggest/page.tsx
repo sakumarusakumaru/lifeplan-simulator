@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
-import { CARD, LINE_SOFT, note } from "@/components/v4/frame";
+import { CARD, INNER, LINE_SOFT, note } from "@/components/v4/frame";
 import { AllocationGuide } from "@/components/v4/AllocationGuide";
 import { EnvironmentPanel } from "@/components/v4/EnvironmentPanel";
 import {
@@ -381,6 +381,7 @@ export default function SuggestPage() {
   //  - プラスになるシナリオ（最終純資産が増える、or 資金ショートが改善する）
   //  - 取り崩し系で差が極小（10万未満）のものは隠す
   const MIN_DELTA = 100_000;
+  const visibleIds = new Set<string>();
   const visible = candidates
     .filter((s) => {
       const delta = s.result.finalNetWorth - base.finalNetWorth;
@@ -399,6 +400,8 @@ export default function SuggestPage() {
         return false;
       return true;
     });
+  visible.forEach((v) => visibleIds.add(v.id));
+  const hiddenOnes = candidates.filter((c) => !visibleIds.has(c.id) && c.group === "prepay");
 
   // 効果の大きい順に並べ替え（最終純資産の上昇幅で降順）
   visible.sort(
@@ -537,14 +540,14 @@ export default function SuggestPage() {
         {keptList.length > 0 ? (
           <div className="mb-4 p-3" style={note("green")}>
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-[10px] font-bold text-[#22863a]">キープ中（重ねて試算）</span>
+              <span className="mr-1 text-[10px] font-bold text-[#0072b2]">キープ中（重ねて試算）</span>
               {keptList.map((k) => (
                 <button
                   key={k.id}
                   type="button"
                   onClick={() => toggleKeep(k)}
                   className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold"
-                  style={{ border: "1.5px solid #22863a", color: "#0a0a0a" }}
+                  style={{ border: "1.5px solid #0072b2", color: "#0a0a0a" }}
                   aria-label={`${k.title}のキープを外す`}
                 >
                   {k.title} ×
@@ -557,7 +560,7 @@ export default function SuggestPage() {
             {keptResult ? (
               <p className="mt-2 text-[11px] font-bold">
                 合わせると最後の年の金融純資産 {fmt(keptResult.finalNetWorth)}
-                <span className="ml-1" style={{ color: keptResult.finalNetWorth - base.finalNetWorth >= 0 ? "#22863a" : "#c8383a" }}>
+                <span className="ml-1" style={{ color: keptResult.finalNetWorth - base.finalNetWorth >= 0 ? "#0072b2" : "#d55e00" }}>
                   （{fmtDelta(keptResult.finalNetWorth - base.finalNetWorth)}）
                 </span>
                 {base.shortfallAge !== null
@@ -586,7 +589,7 @@ export default function SuggestPage() {
             </p>
             <p className="mt-0.5 text-sm font-bold text-white">最後の年の金融純資産</p>
             {base.shortfallAge && (
-              <p className="mt-0.5 text-[10px] text-[#f87171]">
+              <p className="mt-0.5 text-[10px] text-[#f4a261]">
                 ● {base.shortfallAge}歳で資金ショート
               </p>
             )}
@@ -596,7 +599,7 @@ export default function SuggestPage() {
           </div>
           <p
             className="shrink-0 whitespace-nowrap text-xl font-bold tabular-nums sm:text-2xl"
-            style={{ color: base.finalNetWorth < 0 ? "#f87171" : "#86efac" }}
+            style={{ color: base.finalNetWorth < 0 ? "#f4a261" : "#8ecae6" }}
           >
             {fmt(base.finalNetWorth)}
           </p>
@@ -664,11 +667,11 @@ export default function SuggestPage() {
                             key={sc.id}
                             className="cursor-pointer rounded-xl p-4 transition-all duration-150"
                             style={{
-                              background: isKept ? "#f0fff4" : pressed ? "#f6fff8" : "#fff",
+                              background: isKept ? "#e9f2fa" : pressed ? "#f6fff8" : "#fff",
                               border: isKept
-                                ? "2.5px solid #22863a"
+                                ? "2.5px solid #0072b2"
                                 : pressed
-                                  ? `2px solid ${positive ? "#22863a" : "#c8383a"}`
+                                  ? `2px solid ${positive ? "#0072b2" : "#d55e00"}`
                                   : `2px solid ${LINE_SOFT}`,
                               transform: pressed ? "scale(0.985)" : undefined,
                               // 長押しで文字選択・iOSのメニューが出ないように
@@ -682,7 +685,7 @@ export default function SuggestPage() {
                               <div className="flex-1">
                                 <p className="text-xs font-bold text-[#0a0a0a]">
                                   {isKept ? (
-                                    <span className="mr-1.5 inline-block rounded px-1.5 py-0.5 align-[1px] text-[9px] text-white" style={{ background: "#22863a" }}>
+                                    <span className="mr-1.5 inline-block rounded px-1.5 py-0.5 align-[1px] text-[9px] text-white" style={{ background: "#0072b2" }}>
                                       キープ中
                                     </span>
                                   ) : null}
@@ -696,7 +699,7 @@ export default function SuggestPage() {
                                 <p
                                   className="text-lg font-bold tabular-nums"
                                   style={{
-                                    color: positive ? "#22863a" : "#c8383a",
+                                    color: positive ? "#0072b2" : "#d55e00",
                                   }}
                                 >
                                   {fmtDelta(delta)}
@@ -712,9 +715,9 @@ export default function SuggestPage() {
                                 className="mt-3 rounded-lg px-3 py-2 text-[10px] font-bold"
                                 style={{
                                   background: shortfallFixed
-                                    ? "#f0fff4"
-                                    : "#fff0f0",
-                                  color: shortfallFixed ? "#22863a" : "#c8383a",
+                                    ? "#e9f2fa"
+                                    : "#fdf0e7",
+                                  color: shortfallFixed ? "#0072b2" : "#d55e00",
                                 }}
                               >
                                 {shortfallFixed
@@ -733,7 +736,7 @@ export default function SuggestPage() {
                                   style={{
                                     color:
                                       sc.result.finalNetWorth < 0
-                                        ? "#c8383a"
+                                        ? "#d55e00"
                                         : "#0a0a0a",
                                   }}
                                 >
@@ -768,6 +771,32 @@ export default function SuggestPage() {
             </p>
           </div>
         )}
+
+        {/* 試したが良くならなかった条件（繰上返済など）。「検討していない」と思われないよう、閉じた一覧で出す */}
+        {hiddenOnes.length ? (
+          <details className="mb-6 rounded-xl px-4 py-2" style={INNER}>
+            <summary className="cursor-pointer text-[11px] font-bold text-[#0a0a0a]/65">
+              試したが、よくならなかった条件（{hiddenOnes.length}件） 開く ▸
+            </summary>
+            <ul className="mt-2 flex flex-col gap-1 text-[11px] text-[#0a0a0a]/75">
+              {hiddenOnes.map((s) => {
+                const d = s.result.finalNetWorth - base.finalNetWorth;
+                return (
+                  <li key={s.id} className="flex flex-wrap justify-between gap-x-3">
+                    <span>{s.title}</span>
+                    <span className="tabular-nums" style={{ color: d < 0 ? "#d55e00" : "#0a0a0a99" }}>
+                      {fmtDelta(d)}
+                      {s.result.shortfallAge !== null && base.shortfallAge !== null && s.result.shortfallAge < base.shortfallAge
+                        ? `・足りなくなる年齢 ${base.shortfallAge}歳 → ${s.result.shortfallAge}歳`
+                        : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-1.5 text-[10px] text-[#0a0a0a]/50">最後の年の金融純資産がほぼ変わらないか、減る条件です。繰上返済は利息が減っても手元のお金が減るので、資金に余裕がないと結果は良くなりません。</p>
+          </details>
+        ) : null}
       </div>
 
       <AllocationGuide plan={plan} base={base} />

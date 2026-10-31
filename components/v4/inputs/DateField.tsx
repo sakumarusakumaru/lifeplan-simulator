@@ -25,7 +25,7 @@ export function DateField({ label, value, onChange, hint, className }: DateField
       <span className="relative block min-w-0">
         <input
           type="date"
-          className="block h-[34px] w-full min-w-0 appearance-none bg-white px-2 text-left text-xs font-bold outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#c8383a]"
+          className="block h-[34px] w-full min-w-0 appearance-none bg-white px-2 text-left text-xs font-bold outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#d55e00]"
           style={{ border: "1.5px solid #0a0a0a", borderRadius: 8, WebkitAppearance: "none" }}
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}

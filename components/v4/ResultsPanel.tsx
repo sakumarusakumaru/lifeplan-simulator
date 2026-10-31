@@ -162,9 +162,9 @@ function YearlyTable({ rows }: { rows: YearlyResult[] }) {
           {rows.map((r, i) => {
             const otherInc = r.inherit;
             const otherExp = r.lifeExp + r.otherLoanPay;
-            const cfColor  = r.cf < 0 ? "#c8383a" : "#22863a";
+            const cfColor  = r.cf < 0 ? "#d55e00" : "#0072b2";
             const cfSign   = r.cf < 0 ? "−" : "+";
-            const nwColor  = r.nw < 0 ? "#c8383a" : "#0a0a0a";
+            const nwColor  = r.nw < 0 ? "#d55e00" : "#0a0a0a";
             const rowBg    = i % 2 === 0 ? "#f8f8f6" : "#ffffff";
             const bt       = i === 0 ? "none" : SEP;
             return (

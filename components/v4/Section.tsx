@@ -167,9 +167,9 @@ export function Section({
           {flow.enabled && idx >= 0 ? (
             <div className="mt-4 flex flex-col items-stretch gap-1.5 border-t pt-4" style={{ borderColor: "#0a0a0a20" }}>
               {blocked ? (
-                <p className="text-[11px] font-bold text-[#c8383a]">{blocked}</p>
+                <p className="text-[11px] font-bold text-[#d55e00]">{blocked}</p>
               ) : note ? (
-                <p className="text-[11px] font-bold text-[#a07900]">{note}</p>
+                <p className="text-[11px] font-bold text-[#8a5a00]">{note}</p>
               ) : (
                 <p className="text-[10px] text-[#0a0a0a]/55">
                   わからない項目は空欄・初期値のままで大丈夫です。あとからいつでも直せます。
@@ -180,7 +180,7 @@ export function Section({
                 disabled={!!blocked}
                 onClick={() => flow.onDone(id)}
                 className="w-full py-3 text-sm font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
-                style={{ background: isLast ? "#c8383a" : "var(--lp-primary)", border: "none", borderRadius: 12 }}
+                style={{ background: isLast ? "#d55e00" : "var(--lp-primary)", border: "none", borderRadius: 12 }}
               >
                 {isLast ? "入力完了・結果を表示する →" : `この内容でOK・次へ（${String(idx + 2).padStart(2, "0")}）→`}
               </button>
@@ -217,7 +217,7 @@ function StatusPill({ status, jp = false, active = false }: { status: SectionSta
         style={{
           height: 20,
           padding: "0 8px",
-          background: "#c8383a",
+          background: "#d55e00",
           border: "1.5px solid #0a0a0a",
           borderRadius: 12,
         }}

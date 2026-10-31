@@ -69,7 +69,7 @@ export function LoanPartsEditor({
                 onClick={() => {
                   if (confirm(`ローン${i + 1}を消しますか？`)) setParts(parts.filter((_, idx) => idx !== i));
                 }}
-                className="text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#c8383a]"
+                className="text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#d55e00]"
               >
                 削除 ✕
               </button>
@@ -111,7 +111,7 @@ export function LoanPartsEditor({
           onClick={() => setParts([...parts, { label: `ローン${parts.length + 1}`, bal: 0, years: parts[0]?.years ?? 30, rate: 1.5, rateType: "fixed", method: "annuity" }])}
         />
         {onSimple ? (
-          <button type="button" onClick={onSimple} className="text-[11px] font-bold text-[#0a0a0a]/60 underline underline-offset-4 hover:text-[#c8383a]">
+          <button type="button" onClick={onSimple} className="text-[11px] font-bold text-[#0a0a0a]/60 underline underline-offset-4 hover:text-[#d55e00]">
             簡単な入力に戻す
           </button>
         ) : null}
@@ -148,7 +148,7 @@ export function LoanPartsEditor({
                 />
               </div>
             ) : null}
-            <button type="button" onClick={() => setPrepays(prepays.filter((_, idx) => idx !== i))} className="pb-2 text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#c8383a]">
+            <button type="button" onClick={() => setPrepays(prepays.filter((_, idx) => idx !== i))} className="pb-2 text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#d55e00]">
               削除 ✕
             </button>
           </div>

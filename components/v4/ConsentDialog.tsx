@@ -43,7 +43,7 @@ export function ConsentDialog() {
         className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6"
         style={{ border: "1.5px solid #0a0a0a", boxShadow: "0 16px 48px rgba(0,0,0,0.25)" }}
       >
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#d55e00]">
           重要 ／ ご利用にあたって
         </p>
         <h2
@@ -87,13 +87,13 @@ export function ConsentDialog() {
 
         <label
           className="mb-4 flex cursor-pointer items-start gap-2.5 rounded-lg p-3"
-          style={{ background: agreed ? "#f0fff4" : "#f0f0ee", border: `2px solid ${agreed ? "#22863a" : "#0a0a0a30"}` }}
+          style={{ background: agreed ? "#e9f2fa" : "#f0f0ee", border: `2px solid ${agreed ? "#0072b2" : "#0a0a0a30"}` }}
         >
           <input
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#22863a]"
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#0072b2]"
           />
           <span className="text-xs font-bold leading-snug text-[#0a0a0a]">
             上記すべての内容を理解し、同意して利用します

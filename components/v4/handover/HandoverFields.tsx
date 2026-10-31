@@ -35,7 +35,7 @@ function SecretInput({ label, value, onChange }: { label: string; value: string;
         data-1p-ignore
         data-lpignore="true"
         spellCheck={false}
-        className="bg-white px-2 py-1.5 text-xs font-bold outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#c8383a]"
+        className="bg-white px-2 py-1.5 text-xs font-bold outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#d55e00]"
         style={{ border: "2px dashed #b8860b", borderRadius: 8 }}
         value={focused ? text : text.replace(/./g, "●")}
         onFocus={() => setFocused(true)}
@@ -68,7 +68,7 @@ function HandBox({ label }: { label: string }) {
 function NeverBox({ label, reason }: { label: string; reason?: string }) {
   return (
     <Field label={`🚫 ${label}`}>
-      <div className="rounded-lg px-2 py-1.5 text-[10px] leading-relaxed" style={{ background: "#fff1f1", border: "1.5px solid #c8383a50", color: "#7a1f20" }}>
+      <div className="rounded-lg px-2 py-1.5 text-[10px] leading-relaxed" style={{ background: "#fdf0e7", border: "1.5px solid #d55e0050", color: "#7a1f20" }}>
         <b>書かないでください。</b>
         {reason}
       </div>

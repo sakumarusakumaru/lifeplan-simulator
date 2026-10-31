@@ -19,6 +19,11 @@
   --lp-primary: #2b4a6f;
   --lp-primary-dark: #1f3752;
   --lp-primary-soft: #e8eef5;
+  /* 状態の色（色覚に配慮: 赤と緑の組み合わせを使わない）。良い＝青、足りない・警告＝朱、注意＝橙、補足＝空色 */
+  --lp-ok: #0072b2;
+  --lp-ng: #d55e00;
+  --lp-warn: #e69f00;
+  --lp-info: #56b4e9;
 }
 
 @theme inline {

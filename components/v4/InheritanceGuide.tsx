@@ -12,8 +12,8 @@ import type { InheritSettings, PlanInput, SimulationSummary } from "@/lib/v4/cal
 import { usePlanStore } from "@/store/v4/plan-store";
 
 const INK = "#0a0a0a";
-const RED = "#c8383a";
-const GREEN = "#22863a";
+const RED = "#d55e00";
+const GREEN = "#0072b2";
 
 const man = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
@@ -370,7 +370,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
             <p className="text-base font-bold tabular-nums">{P.first.taxable > 0 ? man(P.first.totalTax) : "0円"}</p>
             <p className="text-[9px] text-[#0a0a0a]/50">分け方に関係なく決まる、家族全体の税</p>
           </div>
-          <div className="col-span-2 rounded-lg p-2.5 sm:col-span-1" style={{ background: P.first.payable > 0 ? "#fff1f1" : "#f0fff4" }}>
+          <div className="col-span-2 rounded-lg p-2.5 sm:col-span-1" style={{ background: P.first.payable > 0 ? "#fdf0e7" : "#e9f2fa" }}>
             <p className="text-[10px] font-bold text-[#0a0a0a]/55">{twoStep ? "一次相続で払う税" : "実際に払う税"}</p>
             <p className="text-base font-bold tabular-nums" style={{ color: P.first.payable > 0 ? RED : GREEN }}>
               {P.first.taxable <= 0 ? "かからない見込み" : P.first.payable > 0 ? man(P.first.payable) : "0円（軽減で）"}

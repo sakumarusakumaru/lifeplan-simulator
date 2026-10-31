@@ -388,7 +388,7 @@ export function SettingsMegaSection() {
                     )}
                     <span className="col-span-2 my-1.5 h-px" style={{ background: "#0a0a0a30" }} />
                     <span className="text-sm font-bold text-[#0a0a0a]">税・社保合計</span>
-                    <span className="text-right text-sm font-bold tabular-nums text-[#c8383a]">{fmtMan(sample.total)}</span>
+                    <span className="text-right text-sm font-bold tabular-nums text-[#d55e00]">{fmtMan(sample.total)}</span>
                     <span className="text-[#0a0a0a]/60">手取り合計</span>
                     <span className="text-right font-bold tabular-nums">{fmtMan(sample.netAfterTax)}</span>
                   </div>

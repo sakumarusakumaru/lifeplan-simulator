@@ -109,9 +109,9 @@ function AccountBox({
 }) {
   const c =
     tone === "green"
-      ? { border: "#22863a40", bg: "#f0fff4", fg: "#22863a" }
+      ? { border: "#0072b240", bg: "#e9f2fa", fg: "#0072b2" }
       : tone === "blue"
-        ? { border: "#1a6fa840", bg: "#eef6fc", fg: "#1a6fa8" }
+        ? { border: "#0072b240", bg: "#eef6fc", fg: "#0072b2" }
         : { border: "#0a0a0a30", bg: "#f0f0ee", fg: "#0a0a0ab3" };
   return (
     <div className="overflow-hidden" style={INNER}>
@@ -134,14 +134,14 @@ function Meter({ label, used, max }: { label: string; used: number; max: number 
     <div className="flex flex-col gap-1">
       <div className="flex justify-between text-[10px] font-bold text-[#0a0a0a]/70">
         <span>{label}</span>
-        <span className="tabular-nums" style={{ color: over ? "#c8383a" : undefined }}>
+        <span className="tabular-nums" style={{ color: over ? "#d55e00" : undefined }}>
           {fmtMan(used)} / {fmtMan(max)}
         </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "#0a0a0a15" }}>
         <div
           className="h-full rounded-full"
-          style={{ width: `${pct}%`, background: over ? "#c8383a" : "#22863a" }}
+          style={{ width: `${pct}%`, background: over ? "#d55e00" : "#0072b2" }}
         />
       </div>
     </div>
@@ -152,7 +152,7 @@ function Note({ children, warn }: { children: React.ReactNode; warn?: boolean })
   return (
     <p
       className="text-[10px] leading-relaxed"
-      style={{ color: warn ? "#c8383a" : "#0a0a0a8c", fontWeight: warn ? 700 : 400 }}
+      style={{ color: warn ? "#d55e00" : "#0a0a0a8c", fontWeight: warn ? 700 : 400 }}
     >
       {children}
     </p>
@@ -495,7 +495,7 @@ export function AssetsMegaSection() {
             </div>
             <div
               className="rounded-md px-2.5 py-1.5 text-[10px] leading-relaxed"
-              style={{ background: dcOver ? "#fff1f1" : "#f0f0ee", color: dcOver ? "#c8383a" : "#0a0a0ab3" }}
+              style={{ background: dcOver ? "#fdf0e7" : "#f0f0ee", color: dcOver ? "#d55e00" : "#0a0a0ab3" }}
             >
               上限（2027年〜）: {dcLimitNew.note}
               {dcLimitNew.note !== dcLimitNow.note ? <><br />2026年11月掛金分まで: {dcLimitNow.note}</> : null}
@@ -692,13 +692,13 @@ export function AssetsMegaSection() {
                     {/* 推定評価額表示 + 手動上書き */}
                     <div
                       className="rounded-lg p-2"
-                      style={{ background: useOverride ? "#fff8e7" : "#f0fff4", border: `1.5px solid ${useOverride ? "#d4a017" : "#22863a"}40` }}
+                      style={{ background: useOverride ? "#fff8e7" : "#e9f2fa", border: `1.5px solid ${useOverride ? "#e69f00" : "#0072b2"}40` }}
                     >
                       <div className="mb-1.5 flex items-baseline justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: useOverride ? "#a07900" : "#22863a" }}>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: useOverride ? "#8a5a00" : "#0072b2" }}>
                           {useOverride ? "現在評価額（手動指定）" : "推定現在評価額"}
                         </span>
-                        <span className="text-sm font-bold tabular-nums" style={{ color: useOverride ? "#a07900" : "#22863a" }}>
+                        <span className="text-sm font-bold tabular-nums" style={{ color: useOverride ? "#8a5a00" : "#0072b2" }}>
                           {fmtMan(estimatedValue)}
                         </span>
                       </div>
@@ -791,7 +791,7 @@ export function AssetsMegaSection() {
                                 }],
                               })
                             }
-                            className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#c8383a]"
+                            className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#d55e00]"
                           >
                             固定と変動のミックスローンにする（2本以上に分ける）
                           </button>

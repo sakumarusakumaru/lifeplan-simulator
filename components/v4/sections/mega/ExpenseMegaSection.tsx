@@ -147,10 +147,24 @@ const NEW_CARE = (): CareEvent => ({
   label: "親A 介護",
 });
 
+// 住まいの形。賃貸＝家賃、持ち家＝管理費/修繕の積立と固定資産税、これから買う＝買うまでの家賃と買う年齢
+type HomeKind = "rent" | "own" | "buy";
+const HOME_KIND_OPTIONS: { value: HomeKind; label: string }[] = [
+  { value: "rent", label: "賃貸" },
+  { value: "own", label: "持ち家" },
+  { value: "buy", label: "これから買う" },
+];
+
 export function ExpenseMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
   const patchPlan = usePlanStore((s) => s.patch);
+  const homeKind: HomeKind = (plan.homeBuyAge ?? 0) > 0 ? "buy" : plan.homeOwned ? "own" : "rent";
+  const setHomeKind = (k: HomeKind) => {
+    if (k === "rent") patchPlan({ homeOwned: false, homeBuyAge: 0, homeTaxY: 0, useHomeLoan: false });
+    else if (k === "own") patchPlan({ homeOwned: true, homeBuyAge: 0 });
+    else patchPlan({ homeOwned: true, homeBuyAge: Math.max(plan.curAge + 1, plan.homeBuyAge || plan.curAge + 3) });
+  };
   const [showLivingGuide, setShowLivingGuide] = useState(false);
   // 塾・習い事: どのモデルにも当てはまらない値なら「カスタム」。カスタムを選んだあとは、モデルと同じ値になってもカスタムのまま
   const jukuPreset = findJukuPreset(plan.jukuM);
@@ -229,7 +243,7 @@ export function ExpenseMegaSection() {
               title="含めるもの／含めないものを確認"
               className="inline-flex h-6 w-6 items-center justify-center text-[12px] font-bold text-white transition-colors hover:opacity-80"
               style={{
-                background: showLivingGuide ? "#a07900" : "#d4a017",
+                background: showLivingGuide ? "#8a5a00" : "#e69f00",
                 borderRadius: "50%",
               }}
             >
@@ -240,14 +254,14 @@ export function ExpenseMegaSection() {
           {showLivingGuide && (
             <div
               className="rounded-lg p-3"
-              style={{ background: "#fff8e7", border: "1.5px solid #d4a017" }}
+              style={{ background: "#fff8e7", border: "1.5px solid #e69f00" }}
             >
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#a07900]">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#8a5a00]">
                 ● 重複入力を防ぐため、ここに含めるもの／含めないものを確認
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div>
-                  <p className="mb-1 text-[10px] font-bold text-[#22863a]">✓ 含める</p>
+                  <p className="mb-1 text-[10px] font-bold text-[#0072b2]">✓ 含める</p>
                   <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
                     <li>・食費・外食</li>
                     <li>・水道光熱費</li>
@@ -259,7 +273,7 @@ export function ExpenseMegaSection() {
                   </ul>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] font-bold text-[#c8383a]">✗ 含めない（別項目で入力）</p>
+                  <p className="mb-1 text-[10px] font-bold text-[#d55e00]">✗ 含めない（別項目で入力）</p>
                   <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
                     <li>・家賃・住宅ローン → 住居</li>
                     <li>・保険料 → 保険（Lite版から引き継いだ生活費には保険料が入っています。保険を別に入れるときは、その分を生活費から引いてください）</li>
@@ -310,38 +324,44 @@ export function ExpenseMegaSection() {
 
         <CollapsibleSubGroup title="住居">
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
-              <NumberField
-                label="家賃/管理費(月)"
-                value={plan.rentM}
-                onChange={(v) => setField("rentM", v)}
-                unit="円"
-              />
-              <NumberField
-                label="固定資産税(年)"
-                value={plan.homeTaxY}
-                onChange={(v) => setField("homeTaxY", v)}
-                unit="円"
-              />
+            {/* まず住まいの形を選び、それに合わせて欄を切り替える（賃貸に固定資産税、持ち家に家賃が出ないように） */}
+            <div className="grid grid-cols-3 overflow-hidden rounded-lg" style={{ border: "1.5px solid #0a0a0a" }} role="radiogroup" aria-label="住まい">
+              {HOME_KIND_OPTIONS.map((o, i) => {
+                const on = homeKind === o.value;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setHomeKind(o.value)}
+                    className="min-h-11 px-2 text-[12px] font-bold"
+                    style={{ background: on ? "var(--lp-primary)" : "#ffffff", color: on ? "#ffffff" : "#0a0a0a", borderLeft: i === 0 ? "none" : "1.5px solid #0a0a0a" }}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
             </div>
-            <NumberField
-              label="家を買う年齢（予定がなければ0）"
-              value={plan.homeBuyAge ?? 0}
-              onChange={(v) => setField("homeBuyAge", v)}
-              unit="歳"
-              hint="この年齢から家賃が止まり、固定資産税がかかります。住宅ローンの開始年齢と頭金（ライフイベント）も合わせて入れてください。持ち家にチェックを入れると、買う年齢から自宅として数えます"
-            />
-            {(plan.homeBuyAge ?? 0) > 0 ? (() => {
+            {homeKind === "rent" ? (
+              <NumberField label="家賃（月）" value={plan.rentM} onChange={(v) => setField("rentM", v)} unit="円" hint="共益費・管理費・駐車場代も込みで。更新料は「特別費」に" />
+            ) : homeKind === "buy" ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <NumberField label="買うまでの家賃（月）" value={plan.rentM} onChange={(v) => setField("rentM", v)} unit="円" hint="買う年齢から家賃は止まります" />
+                  <NumberField label="家を買う年齢" value={plan.homeBuyAge ?? 0} onChange={(v) => setField("homeBuyAge", v)} unit="歳" />
+                </div>
+                <NumberField label="買ったあとの固定資産税（年）" value={plan.homeTaxY} onChange={(v) => setField("homeTaxY", v)} unit="円" hint="買う年齢からかかります。マンションの管理費・修繕積立金は「特別費」に足してください" />
+                {(plan.homeBuyAge ?? 0) > 0 ? (() => {
               // 家を買う予定は3か所（持ち家・住宅ローンの開始・頭金）にまたがるので、ずれていたら知らせる
               const buy = plan.homeBuyAge ?? 0;
               const issues: { text: string; fix?: () => void; fixLabel?: string }[] = [];
-              if (!plan.homeOwned) issues.push({ text: "「持ち家」にチェックが入っていません（買ったあとの家が資産に入りません）", fix: () => setField("homeOwned", true), fixLabel: "チェックを入れる" });
               if (plan.useHomeLoan && plan.hlStart !== buy)
                 issues.push({ text: `住宅ローンの返済開始（${plan.hlStart}歳）が、買う年齢（${buy}歳）と違います`, fix: () => setField("hlStart", buy), fixLabel: `${buy}歳にそろえる` });
               if (!plan.lifeExpenses.some((e) => e.age === buy))
                 issues.push({ text: `${buy}歳の一時支出（頭金・諸費用）がありません。「ライフイベント」の一時支出に入れてください`, fix: () => setField("lifeExpenses", [...plan.lifeExpenses, { age: buy, amount: 0, label: "家の頭金・諸費用" }]), fixLabel: "欄を足す" });
               return issues.length ? (
-                <div className="flex flex-col gap-1.5 rounded-lg p-3 text-[11px] leading-relaxed" style={{ background: "#fff8e6", border: "1.5px solid #d4a01760" }}>
+                <div className="flex flex-col gap-1.5 rounded-lg p-3 text-[11px] leading-relaxed" style={{ background: "#fff8e6", border: "1.5px solid #e69f0060" }}>
                   <p className="font-bold">家を買う予定とそろっていない所</p>
                   {issues.map((it) => (
                     <div key={it.text} className="flex flex-wrap items-center justify-between gap-2">
@@ -356,15 +376,21 @@ export function ExpenseMegaSection() {
                 </div>
               ) : null;
             })() : null}
-            <CheckboxField
-              label="持ち家（自宅を所有している）"
-              value={plan.homeOwned ?? plan.useHomeLoan}
-              onChange={(v) => setField("homeOwned", v)}
-            />
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {(plan.homePropType ?? "house") === "mansion" ? (
+                  <NumberField label="管理費・修繕積立金（月）" value={plan.rentM} onChange={(v) => setField("rentM", v)} unit="円" hint="管理組合に払う分。駐車場代も込みで" />
+                ) : (
+                  <NumberField label="修繕・維持の積立（月）" value={plan.rentM} onChange={(v) => setField("rentM", v)} unit="円" hint="外壁・屋根・設備の修繕に備える分（なければ0）" />
+                )}
+                <NumberField label="固定資産税（年）" value={plan.homeTaxY} onChange={(v) => setField("homeTaxY", v)} unit="円" hint="都市計画税も含めて" />
+              </div>
+            )}
             {plan.homeOwned && (
               <div
                 className="flex flex-col gap-2 rounded-lg p-3"
-                style={{ background: "#f0f7ff", border: "1.5px solid #3b82f640" }}
+                style={{ background: "#eef6fc", border: "1.5px solid #56b4e940" }}
               >
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/65">
                   自宅の評価額（レポートの「資産と負債のバランス」に入ります）
@@ -447,20 +473,20 @@ export function ExpenseMegaSection() {
                     <div
                       className="rounded-lg p-2"
                       style={{
-                        background: useOverride ? "#fff8e7" : "#f0fff4",
-                        border: `1.5px solid ${useOverride ? "#d4a017" : "#22863a"}40`,
+                        background: useOverride ? "#fff8e7" : "#e9f2fa",
+                        border: `1.5px solid ${useOverride ? "#e69f00" : "#0072b2"}40`,
                       }}
                     >
                       <div className="mb-1.5 flex items-baseline justify-between">
                         <span
                           className="text-[10px] font-bold uppercase tracking-[0.12em]"
-                          style={{ color: useOverride ? "#a07900" : "#22863a" }}
+                          style={{ color: useOverride ? "#8a5a00" : "#0072b2" }}
                         >
                           {useOverride ? "現在評価額（手動指定）" : "推定現在評価額"}
                         </span>
                         <span
                           className="text-sm font-bold tabular-nums"
-                          style={{ color: useOverride ? "#a07900" : "#22863a" }}
+                          style={{ color: useOverride ? "#8a5a00" : "#0072b2" }}
                         >
                           {fmtMan(estimatedHomeValue)}
                         </span>
@@ -577,8 +603,8 @@ export function ExpenseMegaSection() {
                       }}
                       className="flex flex-col gap-0.5 px-3 py-2 text-left transition-colors"
                       style={{
-                        border: matches ? "2.5px solid #c8383a" : "2px solid #0a0a0a25",
-                        background: matches ? "#fff0f0" : "#ffffff",
+                        border: matches ? "2.5px solid #d55e00" : "2px solid #0a0a0a25",
+                        background: matches ? "#fdf0e7" : "#ffffff",
                         borderRadius: 8,
                       }}
                     >
@@ -592,8 +618,8 @@ export function ExpenseMegaSection() {
                   onClick={() => setJukuCustom(true)}
                   className="flex flex-col gap-0.5 px-3 py-2 text-left transition-colors"
                   style={{
-                    border: jukuIsCustom ? "2.5px solid #c8383a" : "2px solid #0a0a0a25",
-                    background: jukuIsCustom ? "#fff0f0" : "#ffffff",
+                    border: jukuIsCustom ? "2.5px solid #d55e00" : "2px solid #0a0a0a25",
+                    background: jukuIsCustom ? "#fdf0e7" : "#ffffff",
                     borderRadius: 8,
                   }}
                 >
@@ -721,7 +747,7 @@ export function ExpenseMegaSection() {
                           {k.opt.dorm ? (
                             <div
                               className="rounded-lg p-3"
-                              style={{ background: "#f0f7ff", border: "1.5px solid #3b82f640" }}
+                              style={{ background: "#eef6fc", border: "1.5px solid #56b4e940" }}
                             >
                               <p className="mb-2 text-[10px] leading-relaxed text-[#0a0a0a]/65">
                                 💡 下宿先への月々の仕送り（家賃・食費補助等）。下宿期間中のみ計算に反映されます。参考: 月5〜10万円が一般的

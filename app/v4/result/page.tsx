@@ -280,10 +280,10 @@ export default function ResultPage() {
         {(() => {
           const colors =
             v.level === "good"
-              ? { main: "#22863a", light: "#f0fff4", text: "#22863a" }
+              ? { main: "#0072b2", light: "#e9f2fa", text: "#0072b2" }
               : v.level === "warn"
-                ? { main: "#d4a017", light: "#fff8e7", text: "#a07900" }
-                : { main: "#c8383a", light: "#fff0f0", text: "#c8383a" };
+                ? { main: "#e69f00", light: "#fff8e7", text: "#8a5a00" }
+                : { main: "#d55e00", light: "#fdf0e7", text: "#d55e00" };
           return (
             <div
               className="overflow-hidden rounded-2xl"
@@ -346,7 +346,7 @@ export default function ResultPage() {
                 <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
                   参考情報 ／ GENERAL INFORMATION
                 </p>
-                <p className="mb-3 rounded-md px-2.5 py-1.5 text-[10px] leading-relaxed text-[#0a0a0a]/55" style={{ background: "#fff8e7", border: "1px solid #c8383a30" }}>
+                <p className="mb-3 rounded-md px-2.5 py-1.5 text-[10px] leading-relaxed text-[#0a0a0a]/55" style={{ background: "#fff8e7", border: "1px solid #d55e0030" }}>
                   ※ 以下は一般的な制度情報・選択肢の整理です。個別の助言・推奨ではありません。意思決定の前に専門家にご相談ください。
                 </p>
                 <div className="whitespace-pre-line text-[12px] leading-[1.85] text-[#0a0a0a]/85" style={{ fontFeatureSettings: "'palt'" }}>
@@ -672,17 +672,17 @@ const BS_MIN_SEG_HEIGHT = 22; // 凡例側の最小高と揃えるためのバ�
 
 const BS_COLORS = {
   cash: "#64748b",
-  nisa: "#22863a",
+  nisa: "#0072b2",
   toku: "#94a3b8",
   crypto: "#a78bfa",
   gold: "#c9aa7c",
   dc: "#dde6ef",
   home: "#a05f3a",
   re: "#8b6f4e",
-  otherLoan: "#d4a017",
-  homeLoan: "#c8383a",
-  reLoan: "#e88a8c",
-  shortage: "#7f1d1d",
+  otherLoan: "#e69f00",
+  homeLoan: "#d55e00",
+  reLoan: "#f2b183",
+  shortage: "#8c3b00",
 };
 
 // 自宅の評価額（指定した西暦年時点。築年数で減価）
@@ -843,7 +843,7 @@ function BalanceSheetTimeline({
             setPlaying(false);
             setAge(Number(e.target.value));
           }}
-          className="w-full accent-[#c8383a]"
+          className="w-full accent-[#d55e00]"
           aria-label="バランスシートの年齢"
         />
         <div className="mt-1 flex flex-wrap gap-1.5">
@@ -895,10 +895,10 @@ function BalanceSheetVis({
 
   // 各側のextra（純資産マイナス or 純資産NET）
   const assetsExtraDef: BSItem | null = isAlert
-    ? { label: "債務超過（純資産マイナス）", value: Math.abs(netWorth), color: "#c8383a", category: "current" }
+    ? { label: "債務超過（純資産マイナス）", value: Math.abs(netWorth), color: "#d55e00", category: "current" }
     : null;
   const liabilitiesExtraDef: BSItem | null = !isAlert && netWorth > 0
-    ? { label: "純資産（NET）", value: netWorth, color: "#22863a", category: "current" }
+    ? { label: "純資産（NET）", value: netWorth, color: "#0072b2", category: "current" }
     : null;
 
   // 1側全体（通常項目+extra）を一括レイアウト：
@@ -979,12 +979,12 @@ function BalanceSheetVis({
         <div>
           <div
             className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-2 border-b-2 px-1 pb-1"
-            style={{ borderColor: "#22863a" }}
+            style={{ borderColor: "#0072b2" }}
           >
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0072b2]">
               {isAlert ? "資産 ＋ 債務超過" : "資産 ASSETS"}
             </span>
-            <span className="whitespace-nowrap text-sm font-bold tabular-nums text-[#22863a]">
+            <span className="whitespace-nowrap text-sm font-bold tabular-nums text-[#0072b2]">
               {fmtMan(isAlert ? totalAssets + Math.abs(netWorth) : totalAssets)}
             </span>
           </div>
@@ -1005,12 +1005,12 @@ function BalanceSheetVis({
         <div>
           <div
             className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-2 border-b-2 px-1 pb-1"
-            style={{ borderColor: "#c8383a" }}
+            style={{ borderColor: "#d55e00" }}
           >
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8383a]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d55e00]">
               {isAlert ? "負債" : "負債 + 純資産"}
             </span>
-            <span className="whitespace-nowrap text-sm font-bold tabular-nums text-[#c8383a]">
+            <span className="whitespace-nowrap text-sm font-bold tabular-nums text-[#d55e00]">
               {fmtMan(isAlert ? totalLiabilities : totalLiabilities + Math.max(0, netWorth))}
             </span>
           </div>
@@ -1032,14 +1032,14 @@ function BalanceSheetVis({
       <div
         className="mt-4 flex flex-col gap-1 rounded-lg px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between"
         style={{
-          background: isAlert ? "#fff0f0" : "#f0fff4",
-          border: `2px solid ${isAlert ? "#c8383a" : "#22863a"}`,
+          background: isAlert ? "#fdf0e7" : "#e9f2fa",
+          border: `2px solid ${isAlert ? "#d55e00" : "#0072b2"}`,
         }}
       >
         <div>
           <span
             className="text-[9px] font-bold uppercase tracking-[0.18em]"
-            style={{ color: isAlert ? "#c8383a" : "#22863a" }}
+            style={{ color: isAlert ? "#d55e00" : "#0072b2" }}
           >
             純資産（NET WORTH）
           </span>
@@ -1049,7 +1049,7 @@ function BalanceSheetVis({
         </div>
         <span
           className="text-xl font-bold tabular-nums"
-          style={{ color: isAlert ? "#c8383a" : "#22863a" }}
+          style={{ color: isAlert ? "#d55e00" : "#0072b2" }}
         >
           {fmtMan(netWorth)}
         </span>
@@ -1315,7 +1315,7 @@ function KpiCard({
       </span>
       <span
         className="text-base font-bold tabular-nums"
-        style={{ color: alert ? "#c8383a" : "#0a0a0a" }}
+        style={{ color: alert ? "#d55e00" : "#0a0a0a" }}
       >
         {value}
       </span>

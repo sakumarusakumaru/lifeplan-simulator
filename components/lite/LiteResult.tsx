@@ -85,7 +85,7 @@ export function LiteResult() {
         ) : null}
 
         {/* 次にやること: 足りない人は積立をあといくら、足りる人は生活費の余裕 */}
-        <div className="mt-3 rounded-lg px-3 py-2.5" style={{ background: ok ? "#f0fff4" : "#fff1f1" }}>
+        <div className="mt-3 rounded-lg px-3 py-2.5" style={{ background: ok ? "#e9f2fa" : "#fdf0e7" }}>
           {ok ? (
             <p className="text-[13px] font-bold leading-snug">
               生活費をあと月{r.room !== null && r.room >= 50 ? "50万円以上" : `${r.room}万円`}ふやしても、{A.endAge}歳まで足りる計算です

@@ -42,8 +42,8 @@ import { usePlanStore } from "@/store/v4/plan-store";
 import { useSecretStore } from "@/store/v4/secret-store";
 
 const INK = "#0a0a0a";
-const RED = "#c8383a";
-const GREEN = "#22863a";
+const RED = "#d55e00";
+const GREEN = "#0072b2";
 const GOLD = "#b8860b";
 
 const WILL_OPTIONS: { value: HandoverInput["will"]; label: string }[] = [
@@ -78,7 +78,7 @@ function TextArea({ label, value, onChange, placeholder }: { label: string; valu
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full bg-white px-2 py-1.5 text-xs leading-relaxed outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#c8383a]"
+        className="w-full bg-white px-2 py-1.5 text-xs leading-relaxed outline-none focus:outline-2 focus:outline-offset-2 focus:outline-[#d55e00]"
         style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
       />
     </label>
@@ -332,7 +332,7 @@ export default function HandoverPage() {
         </div>
         <p className="mb-2 text-[10px] leading-relaxed text-[#0a0a0a]/60">{c.hint}</p>
         {simTotal > 0 && Math.abs(simTotal - written) >= 10_000 ? (
-          <p className="mb-2 text-[10px] font-bold text-[#a07900]">
+          <p className="mb-2 text-[10px] font-bold text-[#8a5a00]">
             シミュレーターの金額 {man(simTotal)}／ここに書いた合計 {man(written)}
           </p>
         ) : null}
@@ -350,7 +350,7 @@ export default function HandoverPage() {
                       </span>
                     ) : null}
                   </p>
-                  <button type="button" onClick={() => removeItem(it)} className="text-[11px] font-bold text-[#c8383a]">
+                  <button type="button" onClick={() => removeItem(it)} className="text-[11px] font-bold text-[#d55e00]">
                     削除
                   </button>
                 </div>
@@ -404,7 +404,7 @@ export default function HandoverPage() {
               <p className="text-[12px] font-bold">{c.title}</p>
               {side === "asset" || side === "debt" ? <p className="text-[11px] font-bold tabular-nums">{man(byCat(c.id).reduce((a, it) => a + amountOf(it), 0))}</p> : null}
             </div>
-            {c.warn ? <p className="mb-1.5 text-[10px] leading-relaxed text-[#c8383a]">{c.warn}</p> : null}
+            {c.warn ? <p className="mb-1.5 text-[10px] leading-relaxed text-[#d55e00]">{c.warn}</p> : null}
             {byCat(c.id).map((it) => itemView(c, it))}
           </div>
         ))}
@@ -487,7 +487,7 @@ export default function HandoverPage() {
               <p className="text-lg font-bold tabular-nums">{man(totalDebts)}</p>
               <p className="text-[9px] text-[#0a0a0a]/55">差し引き {man(totalAssets - totalDebts)}</p>
             </div>
-            <div className="rounded-lg p-3" style={{ background: tax.payable > 0 ? "#fff1f1" : "#f0fff4" }}>
+            <div className="rounded-lg p-3" style={{ background: tax.payable > 0 ? "#fdf0e7" : "#e9f2fa" }}>
               <p className="text-[10px] font-bold text-[#0a0a0a]/55">相続税の目安</p>
               <p className="text-lg font-bold tabular-nums" style={{ color: tax.payable > 0 ? RED : GREEN }}>
                 {tax.taxable > 0 ? man(tax.payable) : "かからない見込み"}
@@ -660,7 +660,7 @@ export default function HandoverPage() {
               <p className="text-[10px] font-bold text-[#0a0a0a]/55">毎月の遺族年金（最初）</p>
               <p className="text-lg font-bold tabular-nums">{phases[0] ? `${((phases[0].kiso + phases[0].kosei + phases[0].chukorei) / 12 / 10000).toFixed(1)}万円` : "対象外"}</p>
             </div>
-            <div className="rounded-lg p-3" style={{ background: need === 0 ? "#f0fff4" : "#fff1f1" }}>
+            <div className="rounded-lg p-3" style={{ background: need === 0 ? "#e9f2fa" : "#fdf0e7" }}>
               <p className="text-[10px] font-bold text-[#0a0a0a]/55">暮らしの見通し</p>
               <p className="text-[13px] font-bold" style={{ color: need === 0 ? GREEN : RED }}>
                 {need === null
@@ -978,7 +978,7 @@ export default function HandoverPage() {
                 onClick={() => {
                   if (confirm("この端末に保存した口座番号・ログインIDなどをすべて消しますか？")) clearSecrets();
                 }}
-                className="rounded-md bg-white px-2.5 py-1.5 font-bold text-[#c8383a]"
+                className="rounded-md bg-white px-2.5 py-1.5 font-bold text-[#d55e00]"
                 style={{ border: `2px solid ${RED}` }}
               >
                 番号・IDをこの端末から消す（{Object.keys(secrets).length}件）
@@ -1078,7 +1078,7 @@ export default function HandoverPage() {
                 <TextField label="受取人" value={p.beneficiary} onChange={(v) => updPolicy(i, { beneficiary: v })} />
                 <NumberField label="死亡保険金" value={p.benefit} unit="円" onChange={(v) => updPolicy(i, { benefit: v })} />
                 <TextField label="連絡先・証券の保管場所" value={p.contact} onChange={(v) => updPolicy(i, { contact: v })} />
-                <button type="button" onClick={() => upd({ policies: h.policies.filter((_, j) => j !== i) })} className="text-left text-[11px] font-bold text-[#c8383a]">
+                <button type="button" onClick={() => upd({ policies: h.policies.filter((_, j) => j !== i) })} className="text-left text-[11px] font-bold text-[#d55e00]">
                   削除
                 </button>
               </div>
@@ -1117,7 +1117,7 @@ export default function HandoverPage() {
                 />
                 <TextField label="名前・会社名" value={c.name} onChange={(v) => updContact(i, { name: v })} />
                 <TextField label="電話番号など" value={c.phone} onChange={(v) => updContact(i, { phone: v })} />
-                <button type="button" onClick={() => upd({ contacts: h.contacts.filter((_, j) => j !== i) })} className="text-left text-[11px] font-bold text-[#c8383a]">
+                <button type="button" onClick={() => upd({ contacts: h.contacts.filter((_, j) => j !== i) })} className="text-left text-[11px] font-bold text-[#d55e00]">
                   削除
                 </button>
               </div>

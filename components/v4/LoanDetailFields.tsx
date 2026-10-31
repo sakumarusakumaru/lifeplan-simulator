@@ -52,7 +52,7 @@ export function LoanDetailFields({
   const [open, setOpen] = useState(defaultOpen || value.rateType !== "variable" || value.prepays.length > 0 || value.method !== "annuity");
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#c8383a]">
+      <button type="button" onClick={() => setOpen(true)} className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#d55e00]">
         くわしく設定する（金利のタイプ・元金均等・繰上返済の予定）
       </button>
     );
@@ -108,7 +108,7 @@ export function LoanDetailFields({
             <button
               type="button"
               onClick={() => onChange({ prepays: value.prepays.filter((_, idx) => idx !== i) })}
-              className="pb-2 text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#c8383a]"
+              className="pb-2 text-[11px] font-bold text-[#0a0a0a]/45 hover:text-[#d55e00]"
             >
               削除 ✕
             </button>
@@ -117,7 +117,7 @@ export function LoanDetailFields({
         <button
           type="button"
           onClick={() => onChange({ prepays: [...value.prepays, { age: curAge + 1, amount: 1_000_000, kind: "shorten" }] })}
-          className="mt-1.5 text-[11px] font-bold underline underline-offset-4 hover:text-[#c8383a]"
+          className="mt-1.5 text-[11px] font-bold underline underline-offset-4 hover:text-[#d55e00]"
         >
           ＋ 繰上返済の予定を足す
         </button>

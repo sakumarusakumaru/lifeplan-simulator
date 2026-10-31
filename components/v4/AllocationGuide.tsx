@@ -12,7 +12,7 @@ const INK = "#0a0a0a";
 const C_CASH = "#9aa5b1";
 const C_RISKY = "#2b4a6f";
 const C_GOLD = "#c9aa7c";
-const C_BAND = "#22863a";
+const C_BAND = "#e69f00";
 
 // 年齢ごとの資産配分。
 // このプランで「現金」と「運用資産」の割合が年齢とともにどう動くかを1枚のグラフにし、
@@ -147,7 +147,7 @@ export function AllocationGuide({ plan, base }: { plan: PlanInput; base: Simulat
         <h2 className="text-lg font-bold text-[#0a0a0a]">年齢ごとの資産配分</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/60">
           このプランのまま進んだとき、「現金」と「運用資産（NISA・特定口座・iDeCo/DC・暗号資産）」の割合が年齢とともにどう動くか。
-          緑の点線は、よく挙げられる目安（運用の割合 100−年齢 〜 120−年齢）。グラフに乗せるか、下のスライダーで年齢を選べます。
+          橙の点線は、よく挙げられる目安（運用の割合 100−年齢 〜 120−年齢）。グラフに乗せるか、下のスライダーで年齢を選べます。
           特定の商品や配分をすすめるものではありません。
         </p>
       </div>

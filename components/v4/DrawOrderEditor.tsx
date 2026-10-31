@@ -9,7 +9,7 @@ import type { DrawAsset, SimulationSummary } from "@/lib/v4/calc/types";
 import { usePlanStore } from "@/store/v4/plan-store";
 
 const INK = "#0a0a0a";
-const GREEN = "#22863a";
+const GREEN = "#0072b2";
 
 const man = (yen: number) => {
   const sign = yen < 0 ? "-" : "";
@@ -141,7 +141,7 @@ export function DrawOrderEditor() {
         </div>
       )}
 
-      <div className="rounded-lg px-3 py-2 text-[11px] leading-relaxed" style={{ background: "#f0fff4", border: `1.5px solid ${GREEN}60` }}>
+      <div className="rounded-lg px-3 py-2 text-[11px] leading-relaxed" style={{ background: "#e9f2fa", border: `1.5px solid ${GREEN}60` }}>
         <p className="font-bold" style={{ color: GREEN }}>
           {Math.abs(cmp.diff) < 100_000
             ? "このプランでは、順番による差はほとんどありません"
@@ -172,7 +172,7 @@ export function DrawOrderEditor() {
               </li>
             </ul>
             {rGap !== 0 ? (
-              <p className="mt-1 text-[10px] font-bold leading-relaxed text-[#a07900]">
+              <p className="mt-1 text-[10px] font-bold leading-relaxed text-[#8a5a00]">
                 ※ NISAの想定利回り（{plan.nisaR.toFixed(1)}%）が特定口座（{plan.tokuR.toFixed(1)}%）より{rGap > 0 ? "高い" : "低い"}設定です。③の多くはこの利回りの差から来ています。
                 同じ商品をどちらの口座で持つかの比較をしたいときは、利回りをそろえて見てください。
               </p>

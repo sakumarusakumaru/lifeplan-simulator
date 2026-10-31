@@ -2,6 +2,8 @@
 
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { niceDomain, useLaggedDomain } from "@/components/v4/charts/useLaggedDomain";
+
 import { GREEN, INK, RED, man } from "./controls";
 
 // 年齢ごとの「お金（預金＋投資）」。0を下回ったところが足りなくなる年齢
@@ -16,6 +18,7 @@ export function LiteChart({
 }) {
   const min = Math.min(0, ...data.map((d) => d.fin));
   const max = Math.max(0, ...data.map((d) => d.fin));
+  const domain = useLaggedDomain(niceDomain(min, max)); // 縦軸は一拍おいて動かす
   // 0の位置でグラデーションの色を切り替える（プラスは緑、マイナスは赤）
   const zero = max - min > 0 ? max / (max - min) : 1;
   return (
@@ -39,6 +42,8 @@ export function LiteChart({
           <YAxis
             tick={{ fontSize: 10 }}
             width={52}
+            domain={domain}
+            allowDataOverflow
             tickFormatter={(v: number) => (Math.abs(v) >= 1e8 ? `${(v / 1e8).toFixed(1)}億` : `${Math.round(v / 1e4).toLocaleString()}万`)}
           />
           <Tooltip

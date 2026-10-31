@@ -10,7 +10,7 @@ interface FieldProps {
 export function Field({ label, hint, children, className }: FieldProps) {
   return (
     <label className={`group flex flex-col gap-1.5 ${className ?? ""}`}>
-      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a] transition-colors group-focus-within:text-[#c8383a]">
+      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a] transition-colors group-focus-within:text-[#d55e00]">
         {label}
       </span>
       {children}

@@ -477,16 +477,16 @@ export default function SuggestPage() {
 
         {/* キープ中の打ち手 */}
         {keptList.length > 0 ? (
-          <div className="mb-4 rounded-xl p-3" style={{ background: "#f0fff4", border: "2px solid #22863a" }}>
+          <div className="mb-4 rounded-xl p-3" style={{ background: "#e9f2fa", border: "2px solid #0072b2" }}>
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-[10px] font-bold text-[#22863a]">キープ中（重ねて試算）</span>
+              <span className="mr-1 text-[10px] font-bold text-[#0072b2]">キープ中（重ねて試算）</span>
               {keptList.map((k) => (
                 <button
                   key={k.title}
                   type="button"
                   onClick={() => toggleKeep(k)}
                   className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold"
-                  style={{ border: "1.5px solid #22863a", color: "#0a0a0a" }}
+                  style={{ border: "1.5px solid #0072b2", color: "#0a0a0a" }}
                   aria-label={`${k.title}のキープを外す`}
                 >
                   {k.title} ×
@@ -499,7 +499,7 @@ export default function SuggestPage() {
             {keptResult ? (
               <p className="mt-2 text-[11px] font-bold">
                 合わせると最終純資産 {fmt(keptResult.finalNetWorth)}
-                <span className="ml-1" style={{ color: keptResult.finalNetWorth - base.finalNetWorth >= 0 ? "#22863a" : "#c8383a" }}>
+                <span className="ml-1" style={{ color: keptResult.finalNetWorth - base.finalNetWorth >= 0 ? "#0072b2" : "#d55e00" }}>
                   （{fmtDelta(keptResult.finalNetWorth - base.finalNetWorth)}）
                 </span>
                 {base.shortfallAge !== null
@@ -528,7 +528,7 @@ export default function SuggestPage() {
             </p>
             <p className="mt-0.5 text-sm font-bold text-white">最終純資産</p>
             {base.shortfallAge && (
-              <p className="mt-0.5 text-[10px] text-[#f87171]">
+              <p className="mt-0.5 text-[10px] text-[#f4a261]">
                 ⚠ {base.shortfallAge}歳で資金ショート
               </p>
             )}
@@ -538,7 +538,7 @@ export default function SuggestPage() {
           </div>
           <p
             className="shrink-0 whitespace-nowrap text-xl font-bold tabular-nums sm:text-2xl"
-            style={{ color: base.finalNetWorth < 0 ? "#f87171" : "#86efac" }}
+            style={{ color: base.finalNetWorth < 0 ? "#f4a261" : "#8ecae6" }}
           >
             {fmt(base.finalNetWorth)}
           </p>
@@ -548,9 +548,9 @@ export default function SuggestPage() {
         {visible.length >= 3 && (
           <div
             className="mb-6 rounded-xl p-4"
-            style={{ background: "#f0fff4", border: "2px solid #22863a" }}
+            style={{ background: "#e9f2fa", border: "2px solid #0072b2" }}
           >
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0072b2]">
               TOP 3 ／ 効果の大きい打ち手
             </p>
             <ol className="flex flex-col gap-1.5">
@@ -563,14 +563,14 @@ export default function SuggestPage() {
                   >
                     <span
                       className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[10px] font-bold text-white"
-                      style={{ background: "#22863a", borderRadius: 4 }}
+                      style={{ background: "#0072b2", borderRadius: 4 }}
                     >
                       {i + 1}
                     </span>
                     <span className="flex-1 font-bold text-[#0a0a0a]">
                       {sc.title}
                     </span>
-                    <span className="shrink-0 font-bold tabular-nums text-[#22863a]">
+                    <span className="shrink-0 font-bold tabular-nums text-[#0072b2]">
                       {fmtDelta(delta)}
                     </span>
                   </li>
@@ -642,11 +642,11 @@ export default function SuggestPage() {
                             key={sc.title}
                             className="cursor-pointer rounded-xl p-4 transition-all duration-150"
                             style={{
-                              background: isKept ? "#f0fff4" : pressed ? "#f6fff8" : "#fff",
+                              background: isKept ? "#e9f2fa" : pressed ? "#f6fff8" : "#fff",
                               border: isKept
-                                ? "2.5px solid #22863a"
+                                ? "2.5px solid #0072b2"
                                 : pressed
-                                  ? `2px solid ${positive ? "#22863a" : "#c8383a"}`
+                                  ? `2px solid ${positive ? "#0072b2" : "#d55e00"}`
                                   : "2px solid #0a0a0a18",
                               transform: pressed ? "scale(0.985)" : undefined,
                               // 長押しで文字選択・iOSのメニューが出ないように
@@ -660,7 +660,7 @@ export default function SuggestPage() {
                               <div className="flex-1">
                                 <p className="text-xs font-bold text-[#0a0a0a]">
                                   {isKept ? (
-                                    <span className="mr-1.5 inline-block rounded px-1.5 py-0.5 align-[1px] text-[9px] text-white" style={{ background: "#22863a" }}>
+                                    <span className="mr-1.5 inline-block rounded px-1.5 py-0.5 align-[1px] text-[9px] text-white" style={{ background: "#0072b2" }}>
                                       キープ中
                                     </span>
                                   ) : null}
@@ -674,7 +674,7 @@ export default function SuggestPage() {
                                 <p
                                   className="text-lg font-bold tabular-nums"
                                   style={{
-                                    color: positive ? "#22863a" : "#c8383a",
+                                    color: positive ? "#0072b2" : "#d55e00",
                                   }}
                                 >
                                   {fmtDelta(delta)}
@@ -690,9 +690,9 @@ export default function SuggestPage() {
                                 className="mt-3 rounded-lg px-3 py-2 text-[10px] font-bold"
                                 style={{
                                   background: shortfallFixed
-                                    ? "#f0fff4"
-                                    : "#fff0f0",
-                                  color: shortfallFixed ? "#22863a" : "#c8383a",
+                                    ? "#e9f2fa"
+                                    : "#fdf0e7",
+                                  color: shortfallFixed ? "#0072b2" : "#d55e00",
                                 }}
                               >
                                 {shortfallFixed
@@ -711,7 +711,7 @@ export default function SuggestPage() {
                                   style={{
                                     color:
                                       sc.result.finalNetWorth < 0
-                                        ? "#c8383a"
+                                        ? "#d55e00"
                                         : "#0a0a0a",
                                   }}
                                 >

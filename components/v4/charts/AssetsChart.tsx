@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
+import { niceDomain, useLaggedDomain } from "@/components/v4/charts/useLaggedDomain";
 import { CARD, INNER } from "@/components/v4/frame";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import {
@@ -48,17 +49,17 @@ const FILLS = {
   crypto: "#a78bfa",
   gold: "#c9aa7c",
   dc: "#dde6ef",
-  nw: "#c8383a",
+  nw: "#d55e00",
 };
 
 const FILLS_HOVER = {
   cash: "#334155",   // 現金: ダークスレート（そのまま）
-  fund: "#1a6fa8",   // 投資信託: 青系（現金のスレートと明確に差別化）
+  fund: "#0072b2",   // 投資信託: 青系（現金のスレートと明確に差別化）
   stock: "#2d7a6a",  // 株: ティール緑（投信の青・現金のグレーと区別）
   crypto: "#7c3aed", // 仮想通貨: 紫（そのまま）
   gold: "#a47f4d",   // 金: アンバー（そのまま）
   dc: "#5a7fa0",     // DC: スチールブルー（そのまま）
-  nw: "#c8383a",     // 純資産: 赤（そのまま）
+  nw: "#d55e00",     // 純資産: 赤（そのまま）
 };
 
 const ITEMS: { key: keyof typeof FILLS; label: string; desc: string }[] = [
@@ -88,6 +89,19 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）
   const compact = useIsNarrow();
+
+  // 縦軸は一拍おいて動かす（入力を変えたとき、増減が見えるように）
+  const target = useMemo(() => {
+    let lo = 0;
+    let hi = 0;
+    for (const r of rows) {
+      const pos = Math.max(0, r.ass.c) + Math.max(0, r.ass.nisa) + Math.max(0, r.ass.toku) + Math.max(0, r.ass.k || 0) + Math.max(0, r.ass.g || 0) + Math.max(0, r.ass.dc);
+      hi = Math.max(hi, pos, r.nw);
+      lo = Math.min(lo, r.nw, r.ass.c);
+    }
+    return niceDomain(lo, hi);
+  }, [rows]);
+  const domain = useLaggedDomain(target);
 
   const data = rows.map((r) => ({
     age: r.age,
@@ -143,6 +157,8 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               tickLine={false}
               axisLine={{ stroke: "#0a0a0a", strokeWidth: 2 }}
               width={58}
+              domain={domain}
+              allowDataOverflow
             />
             <Tooltip
               content={({ payload, label }) => {
@@ -174,8 +190,8 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
                       const isHovered = hoveredKey === key;
                       const valueColor = isNW
                         ? Number(entry.value) < 0
-                          ? "#c8383a"
-                          : "#22863a"
+                          ? "#d55e00"
+                          : "#0072b2"
                         : "#0a0a0a";
                       return (
                         <div
@@ -235,7 +251,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
                         borderTop: "1.5px dashed #0a0a0a20",
                         fontSize: 10,
                         fontWeight: 700,
-                        color: nw < 0 ? "#c8383a" : "#22863a",
+                        color: nw < 0 ? "#d55e00" : "#0072b2",
                       }}
                     >
                       {nw < 0
@@ -339,7 +355,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
               <ReferenceLine
                 key={`${ev.age}-${ev.label}`}
                 x={ev.age}
-                stroke="#c8383a"
+                stroke="#d55e00"
                 strokeWidth={1.5}
                 strokeDasharray="4 3"
                 label={(props: { viewBox?: { x: number; y: number } }) => {
@@ -348,7 +364,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
                   const staggerY = (idx % 3) * 18;
                   return (
                     <g>
-                      <circle cx={x} cy={y + staggerY + 9} r={7} fill="#c8383a" />
+                      <circle cx={x} cy={y + staggerY + 9} r={7} fill="#d55e00" />
                       <text
                         x={x}
                         y={y + staggerY + 9}
@@ -374,7 +390,7 @@ export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChart
             <div key={`leg-${ev.age}-${idx}`} className="flex items-center gap-1.5">
               <span
                 className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ background: "#c8383a" }}
+                style={{ background: "#d55e00" }}
               >
                 {idx + 1}
               </span>

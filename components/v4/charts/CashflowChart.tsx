@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
+import { niceDomain, useLaggedDomain } from "@/components/v4/charts/useLaggedDomain";
 import { CARD, INNER } from "@/components/v4/frame";
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
 import {
@@ -44,7 +45,7 @@ const FILLS = {
   income: "#334155",
   expense: "#9ca3af",
   invest: "#93c5fd",
-  cf: "#c8383a",
+  cf: "#d55e00",
 };
 
 // ホバー時のハイライト色（色相を明確に分離して取り違えを防止）
@@ -52,7 +53,7 @@ const FILLS_HOVER = {
   income: "#0f172a",  // 収入: 極暗スレート（冷たい青灰）
   expense: "#9a3412", // 支出: 暖色オレンジ赤（収入の冷色と明確に区別）
   invest: "#1d6fa8",  // 投資積立: 青
-  cf: "#c8383a",
+  cf: "#d55e00",
 };
 
 const KEYS: ("収入" | "支出" | "投資積立")[] = ["収入", "支出", "投資積立"];
@@ -72,13 +73,48 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）
   const compact = useIsNarrow();
 
-  const data = rows.map((r) => ({
-    age: r.age,
-    収入: Math.round(r.income),
-    支出: -Math.round(r.exp),
-    投資積立: -Math.round(r.inv),
-    収支: Math.round(r.cf),
-  }));
+  // 住宅の購入・ローンの借入や一括返済など、1年だけ突出する額があると他の年が平らに見えてしまう。
+  // そこで「ふつうの年」の大きさ（上位5%を除いた最大）の1.6倍を目盛りの上限にし、それを超える年は
+  // 棒を上限で止めて、矢印と実際の金額を添える
+  const capped = useMemo(() => {
+    const mags = rows.flatMap((r) => [Math.abs(r.income), Math.abs(r.exp + r.inv)]).sort((a, b) => a - b);
+    const p95 = mags.length ? mags[Math.min(mags.length - 1, Math.floor(mags.length * 0.95))] : 0;
+    const maxAbs = mags.length ? mags[mags.length - 1] : 0;
+    const cap = p95 > 0 && maxAbs > p95 * 2.2 ? p95 * 1.6 : Infinity;
+    const data = rows.map((r) => {
+      const out = Math.round(r.exp + r.inv);
+      const overIn = r.income > cap;
+      const overOut = out > cap;
+      const scale = overOut ? cap / out : 1;
+      return {
+        age: r.age,
+        収入: Math.round(overIn ? cap : r.income),
+        支出: -Math.round(r.exp * scale),
+        投資積立: -Math.round(r.inv * scale),
+        収支: Math.round(r.cf),
+        実収入: Math.round(r.income),
+        実支出: Math.round(r.exp),
+        実投資積立: Math.round(r.inv),
+        超過: overIn ? ("in" as const) : overOut ? ("out" as const) : null,
+      };
+    });
+    return { data, cap, over: data.filter((d) => d.超過) };
+  }, [rows]);
+  const data = capped.data;
+  const target = useMemo(() => {
+    let lo = 0;
+    let hi = 0;
+    for (const d of data) {
+      hi = Math.max(hi, d.収入, d.収支);
+      lo = Math.min(lo, d.支出 + d.投資積立, d.収支);
+    }
+    if (Number.isFinite(capped.cap)) {
+      hi = Math.min(hi, capped.cap);
+      lo = Math.max(lo, -capped.cap);
+    }
+    return niceDomain(lo, hi);
+  }, [data, capped.cap]);
+  const domain = useLaggedDomain(target);
 
   const getFill = (key: "収入" | "支出" | "投資積立"): string => {
     const k = KEY_TO_FILL[key];
@@ -125,7 +161,25 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               tickLine={false}
               axisLine={{ stroke: "#0a0a0a", strokeWidth: 2 }}
               width={58}
+              domain={domain}
+              allowDataOverflow
             />
+
+            {/* 目盛りを超える年: 棒は上限で止め、矢印と金額を添える */}
+            {capped.over.map((d) => (
+              <ReferenceLine
+                key={`over-${d.age}`}
+                x={d.age}
+                stroke="transparent"
+                label={{
+                  value: `${d.超過 === "in" ? "▲" : "▼"} ${fmtAbs(d.超過 === "in" ? d.実収入 : d.実支出 + d.実投資積立)}`,
+                  position: d.超過 === "in" ? "insideTop" : "insideBottom",
+                  fill: "#0a0a0a",
+                  fontSize: 9,
+                  fontWeight: 700,
+                }}
+              />
+            ))}
 
             {/* 0円ライン */}
             <ReferenceLine y={0} stroke="#0a0a0a" strokeWidth={2} />
@@ -163,8 +217,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                       const isHovered = hoveredKey === key;
                       const valueColor = isCF
                         ? cf < 0
-                          ? "#c8383a"
-                          : "#22863a"
+                          ? "#d55e00"
+                          : "#0072b2"
                         : "#0a0a0a";
                       return (
                         <div
@@ -224,7 +278,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                         borderTop: "1.5px dashed #0a0a0a20",
                         fontSize: 10,
                         fontWeight: 700,
-                        color: cf < 0 ? "#c8383a" : "#22863a",
+                        color: cf < 0 ? "#d55e00" : "#0072b2",
                       }}
                     >
                       {cf < 0
@@ -265,7 +319,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               <ReferenceLine
                 key={`${ev.age}-${ev.label}`}
                 x={ev.age}
-                stroke="#c8383a"
+                stroke="#d55e00"
                 strokeWidth={1.5}
                 strokeDasharray="4 3"
                 label={(props: { viewBox?: { x: number; y: number } }) => {
@@ -274,7 +328,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                   const staggerY = (idx % 3) * 18;
                   return (
                     <g>
-                      <circle cx={x} cy={y + staggerY + 9} r={7} fill="#c8383a" />
+                      <circle cx={x} cy={y + staggerY + 9} r={7} fill="#d55e00" />
                       <text
                         x={x}
                         y={y + staggerY + 9}
@@ -301,7 +355,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
             <div key={`leg-${ev.age}-${idx}`} className="flex items-center gap-1.5">
               <span
                 className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ background: "#c8383a" }}
+                style={{ background: "#d55e00" }}
               >
                 {idx + 1}
               </span>

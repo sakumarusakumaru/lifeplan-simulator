@@ -29,6 +29,13 @@ import type { CSSProperties } from "react";
 //
 //   例外: 引き継ぎ書の印刷する紙面は、紙の書類としての体裁（罫線・記入欄）を優先する
 
+// 状態の色（globals.css の --lp-ok / --lp-ng / --lp-warn / --lp-info と同じ値。グラフなど CSS変数が使えない所で使う）
+//   色覚に配慮して、赤と緑を対にしない。良い＝青、足りない・警告＝朱、注意＝橙、補足＝空色。
+//   隣り合う色は色相だけでなく明るさも変える（資産＝青の濃淡、負債＝橙の濃淡、線は点線・実線で区別）
+export const OK = "#0072b2";
+export const NG = "#d55e00";
+export const WARN = "#e69f00";
+export const INFO = "#56b4e9";
 export const LINE_SOFT = "#0a0a0a1f"; // カードの線
 export const INNER_BG = "#f4f4f2"; // 中箱の地色
 

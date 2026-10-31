@@ -15,8 +15,8 @@ import { useVBase } from "@/components/v4/useVBase";
 import type { SimulationSummary } from "@/lib/v4/calc/types";
 
 const INK = "#0a0a0a";
-const GREEN = "#22863a";
-const RED = "#c8383a";
+const GREEN = "#0072b2";
+const RED = "#d55e00";
 
 const axisFmt = (yen: number) =>
   Math.abs(yen) >= 100_000_000 ? `${(yen / 100_000_000).toFixed(1)}億` : `${Math.round(yen / 10000)}万`;

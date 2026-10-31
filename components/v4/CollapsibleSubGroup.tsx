@@ -37,19 +37,15 @@ export function CollapsibleSubGroup({
     );
   }
   if (tabMode) {
-    const fixed = defaultOpen;
-    const shown = fixed || open;
+    const shown = open;
     return (
       <div style={CARD}>
         <div className="flex items-center justify-between gap-2 px-4 py-3">
-          {fixed ? (
+          {/* はじめから開いている組も、見出しを押せば閉じられる（開いた状態が既定） */}
+          <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex flex-1 items-center justify-between gap-2 text-left">
             <span className="text-[13px] font-bold text-[#0a0a0a]">{title}</span>
-          ) : (
-            <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex flex-1 items-center justify-between gap-2 text-left">
-              <span className="text-[13px] font-bold text-[#0a0a0a]">{title}</span>
-              <span className="text-[11px] font-bold text-[#0a0a0a]/55">{open ? "閉じる ▾" : "開く ▸"}</span>
-            </button>
-          )}
+            <span className="text-[11px] font-bold text-[#0a0a0a]/55">{open ? "閉じる ▾" : "開く ▸"}</span>
+          </button>
           {headerExtra ? <div className="flex shrink-0 items-center">{headerExtra}</div> : null}
         </div>
         {shown ? (

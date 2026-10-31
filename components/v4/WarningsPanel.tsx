@@ -19,11 +19,11 @@ export function WarningsPanel({ warnings }: { warnings: SimulationWarning[] }) {
         aria-expanded={open}
         className="flex w-full items-center justify-between px-4 py-2.5 text-left"
       >
-        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#a07900]">
+        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8a5a00]">
           制度チェック（{warnings.length}件）
-          {!open && hasWarn ? <span className="ml-2 text-[#c8383a]">● 要確認あり</span> : null}
+          {!open && hasWarn ? <span className="ml-2 text-[#d55e00]">● 要確認あり</span> : null}
         </span>
-        <span className="text-[11px] font-bold text-[#a07900]" aria-hidden>
+        <span className="text-[11px] font-bold text-[#8a5a00]" aria-hidden>
           {open ? "閉じる ▾" : "開く ▸"}
         </span>
       </button>
@@ -31,7 +31,7 @@ export function WarningsPanel({ warnings }: { warnings: SimulationWarning[] }) {
         <ul className="flex flex-col gap-1 px-4 pb-3">
           {warnings.map((w, i) => (
             <li key={i} className="flex gap-1.5 text-[11px] leading-relaxed text-[#0a0a0a]/80">
-              <span style={{ color: w.level === "warn" ? "#c8383a" : "#a07900" }}>
+              <span style={{ color: w.level === "warn" ? "#d55e00" : "#8a5a00" }}>
                 {w.level === "warn" ? "●" : "○"}
               </span>
               <span>{w.text}</span>

@@ -63,7 +63,7 @@ export function HomeLoanEditor({
             <NumberField label="返済開始" value={plan.hlStart} onChange={(v) => setField("hlStart", v)} unit="歳" hint="すでに返済中なら、残高は今の額・年数は残りで" />
             <NumberField label="残りの返済年数" value={plan.hlTerm} onChange={(v) => setField("hlTerm", v)} unit="年" />
           </div>
-          <button type="button" onClick={toDetailed} className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#c8383a]">
+          <button type="button" onClick={toDetailed} className="self-start text-[11px] font-bold underline underline-offset-4 hover:text-[#d55e00]">
             くわしく設定する（固定と変動のミックス・元金均等・繰上返済の予定）
           </button>
         </>

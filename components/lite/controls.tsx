@@ -3,8 +3,8 @@
 import { useState } from "react";
 
 export const INK = "#0a0a0a";
-export const RED = "#c8383a";
-export const GREEN = "#22863a";
+export const RED = "#d55e00";
+export const GREEN = "#0072b2";
 
 export const man = (yen: number) => {
   const sign = yen < 0 ? "-" : "";

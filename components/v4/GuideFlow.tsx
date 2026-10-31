@@ -13,8 +13,8 @@ const GUIDE_KEY = "lp_guide_v4";
 const CONSENT_KEY = "lp_consent_v1";
 
 const INK = "#0a0a0a";
-const RED = "#c8383a";
-const GREEN = "#22863a";
+const RED = "#d55e00";
+const GREEN = "#0072b2";
 const CREAM = "#f0f0ee";
 
 const STEPS = [
@@ -87,7 +87,7 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#c8383a]"
+        className="w-full accent-[#d55e00]"
       />
     </label>
   );
@@ -168,7 +168,7 @@ function StepHello() {
                   type="checkbox"
                   checked={!!checked[p.key]}
                   onChange={(e) => setChecked((c) => ({ ...c, [p.key]: e.target.checked }))}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-[#22863a]"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[#0072b2]"
                 />
                 <span className="flex flex-col">
                   <span className="text-[12px] font-bold text-[#0a0a0a]">{p.label}</span>
@@ -243,7 +243,7 @@ function StepHow() {
               <text x={x(65) + 3} y={11} fontSize={12} fill="#0a0a0a99" fontWeight={700}>65歳 退職</text>
             </>
           ) : null}
-          <path d={area} fill={short ? "#c8383a22" : "#22863a22"} />
+          <path d={area} fill={short ? "#d55e0022" : "#0072b222"} />
           <path d={line} fill="none" stroke={short ? RED : GREEN} strokeWidth={2.5} />
           {short ? <circle cx={x(short.age)} cy={y(0)} r={4} fill={RED} /> : null}
           <text x={0} y={H + 14} fontSize={12} fill="#0a0a0a99" fontWeight={700}>{age}歳</text>
@@ -341,7 +341,7 @@ function StepInput() {
             <dd className="text-[13px] leading-relaxed text-[#0a0a0a]/80">{t.where}</dd>
           </div>
           <div className="rounded-lg px-3 py-2" style={{ background: "#fff8e7" }}>
-            <dt className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#a07900" }}>コツ</dt>
+            <dt className="text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "#8a5a00" }}>コツ</dt>
             <dd className="text-[12px] leading-relaxed text-[#0a0a0a]/80">{t.tip}</dd>
           </div>
         </dl>
@@ -419,7 +419,7 @@ function StepAccount() {
       <Card>
         <p className="mb-2 text-sm font-bold text-[#0a0a0a]">同じ積立を、新NISAと特定口座でくらべる</p>
         <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div className="rounded-lg px-3 py-2" style={{ background: "#f0fff4" }}>
+          <div className="rounded-lg px-3 py-2" style={{ background: "#e9f2fa" }}>
             <p className="text-[11px] font-bold" style={{ color: GREEN }}>新NISA（2024年〜）</p>
             <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
               利益に税金がかからない。1年に360万円まで（つみたて投資枠120万円＋成長投資枠240万円）＝毎月30万円まで。一生で使える枠は1,800万円（買った金額で数える。売ると翌年に枠が戻る）。
@@ -575,8 +575,8 @@ function StepResult() {
           </svg>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="rounded-lg px-2.5 py-2 text-[10px]" style={{ background: "#fff8e7", border: "1.5px solid #d4a01760" }}>
-            <b style={{ color: "#a07900" }}>制度チェック</b>
+          <div className="rounded-lg px-2.5 py-2 text-[10px]" style={{ background: "#fff8e7", border: "1.5px solid #e69f0060" }}>
+            <b style={{ color: "#8a5a00" }}>制度チェック</b>
             <p className="text-[#0a0a0a]/60">● NISA生涯枠に56歳で到達…</p>
           </div>
           <div className="rounded-lg bg-white px-2.5 py-2 text-[10px]" style={{ border: `1.5px solid ${INK}20` }}>
@@ -633,19 +633,19 @@ function StepStart({ onStart }: { onStart: () => void }) {
           <li>5. 本サイトの利用で生じた損害について、運営者は責任を負いません。</li>
         </ul>
         <div className="flex gap-4 border-t px-4 py-2 text-[11px]" style={{ borderColor: "#0a0a0a20" }}>
-          <Link href="/terms" className="font-bold underline hover:text-[#c8383a]">→ 利用規約</Link>
-          <Link href="/privacy" className="font-bold underline hover:text-[#c8383a]">→ プライバシーポリシー</Link>
+          <Link href="/terms" className="font-bold underline hover:text-[#d55e00]">→ 利用規約</Link>
+          <Link href="/privacy" className="font-bold underline hover:text-[#d55e00]">→ プライバシーポリシー</Link>
         </div>
       </div>
       <label
         className="flex cursor-pointer items-start gap-3 rounded-xl p-4"
-        style={{ background: agreed ? "#f0fff4" : "#fff", border: `2.5px solid ${agreed ? GREEN : INK}` }}
+        style={{ background: agreed ? "#e9f2fa" : "#fff", border: `2.5px solid ${agreed ? GREEN : INK}` }}
       >
         <input
           type="checkbox"
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
-          className="mt-0.5 h-5 w-5 shrink-0 accent-[#22863a]"
+          className="mt-0.5 h-5 w-5 shrink-0 accent-[#0072b2]"
         />
         <span className="text-sm font-bold leading-snug text-[#0a0a0a]">上記の内容を理解し、同意して利用します</span>
       </label>
@@ -759,7 +759,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             <button
               type="button"
               onClick={() => (window.history.length > 1 ? router.back() : router.push(`${base}/detail`))}
-              className="text-[11px] font-bold text-[#0a0a0a] underline hover:text-[#c8383a]"
+              className="text-[11px] font-bold text-[#0a0a0a] underline hover:text-[#d55e00]"
             >
               ← シミュレーターに戻る
             </button>
@@ -767,7 +767,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             <button
               type="button"
               onClick={() => setStep(lastIdx)}
-              className="text-[11px] font-bold text-[#0a0a0a]/55 underline hover:text-[#c8383a]"
+              className="text-[11px] font-bold text-[#0a0a0a]/55 underline hover:text-[#d55e00]"
             >
               スキップ
             </button>
