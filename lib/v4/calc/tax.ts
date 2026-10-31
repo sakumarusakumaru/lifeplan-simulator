@@ -56,38 +56,71 @@ function splitWage(wageY: number) {
   return { monthly, bonusEach };
 }
 
-function koseiBase(wageY: number, year: number): number {
-  const { monthly, bonusEach } = splitWage(wageY);
-  // 標準報酬月額の上限は 2027-09 68万 / 2028-09 71万 / 2029-09 75万（年単位で近似）
-  const cap =
-    year >= 2030 ? 75 * MAN :
-    year >= 2029 ? 71 * MAN :
-    year >= 2028 ? 68 * MAN :
-    SHAHO_2026.koseiMonthlyCap;
-  return Math.min(monthly, cap) * 12 + Math.min(bonusEach, SHAHO_2026.koseiBonusCap) * 2;
+// 標準報酬月額の等級表（協会けんぽ・全50級: 1級58,000円〜50級1,390,000円）
+//   出典: 協会けんぽ「保険料額表（令和8年度）」。lo はその等級になる報酬月額の下限
+//   厚生年金は 88,000円（報酬月額93,000円未満）〜上限の範囲で同じ区分を使う
+const HYOJUN_GRADES: { std: number; lo: number }[] = [
+  { std: 58_000, lo: 0 }, { std: 68_000, lo: 63_000 }, { std: 78_000, lo: 73_000 }, { std: 88_000, lo: 83_000 },
+  { std: 98_000, lo: 93_000 }, { std: 104_000, lo: 101_000 }, { std: 110_000, lo: 107_000 }, { std: 118_000, lo: 114_000 },
+  { std: 126_000, lo: 122_000 }, { std: 134_000, lo: 130_000 }, { std: 142_000, lo: 138_000 }, { std: 150_000, lo: 146_000 },
+  { std: 160_000, lo: 155_000 }, { std: 170_000, lo: 165_000 }, { std: 180_000, lo: 175_000 }, { std: 190_000, lo: 185_000 },
+  { std: 200_000, lo: 195_000 }, { std: 220_000, lo: 210_000 }, { std: 240_000, lo: 230_000 }, { std: 260_000, lo: 250_000 },
+  { std: 280_000, lo: 270_000 }, { std: 300_000, lo: 290_000 }, { std: 320_000, lo: 310_000 }, { std: 340_000, lo: 330_000 },
+  { std: 360_000, lo: 350_000 }, { std: 380_000, lo: 370_000 }, { std: 410_000, lo: 395_000 }, { std: 440_000, lo: 425_000 },
+  { std: 470_000, lo: 455_000 }, { std: 500_000, lo: 485_000 }, { std: 530_000, lo: 515_000 }, { std: 560_000, lo: 545_000 },
+  { std: 590_000, lo: 575_000 }, { std: 620_000, lo: 605_000 }, { std: 650_000, lo: 635_000 }, { std: 680_000, lo: 665_000 },
+  { std: 710_000, lo: 695_000 }, { std: 750_000, lo: 730_000 }, { std: 790_000, lo: 770_000 }, { std: 830_000, lo: 810_000 },
+  { std: 880_000, lo: 855_000 }, { std: 930_000, lo: 905_000 }, { std: 980_000, lo: 955_000 }, { std: 1_030_000, lo: 1_005_000 },
+  { std: 1_090_000, lo: 1_055_000 }, { std: 1_150_000, lo: 1_115_000 }, { std: 1_210_000, lo: 1_175_000 }, { std: 1_270_000, lo: 1_235_000 },
+  { std: 1_330_000, lo: 1_295_000 }, { std: 1_390_000, lo: 1_355_000 },
+];
+
+// 報酬月額 → 標準報酬月額（健康保険の等級）
+export function hyojunGetsugaku(monthly: number): number {
+  let std = HYOJUN_GRADES[0].std;
+  for (const g of HYOJUN_GRADES) {
+    if (monthly >= g.lo) std = g.std;
+    else break;
+  }
+  return std;
 }
 
-function kenpoBase(wageY: number): number {
-  const { monthly, bonusEach } = splitWage(wageY);
-  return (
-    Math.min(monthly, SHAHO_2026.kenpoMonthlyCap) * 12 +
-    Math.min(bonusEach * 2, SHAHO_2026.kenpoBonusCapY)
-  );
+// 被保険者負担の端数処理: 50銭以下切捨て・50銭超切上げ（健康保険法167条の通知・給与から控除する場合）
+const insRound = (x: number) => (x - Math.floor(x) > 0.5 ? Math.ceil(x) : Math.floor(x));
+
+// 厚生年金の標準報酬月額の上限は 2027-09 68万 / 2028-09 71万 / 2029-09 75万（年単位で近似）
+function koseiCap(year: number): number {
+  return year >= 2030 ? 75 * MAN : year >= 2029 ? 71 * MAN : year >= 2028 ? 68 * MAN : SHAHO_2026.koseiMonthlyCap;
 }
 
 // 会社員の社会保険料（本人負担）
+//   標準報酬月額の等級と標準賞与額（千円未満切捨て。厚年は1回150万・健保は年度累計573万まで）で
+//   月ごと・賞与ごとに計算し、端数は50銭以下切捨て・50銭超切上げ
 export function calcEmployeeShaho(wageY: number, age: number, year: number) {
   if (wageY <= 0) return { pension: 0, health: 0, kaigo: 0, total: 0 };
-  const kb = kenpoBase(wageY);
-  const pension = age < 70 ? koseiBase(wageY, year) * SHAHO_2026.kosei : 0;
-  const health = age < 75 ? kb * (SHAHO_2026.kenpo + SHAHO_2026.kodomo) : 0;
-  const kaigo = age >= 40 && age < 65 ? kb * SHAHO_2026.kaigo : 0;
-  const koyo = wageY * SHAHO_2026.koyo;
+  const { monthly, bonusEach } = splitWage(wageY);
+  const hk = hyojunGetsugaku(monthly);
+  const hn = monthly < 93_000 ? 88_000 : Math.min(hk, koseiCap(year));
+  const sb = Math.floor(bonusEach / 1000) * 1000; // 標準賞与額
+  const sbKosei = Math.min(sb, SHAHO_2026.koseiBonusCap);
+  const sb1 = Math.min(sb, SHAHO_2026.kenpoBonusCapY);
+  const sb2 = Math.min(sb, SHAHO_2026.kenpoBonusCapY - sb1);
+  const pension = age < 70 ? insRound(hn * SHAHO_2026.kosei) * 12 + insRound(sbKosei * SHAHO_2026.kosei) * 2 : 0;
+  const kenpoAndKodomo =
+    age < 75
+      ? (insRound(hk * SHAHO_2026.kenpo) + insRound(hk * SHAHO_2026.kodomo)) * 12 +
+        [sb1, sb2].reduce((a, s) => a + insRound(s * SHAHO_2026.kenpo) + insRound(s * SHAHO_2026.kodomo), 0)
+      : 0;
+  const kaigo =
+    age >= 40 && age < 65
+      ? insRound(hk * SHAHO_2026.kaigo) * 12 + [sb1, sb2].reduce((a, s) => a + insRound(s * SHAHO_2026.kaigo), 0)
+      : 0;
+  const koyo = Math.round(wageY * SHAHO_2026.koyo);
   return {
-    pension: Math.round(pension),
-    health: Math.round(health + koyo),
-    kaigo: Math.round(kaigo),
-    total: Math.round(pension + health + kaigo + koyo),
+    pension,
+    health: kenpoAndKodomo + koyo,
+    kaigo,
+    total: pension + kenpoAndKodomo + kaigo + koyo,
   };
 }
 
