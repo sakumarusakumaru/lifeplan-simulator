@@ -109,7 +109,7 @@ export default function RiskPage() {
   if (!hydrated) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center text-xs font-bold uppercase tracking-[0.2em] text-[#0a0a0a]/60">
-        loading...
+        読み込み中…
       </main>
     );
   }
@@ -147,7 +147,7 @@ export default function RiskPage() {
     <main className="px-4 py-6 sm:px-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 border-b-2 border-[#0a0a0a] pb-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">RISK ／ もしも</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">もしも</p>
           <h1 className="text-2xl font-bold text-[#0a0a0a]">
             {who === "self" ? "本人" : "配偶者"}が{deathAge}歳（本人の年齢）で亡くなったら
           </h1>
@@ -263,7 +263,7 @@ export default function RiskPage() {
             ) : (
               <>
 
-            <Section no="01" title="必要保障額 ／ HOW MUCH COVER">
+            <Section no="01" title="必要保障額">
               <div
                 className="mb-3 rounded-xl p-4"
                 style={{ background: covered ? "#f0fff4" : "#fff1f1", border: `2.5px solid ${covered ? GREEN : RED}` }}
@@ -315,7 +315,7 @@ export default function RiskPage() {
               ) : null}
             </Section>
 
-            <Section no="02" title="遺族年金の内訳 ／ SURVIVOR PENSION">
+            <Section no="02" title="遺族年金の内訳">
               {phases.length ? (
                 <div className="overflow-hidden rounded-xl bg-white" style={{ border: `2px solid ${INK}18` }}>
                   <table className="w-full text-[10px] sm:text-[11px]">
@@ -361,7 +361,7 @@ export default function RiskPage() {
               )}
             </Section>
 
-            <Section no="03" title="金融資産の推移 ／ ASSETS">
+            <Section no="03" title="金融資産の推移">
               <div className="rounded-xl bg-white p-3" style={{ border: `2px solid ${INK}18` }}>
                 <div className="h-[260px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -395,18 +395,18 @@ export default function RiskPage() {
               </>
             )}
 
-            <InheritanceGuide plan={plan} base={base} real={real} />
+            <InheritanceGuide plan={plan} base={base} real={real} no={noSurvivor ? "01" : "04"} />
 
 
 
-            <Section no="05" title="計算の前提 ／ ASSUMPTIONS">
+            <Section no={noSurvivor ? "02" : "05"} title="計算の前提">
               <ul className="flex flex-col gap-1.5 rounded-xl bg-white p-4 text-[11px] leading-relaxed text-[#0a0a0a]/70" style={{ border: `2px solid ${INK}18` }}>
                 <li>遺族年金は令和8年度の額（遺族基礎847,300円、子の加算243,800円・3人目以降81,300円、中高齢寡婦加算635,500円）。毎年「年金額の改定率」で改定。</li>
                 <li>遺族厚生年金は報酬比例部分の3/4。在職中の死亡は加入300月とみなす。夫は妻の死亡時55歳以上が条件で、支給は60歳から（子がいる間は例外）。</li>
                 <li>亡くなった人の給与・年金は止まり、生活費は上の割合に。亡くなった人が被保険者の保険料も止まる。新しい積立（NISA・iDeCo等）は止めて計算。</li>
                 <li>在職中なら退職金を勤続年数で按分して死亡退職金に。死亡退職金・死亡保険金は相続税の非課税枠（500万円×法定相続人）の範囲とみなし、税は引いていない。</li>
                 <li>遺族の税金は、ひとり親控除（子あり）または寡婦控除（子のない妻）を反映。国民年金の第3号だった配偶者は第1号として保険料を払う計算。</li>
-                <li>含めていないもの: 寡婦年金・死亡一時金、経過的寡婦加算、相続税、2028年4月からの遺族年金の見直し。</li>
+                <li>含めていないもの: 寡婦年金・死亡一時金、経過的寡婦加算、2028年4月からの遺族年金の見直し。上の資産の推移では相続税を差し引いていない（相続税は「相続の備え」で別に計算）。</li>
               </ul>
             </Section>
 

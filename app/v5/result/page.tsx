@@ -91,8 +91,8 @@ function buildVerdict(
       `【現状診断】\n現役期の収支・積立水準では、${sa}歳時点（残り${yearsLeft}年）で運用資産・現金がともに枯渇する見込みです。現状の年間収支は手取り${curIncome}万円・支出${curExp}万円で${monthlyDeficit > 0 ? `月${monthlyDeficit}万円の不足` : `黒字${-monthlyDeficit}万円/月`}、年間積立${annualSave}万円という構造になっています。生活防衛資金は約${livingDefenseMonths}ヶ月分です。\n\n` +
       `【課題分析】\n資金ショートの根本原因は、(1) 老後の年金収入が現役期の生活水準をカバーしきれない、(2) 退職時${lastJobEndAge}歳から年金開始${penStartA}歳までのギャップ期間に取り崩しが集中、(3) インフレ進行で実質的な購買力が低下、の3点です。${koseiYears < 30 ? `特に厚生年金加入年数${koseiYears}年は短く、年金受給額が想定より低い可能性があります。` : ""}\n\n` +
       `【考えられる選択肢（${yearsLeft < 10 ? "即効性重視" : yearsLeft < 25 ? "中期構造改革" : "長期計画"}）】\n` +
-      `・固定費の削減: 住居費・通信費・保険料の見直しで月1〜3万円の捻出を目指しましょう。\n` +
-      `・積立の増額: NISA成長投資枠（年240万円）・つみたて投資枠（年120万円）・iDeCo（会社員・企業年金なしは2027年から月6.2万円まで）の非課税枠を最大活用。月+2万円の積立で30年後に1,500〜2,000万円の差。\n` +
+      `・固定費の削減: 住居費・通信費・保険料の見直しで、月1〜3万円を捻出できる例が多いとされます。\n` +
+      `・積立の増額: NISA成長投資枠（年240万円）・つみたて投資枠（年120万円）・iDeCo（会社員・企業年金なしは2027年から月6.2万円まで）の非課税枠。月+2万円の積立で30年後に1,500〜2,000万円の差。\n` +
       `・退職時期の延長: 65歳→68歳の3年延長で就労収入${plan.jobs.length > 0 ? Math.round(plan.jobs[0].inc * 3 / 10000) : 1500}万円相当の上乗せ＋年金繰下げで月額25.2%増。\n` +
       `・年金繰下げ: 75歳まで繰下げ可。1ヶ月あたり0.7%増額（最大84%増）。\n` +
       `・配偶者就労: 2026年分から所得税がかかり始めるのは年収178万円超。社会保険の扶養（年130万円）を超えて勤務先の厚生年金に入ると、将来の年金も増えます。\n\n` +
@@ -160,7 +160,7 @@ function buildVerdict(
       body:
         `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれ、現役期の収支構造は健全です。想定外支出にも十分対応可能なバッファがあります。\n\n` +
         `【課題分析】\n相続税の課税ライン（基礎控除3,000万円＋600万円×法定相続人数）に近づきつつあります。例えば配偶者＋子2人なら基礎控除は4,800万円。${nw > 48_000_000 ? "現状ですでに課税対象の可能性があり、" : ""}対策の検討時期に入っています。\n\n` +
-        `【一般に整理される論点】\n・暦年贈与の活用: 配偶者・子・孫への年110万円贈与を継続。例えば子2人に20年贈与で4,400万円を移せる（ただし亡くなる前7年以内に相続人へ贈った分は相続財産に足し戻し）。\n・教育資金一括贈与の特例は2026年3月末で終了（それまでに拠出した分は引き続き教育費に使える）。\n・生命保険の非課税枠: 死亡保険金は500万円×法定相続人数まで非課税。配偶者＋子2人なら1,500万円分。\n・iDeCo・NISAは継続: 退職所得控除（勤続年数×40〜70万円）と公的年金等控除を最大活用した受取設計を。\n\n` +
+        `【一般に整理される論点】\n・暦年贈与の活用: 配偶者・子・孫への年110万円贈与を継続。例えば子2人に20年贈与で4,400万円を移せる（ただし亡くなる前7年以内に相続人へ贈った分は相続財産に足し戻し）。\n・教育資金一括贈与の特例は2026年3月末で終了（それまでに拠出した分は引き続き教育費に使える）。\n・生命保険の非課税枠: 死亡保険金は500万円×法定相続人数まで非課税。配偶者＋子2人なら1,500万円分。\n・iDeCo・NISAは継続: 退職所得控除（勤続年数×40〜70万円）と公的年金等控除をどう使うかで、受け取り方の手取りが変わる。\n\n` +
         `【次のステップ】\n「守りから攻めへ」の移行論点が発生する時期です。FP・税理士等の専門家との連携による相続シミュレーション（特に節税効果の試算）をご検討ください。`,
     };
   }
@@ -174,9 +174,9 @@ function buildVerdict(
       level: "good",
       headline: `資産計画は非常に良好（最終純資産 ${nwLabel(nw)}）`,
       body:
-        `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれます。一般家庭の上位5%以内に入る水準で、相続税の課税対象（10〜30%税率帯）となる規模です。\n\n` +
+        `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれます。相続税の課税対象（10〜30%の税率帯）になりうる規模です。\n\n` +
         `【課題分析】\n無対策のままでは相続時に数千万円規模の納税が発生する可能性があります。法定相続人別の基礎控除を超える分が累進課税の対象になります（1億円超50%、2億円超55%）。\n\n` +
-        `【一般に整理される論点】\n・暦年贈与の最大活用: 年110万円×複数人×複数年で大規模な計画移転。例: 子2人＋孫4人に20年で6,600万円の非課税移転。\n・相続時精算課税制度: 60歳以上の親→18歳以上の子・孫に2,500万円まで贈与時非課税（相続時精算）。2024年から年110万の基礎控除追加。\n・教育資金一括贈与は2026年3月末で終了（新しい贈与には使えない）。\n・結婚・子育て資金贈与: 1,000万円非課税枠（2027年3月末まで）。\n・生命保険活用: 死亡保険金500万円×法定相続人数の非課税枠＋納税資金確保。\n・不動産活用: 評価額が時価より低い特性を活かして相続税評価額を圧縮（過度のタワマン節税は規制強化に注意）。\n\n` +
+        `【一般に整理される論点】\n・暦年贈与: 年110万円×複数人×複数年で大規模な計画移転。例: 子2人＋孫4人に20年で6,600万円の非課税移転。\n・相続時精算課税制度: 60歳以上の親→18歳以上の子・孫に2,500万円まで贈与時非課税（相続時精算）。2024年から年110万の基礎控除追加。\n・教育資金一括贈与は2026年3月末で終了（新しい贈与には使えない）。\n・結婚・子育て資金贈与: 1,000万円非課税枠（2027年3月末まで）。\n・生命保険活用: 死亡保険金500万円×法定相続人数の非課税枠＋納税資金確保。\n・不動産活用: 評価額が時価より低い特性を活かして相続税評価額を圧縮（過度のタワマン節税は規制強化に注意）。\n\n` +
         `【次のステップ】\nFP・税理士・弁護士等による包括的な相続戦略の構築が論点となる規模です。シミュレーションでの効果検証は年1回程度行われるのが一般的です。`,
     };
   }
@@ -187,9 +187,9 @@ function buildVerdict(
   return {
     score: 98,
     level: "good",
-    headline: `富裕層レベルの資産計画（最終純資産 ${nwLabel(nw)}）`,
+    headline: `相続まで見据えたい資産規模（最終純資産 ${nwLabel(nw)}）`,
     body:
-      `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれ、富裕層の上位1%水準です。相続税の最高税率55%（6億円超部分）の対象となり、無対策では資産の半分以上が納税により失われる可能性があります。\n\n` +
+      `【現状診断】\n${endAge}歳時点で${fmtMan(nw)}の純資産形成が見込まれます。相続税の最高税率55%（6億円超部分）の対象となり、無対策では資産の半分以上が納税により失われる可能性があります。\n\n` +
       `【課題分析】\n単純な暦年贈与・生命保険活用では対応しきれない規模のため、法人活用・信託・国際分散などを組み合わせた高度な相続戦略が必要です。\n\n` +
       `【一般に整理される論点】\n・資産管理会社（同族会社）の設立: 個人資産を法人化し、株式贈与で計画的に世代移転。事業承継税制（特例措置）も検討余地。\n・家族信託: 認知症リスク対応＋柔軟な資産承継設計。受託者を子に設定し、生前から資産管理を委譲。\n・不動産活用: 賃貸用不動産で評価減（路線価ベース＋小規模宅地等の特例で最大80%減）。\n・生命保険の高額活用: 終身保険で死亡保険金非課税枠＋納税資金確保。一時払終身は5,000万円〜数億円規模。\n・国際分散: 海外資産・海外法人による多角化（ただし租税条約・出国税・相続税の国際課税ルールに留意）。\n・社団・財団法人: 公益寄付による資産圧縮＋社会貢献。\n\n` +
       `【次のステップ】\n専門家チーム（プライベートバンカー・税理士法人・弁護士・行政書士等）による包括的な戦略構築が論点となる規模です。年1回以上の戦略レビューが一般的に行われます。`,
@@ -264,7 +264,7 @@ export default function ResultPage() {
       <div className="mb-6 flex items-end justify-between border-b-2 border-[#0a0a0a] pb-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">
-            FINANCIAL PLANNING REPORT
+            レポート
           </p>
           <h1 className="mt-1 text-2xl font-bold text-[#0a0a0a]">
             ライフプラン分析レポート
@@ -276,7 +276,7 @@ export default function ResultPage() {
       </div>
 
       {/* 1. 診断結果 */}
-      <ReportSection no="01" title="診断結果 ／ EXECUTIVE SUMMARY">
+      <ReportSection no="01" title="診断結果">
         {(() => {
           const colors =
             v.level === "good"
@@ -333,10 +333,10 @@ export default function ResultPage() {
                     style={{ color: colors.text }}
                   >
                     {v.level === "good"
-                      ? "GOOD ／ 良好"
+                      ? "良好"
                       : v.level === "warn"
-                        ? "WARN ／ 要注意"
-                        : "ALERT ／ 要改善"}
+                        ? "要注意"
+                        : "要改善"}
                   </p>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export default function ResultPage() {
               {/* FPコメント（4段構成） */}
               <div className="px-5 py-4">
                 <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/60">
-                  参考情報 ／ GENERAL INFORMATION
+                  参考情報
                 </p>
                 <p className="mb-3 rounded-md px-2.5 py-1.5 text-[10px] leading-relaxed text-[#0a0a0a]/55" style={{ background: "#fff8e7", border: "1px solid #c8383a30" }}>
                   ※ 以下は一般的な制度情報・選択肢の整理です。個別の助言・推奨ではありません。意思決定の前に専門家にご相談ください。
@@ -358,8 +358,8 @@ export default function ResultPage() {
         })()}
       </ReportSection>
 
-      {/* 2. ご相談者プロフィール */}
-      <ReportSection no="02" title="ご相談者プロフィール ／ PROFILE">
+      {/* 2. プロフィール */}
+      <ReportSection no="02" title="入力したプロフィール">
         <div
           className="rounded-xl p-4"
           style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
@@ -407,7 +407,7 @@ export default function ResultPage() {
       </ReportSection>
 
       {/* 3. 現状の収支・資産 */}
-      <ReportSection no="03" title="現状サマリー ／ CURRENT STATUS">
+      <ReportSection no="03" title="いまの状況">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <SummaryCard
             label="現状の年収（手取り）"
@@ -443,7 +443,7 @@ export default function ResultPage() {
             ],
             liabilities: [
               { label: "その他ローン残高", value: otherLoanBal, color: BS_COLORS.otherLoan, category: "current" },
-              { label: "住宅ローン残高", value: plan.useHomeLoan ? plan.hlBal : 0, color: BS_COLORS.homeLoan, category: "fixed" },
+              { label: "住宅ローン残高", value: plan.useHomeLoan && plan.hlStart <= plan.curAge ? plan.hlBal : 0, color: BS_COLORS.homeLoan, category: "fixed" },
               { label: "不動産投資ローン残高", value: realEstateLoan, color: BS_COLORS.reLoan, category: "fixed" },
             ],
           }}
@@ -451,7 +451,7 @@ export default function ResultPage() {
       </ReportSection>
 
       {/* 4. 主要指標 */}
-      <ReportSection no="04" title="主要指標 ／ KEY INDICATORS">
+      <ReportSection no="04" title="主な数字">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <KpiCard
             label="最終純資産"
@@ -487,26 +487,27 @@ export default function ResultPage() {
       </ReportSection>
 
       {/* 5. 資産推移 */}
-      <ReportSection no="05" title="資産推移 ／ ASSET TRAJECTORY">
+      <ReportSection no="05" title="資産の推移">
         <div className="flex flex-col gap-3">
           <WarningsPanel warnings={result.warnings} />
           <AssetsChart rows={result.rows} />
         </div>
       </ReportSection>
 
-      {/* 6. キャッシュフロー */}
+      {/* 運用の振れ幅（メニューで「振れ幅」を選んだときだけ。以降の章番号を1つずらす） */}
       {mcOn ? (
-        <ReportSection no="05+" title="運用の振れ幅 ／ MONTE CARLO">
+        <ReportSection no="06" title="運用の振れ幅（1,000通りの試算）">
           <MonteCarloPanel />
         </ReportSection>
       ) : null}
 
-      <ReportSection no="06" title="年間キャッシュフロー ／ ANNUAL CASHFLOW">
+      {/* キャッシュフロー */}
+      <ReportSection no={mcOn ? "07" : "06"} title="1年ごとの収支">
         <CashflowChart rows={result.rows} />
       </ReportSection>
 
       {/* 7. リスク・留意事項 */}
-      <ReportSection no="07" title="リスク・留意事項 ／ DISCLAIMERS">
+      <ReportSection no={mcOn ? "08" : "07"} title="計算の前提と留意事項">
         <div
           className="rounded-xl p-4"
           style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
@@ -971,7 +972,7 @@ function BalanceSheetVis({
       style={{ background: "#fff", border: "2px solid #0a0a0a18" }}
     >
       <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/60">
-        BALANCE SHEET ／ 資産・負債バランス
+        資産と負債のバランス
       </p>
 
       <div className="grid grid-cols-2 gap-3">
@@ -982,7 +983,7 @@ function BalanceSheetVis({
             style={{ borderColor: "#22863a" }}
           >
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#22863a]">
-              {isAlert ? "資産 ＋ 債務超過" : "資産 ASSETS"}
+              {isAlert ? "資産 ＋ 債務超過" : "資産"}
             </span>
             <span className="whitespace-nowrap text-sm font-bold tabular-nums text-[#22863a]">
               {fmtMan(isAlert ? totalAssets + Math.abs(netWorth) : totalAssets)}
@@ -1041,7 +1042,7 @@ function BalanceSheetVis({
             className="text-[9px] font-bold uppercase tracking-[0.18em]"
             style={{ color: isAlert ? "#c8383a" : "#22863a" }}
           >
-            純資産（NET WORTH）
+            純資産（家・不動産の評価額を含む）
           </span>
           <span className="ml-2 text-[10px] text-[#0a0a0a]/60">
             資産 {fmtMan(totalAssets)} − 負債 {fmtMan(totalLiabilities)}

@@ -300,7 +300,7 @@ export function LiteInputs() {
           />
         ) : null}
         <NumField
-          label="年金をもらい始める年齢"
+          label={q.hasSpouse ? "あなたが年金をもらい始める年齢（配偶者は65歳から）" : "年金をもらい始める年齢"}
           value={q.penStart}
           onChange={(v) => set({ penStart: v })}
           unit="歳"

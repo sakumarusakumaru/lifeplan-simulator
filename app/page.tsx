@@ -50,7 +50,7 @@ export default function LandingPage() {
         {/* タイトル */}
         <div className="mb-8 border-b-2 border-[#0a0a0a] pb-4">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">
-            LIFE PLAN SIMULATOR ver4
+            LIFE PLAN SIMULATOR ver5
           </p>
           <h1 className="text-3xl font-bold leading-tight text-[#0a0a0a]">
             人生のお金を、

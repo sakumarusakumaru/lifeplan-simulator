@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { useVBase } from "@/components/v4/useVBase";
+
 import type { PlanInput, SimulationSummary } from "@/lib/v4/calc/types";
 
 const INK = "#0a0a0a";
@@ -98,6 +100,7 @@ function stageOf(age: number): Stage {
 }
 
 export function AllocationGuide({ plan, base }: { plan: PlanInput; base: SimulationSummary }) {
+  const jp = useVBase() === "/v5"; // ver5 は英語の小見出しを出さない
   const stages = STAGES.filter((s) => s.to >= plan.curAge);
   const [key, setKey] = useState(stageOf(plan.curAge).key);
   const stage = STAGES.find((s) => s.key === key) ?? stages[0];
@@ -120,7 +123,7 @@ export function AllocationGuide({ plan, base }: { plan: PlanInput; base: Simulat
   return (
     <section className="mt-10">
       <div className="mb-3 border-b-2 border-[#0a0a0a] pb-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">Allocation by age</p>
+        {jp ? null : <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]/50">Allocation by age</p>}
         <h2 className="text-lg font-bold text-[#0a0a0a]">年齢ごとの資産配分の考え方</h2>
         <p className="mt-1 text-[11px] leading-relaxed text-[#0a0a0a]/60">
           一般によく挙げられる考え方と、このプランのまま進んだときの「現金」と「運用資産」の割合を並べています。

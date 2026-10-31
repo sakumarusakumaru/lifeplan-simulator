@@ -110,7 +110,7 @@ function StepHello() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <Kicker>LIFE PLAN SIMULATOR ver4</Kicker>
+        <Kicker>LIFE PLAN SIMULATOR</Kicker>
         <h1 className="text-2xl font-bold leading-snug text-[#0a0a0a] sm:text-3xl">
           人生のお金を、
           <br />
@@ -120,6 +120,17 @@ function StepHello() {
           年齢・収入・支出・資産を入れると、100歳までのお金の流れを1年ずつ計算します。
           入力は10分ほど。わからない所は初期値のままで大丈夫です。
         </p>
+        <Link
+          href="/lite"
+          className="mt-3 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-opacity hover:opacity-85"
+          style={{ background: INK, color: "#fff" }}
+        >
+          <span className="flex flex-col">
+            <span className="text-[13px] font-bold">まずはざっくり知りたい方は、3分で試せるLite版へ</span>
+            <span className="text-[11px] text-white/65">14の質問だけで、100歳までのお金の見通しが出ます。あとから詳しい版に引き継げます</span>
+          </span>
+          <span className="shrink-0 text-[12px] font-bold">開く →</span>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -260,9 +271,9 @@ const INPUT_TABS = [
   {
     no: "01",
     title: "基本設定",
-    what: "生年月日（本人・配偶者）、配偶者の働き方、物価上昇率",
+    what: "生年月日（本人・配偶者）、配偶者の有無と働き方",
     where: "まずは生年月日だけでOK。年齢は自動で計算されます",
-    tip: "税金は「詳細モード」がおすすめ。2026年の基礎控除（178万円の壁）や社会保険料率まで反映します",
+    tip: "物価上昇率や税金の計算方法は「詳細設定」の中にあります。初期値（税金は詳細モード。2026年の基礎控除や社会保険料率まで反映）のままで大丈夫です",
   },
   {
     no: "02",
@@ -296,7 +307,7 @@ function StepInput() {
         <Kicker>INPUT</Kicker>
         <h2 className="text-xl font-bold text-[#0a0a0a]">入力は上から4つのブロック</h2>
         <p className="mt-1 text-sm leading-relaxed text-[#0a0a0a]/70">
-          はじめは入力だけの画面です。4つのブロックを上から順に入れて「OK・次へ」を押していくと、最後にあなたの結果（グラフ・診断）が出ます。そのあとは入力を直すたびに結果がすぐ変わります。番号を押して、それぞれ何を入れるか見てみましょう。
+          4つのブロックを1つずつ入れていきます。本人の生年月日を入れた時点から、入力欄の横（スマホは画面の下）に試算とグラフが出て、入れるたびに変わります。最後まで入れて「入力完了」を押すと、レポート・比較・もしもが開きます。番号を押して、それぞれ何を入れるか見てみましょう。
         </p>
       </div>
       <div className="grid grid-cols-4 gap-1.5">
@@ -336,7 +347,7 @@ function StepInput() {
         </dl>
       </Card>
       <p className="text-[11px] leading-relaxed text-[#0a0a0a]/55">
-        入力内容はこのブラウザの中だけに保存され、外部には送信されません。「JSONでDL」で手元にバックアップできます。
+        入力内容はこのブラウザの中だけに保存され、外部には送信されません。メニューの「入力データを保存」で、手元にバックアップできます。
       </p>
     </div>
   );
@@ -401,7 +412,7 @@ function StepAccount() {
         <Kicker>ACCOUNTS</Kicker>
         <h2 className="text-xl font-bold text-[#0a0a0a]">税金は「何を買うか」より「どの口座か」で決まる</h2>
         <p className="mt-1 text-sm leading-relaxed text-[#0a0a0a]/70">
-          ver4 では投資を「投信／株」ではなく「新NISA／旧NISA／特定口座／iDeCo」で入力します。同じ投資信託を買っても、口座が違えば手取りが変わるからです。
+          このシミュレーターでは、投資を「投信／株」ではなく「新NISA／旧NISA／特定口座／iDeCo」で入力します。同じ投資信託を買っても、口座が違えば手取りが変わるからです。
         </p>
       </div>
 
@@ -496,7 +507,7 @@ function StepAccount() {
           </span>
         </p>
         <p className="mt-1 text-[10px] leading-relaxed text-[#0a0a0a]/50">
-          ただし60歳まで引き出せません。受け取るときは退職金と同じ控除を使えますが、退職金と受取時期が近いと控除が減ります。ver4 はこの調整まで計算します。
+          ただし60歳まで引き出せません。受け取るときは退職金と同じ控除を使えますが、退職金と受取時期が近いと控除が減ります。このシミュレーターはこの調整まで計算します。
         </p>
       </Card>
     </div>
@@ -654,7 +665,7 @@ function StepStart({ onStart }: { onStart: () => void }) {
         同意してシミュレーターを開始 →
       </button>
       <p className="text-[11px] leading-relaxed text-[#0a0a0a]/50">
-        以前のバージョンを使いたい方は <Link href="/v3/detail" className="font-bold underline">ver3</Link> もそのまま使えます（入力データは別々に保存されます。ver4 は初回に ver3 の入力を引き継ぎます）。
+        以前のバージョンを使いたい方は <Link href="/v3/detail" className="font-bold underline">ver3</Link> もそのまま使えます（入力データは別々に保存されます。今の版は、初回に ver3 の入力を引き継ぎます）。
       </p>
     </div>
   );
@@ -732,7 +743,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
         <div className="mb-5 flex items-center justify-between gap-3">
           <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">
             LIFE PLAN SIMULATOR{" "}
-            <span className="font-normal text-[#0a0a0a]/45">ver4 / 使い方</span>
+            <span className="font-normal text-[#0a0a0a]/45">使い方</span>
           </span>
           {mode === "modal" ? (
             <button

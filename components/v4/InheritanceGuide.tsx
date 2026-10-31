@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { useVBase } from "@/components/v4/useVBase";
 import { ageOn } from "@/lib/v4/calc/age";
 import { DEFAULT_INHERIT, basicDeduction, legalHeirs, legalSharesPct, planInheritance, realEstateEval } from "@/lib/v4/calc/inheritance";
 import { deflator } from "@/lib/v4/calc/realValue";
@@ -99,7 +100,8 @@ const STAGES: Stage[] = [
   },
 ];
 
-export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: SimulationSummary; real: boolean }) {
+export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanInput; base: SimulationSummary; real: boolean; no?: string }) {
+  const jp = useVBase() === "/v5"; // ver5 は見出しを日本語だけに
   const hasSpouse = ageOn(plan.spouseBirth, plan.baseDate) !== null;
   // 配偶者も子もいない場合は、親または兄弟姉妹の1人が相続すると仮定する
   const noFamily = !hasSpouse && plan.kids.length === 0;
@@ -166,9 +168,9 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
           className="inline-flex h-5 items-center px-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white"
           style={{ background: INK, borderRadius: 4 }}
         >
-          04
+          {no}
         </span>
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">相続の備え ／ INHERITANCE</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#0a0a0a]">{jp ? "相続の備え" : "相続の備え ／ INHERITANCE"}</p>
       </div>
 
       <div className="rounded-xl bg-white p-4" style={{ border: `2px solid ${INK}18` }}>
@@ -557,7 +559,7 @@ export function InheritanceGuide({ plan, base, real }: { plan: PlanInput; base: 
         </ul>
         <p className="mt-3 text-[10px] leading-relaxed text-[#0a0a0a]/50">
           ※ 不動産の相続税評価は、評価額を入れていなければ購入価格と築年数からの目安です。
-          小規模宅地等の特例は面積330㎡以内・配偶者が相続する前提です。貸付事業用宅地の特例（200㎡まで50%減）と、不動産投資ローンの団信は入れていません。子がいない場合の親・兄弟姉妹の相続、生前贈与の足し戻し、葬式費用、相次相続控除は含めていない概算です。実際の判断は税理士にご相談ください。
+          小規模宅地等の特例は面積330㎡以内・配偶者が相続する前提です。貸付事業用宅地の特例（200㎡まで50%減）と、不動産投資ローンの団信は入れていません。子がいない場合の親・兄弟姉妹の相続は1人が相続するとみなした概算で（人数・相続税の2割加算は入れていない）、生前贈与の足し戻し、葬式費用、相次相続控除は含めていない概算です。実際の判断は税理士にご相談ください。
         </p>
       </div>
     </section>

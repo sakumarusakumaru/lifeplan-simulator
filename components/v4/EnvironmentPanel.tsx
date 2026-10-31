@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { useVBase } from "@/components/v4/useVBase";
+
 import {
   ENV_NONE,
   ENV_OPTIONS,
@@ -34,6 +36,7 @@ export function EnvironmentPanel({
   normal: SimulationSummary;
   current: SimulationSummary;
 }) {
+  const jp = useVBase() === "/v5"; // ver5 は英語の小見出しを出さない
   const on = envActive(env);
   const [open, setOpen] = useState(true);
   const delta = current.finalNetWorth - normal.finalNetWorth;
@@ -49,9 +52,11 @@ export function EnvironmentPanel({
           aria-expanded={open}
           className="flex-1 text-left"
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/50">
-            External environment
-          </p>
+          {jp ? null : (
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0a0a0a]/50">
+              External environment
+            </p>
+          )}
           <p className="flex items-center gap-2 text-sm font-bold text-[#0a0a0a]">
             外的環境を選ぶ
             <span

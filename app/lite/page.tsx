@@ -1,16 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { LiteInputs } from "@/components/lite/LiteInputs";
 import { LiteBar, LiteResult } from "@/components/lite/LiteResult";
+import { sendToV4 } from "@/components/lite/sendToV4";
 import { ConsentDialog } from "@/components/v4/ConsentDialog";
 import { useLiteStore } from "@/store/lite/lite-store";
 
-// ver4 Lite: 4つのカードを入れるだけで、右（スマホは下）に結果がすぐ出る
+// Lite: 4枚のカード（と任意の2枚）を入れるだけで、右（スマホは下）に結果がすぐ出る
 export default function LitePage() {
   const hydrated = useLiteStore((s) => s.hydrated);
   const reset = useLiteStore((s) => s.reset);
+  const router = useRouter();
+  // 詳細版へ。Liteに答えがあれば引き継ぐ（置き換えを断ったときは、引き継がずに開く）
+  const openDetail = () => {
+    const q = useLiteStore.getState().q;
+    if (q.income > 0 && q.livingM > 0) sendToV4(q);
+    router.push("/v5/detail");
+  };
 
   return (
     <main className="min-h-screen px-4 pb-24 pt-6 sm:px-8 lg:pb-16" style={{ background: "#f0f0ee" }}>
@@ -21,7 +30,7 @@ export default function LitePage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#0a0a0a]/50">LIFE PLAN SIMULATOR Lite</p>
             <h1 className="text-2xl font-bold leading-tight text-[#0a0a0a] sm:text-3xl">3分で、100歳までのお金をざっくり</h1>
             <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/65">
-              4つのカードを埋めるだけ。わからない数字は、だいたいで大丈夫です。
+              01〜04の4枚に答えるだけ（05・06は、わかれば）。わからない数字は、だいたいで大丈夫です。
             </p>
           </div>
           <div className="flex items-center gap-3 text-[12px] font-bold">
@@ -34,9 +43,9 @@ export default function LitePage() {
             >
               最初から
             </button>
-            <Link href="/v5/detail" className="underline">
+            <button type="button" onClick={openDetail} className="underline">
               詳細版 →
-            </Link>
+            </button>
           </div>
         </header>
 

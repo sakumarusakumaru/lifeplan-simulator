@@ -135,7 +135,7 @@ export function LiteResult() {
         </div>
       ) : null}
 
-      {/* 詳細版（ver4）への入口（1行のバナー） */}
+      {/* 詳細版への入口（1行のバナー） */}
       <button
         type="button"
         onClick={goV4}
