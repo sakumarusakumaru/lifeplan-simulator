@@ -60,7 +60,7 @@ function Section({ no, title, children }: { no: string; title: string; children:
       <div className="mb-3 flex items-center gap-2">
         <span
           className="inline-flex h-5 items-center px-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white"
-          style={{ background: INK, borderRadius: 4 }}
+          style={{ background: "var(--lp-primary)", borderRadius: 4 }}
         >
           {no}
         </span>

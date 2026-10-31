@@ -41,8 +41,8 @@ export function ResultsPanel() {
         <button
           type="button"
           onClick={() => setShowTable((v) => !v)}
-          className="group flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#0a0a0a]"
-          style={{ background: showTable ? "#0a0a0a" : "#ffffff" }}
+          className="group flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--lp-primary)]"
+          style={{ background: showTable ? "var(--lp-primary)" : "#ffffff" }}
         >
           {/* 左: アイコン + ラベル */}
           <div className="flex items-center gap-2.5">

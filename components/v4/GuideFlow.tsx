@@ -123,7 +123,7 @@ function StepHello() {
         <Link
           href="/lite"
           className="mt-3 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-opacity hover:opacity-85"
-          style={{ background: INK, color: "#fff" }}
+          style={{ background: "var(--lp-primary)", color: "#fff" }}
         >
           <span className="flex flex-col">
             <span className="text-[13px] font-bold">まずはざっくり知りたい方は、3分で試せるLite版へ</span>
@@ -318,7 +318,7 @@ function StepInput() {
             onClick={() => setTab(i)}
             className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-2 transition-colors"
             style={{
-              background: tab === i ? INK : "#fff",
+              background: tab === i ? "var(--lp-primary)" : "#fff",
               color: tab === i ? "#fff" : INK,
               border: `2px solid ${INK}`,
             }}
@@ -490,7 +490,7 @@ function StepAccount() {
               onClick={() => setInc(i)}
               className="rounded-lg px-2 py-1.5 text-[11px] font-bold"
               style={{
-                background: inc === i ? INK : "#fff",
+                background: inc === i ? "var(--lp-primary)" : "#fff",
                 color: inc === i ? "#fff" : INK,
                 border: `2px solid ${INK}`,
               }}
@@ -655,7 +655,7 @@ function StepStart({ onStart }: { onStart: () => void }) {
         disabled={!agreed}
         className="w-full py-4 text-sm font-bold uppercase tracking-[0.16em]"
         style={{
-          background: agreed ? INK : "#d4d4d2",
+          background: agreed ? "var(--lp-primary)" : "#d4d4d2",
           color: agreed ? "#fff" : "#0a0a0a55",
           border: `2.5px solid ${agreed ? INK : "#0a0a0a30"}`,
           borderRadius: 12,
@@ -788,7 +788,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             >
               <span
                 className="h-1.5 w-full rounded-full transition-colors"
-                style={{ background: i <= step ? INK : "#0a0a0a20" }}
+                style={{ background: i <= step ? "var(--lp-primary)" : "#0a0a0a20" }}
               />
               <span
                 className="hidden text-[10px] font-bold sm:block"
@@ -833,7 +833,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             type="button"
             onClick={onClose}
             className="rounded-xl px-5 py-3 text-xs font-bold text-white"
-            style={{ border: `2.5px solid ${INK}`, background: INK }}
+            style={{ border: `2.5px solid ${INK}`, background: "var(--lp-primary)" }}
           >
             閉じて続ける
           </button>
@@ -842,7 +842,7 @@ export function GuideFlow({ mode, onClose }: { mode: "page" | "modal"; onClose?:
             type="button"
             onClick={() => setStep((s) => Math.min(lastIdx, s + 1))}
             className="rounded-xl px-5 py-3 text-xs font-bold text-white"
-            style={{ border: `2.5px solid ${INK}`, background: INK }}
+            style={{ border: `2.5px solid ${INK}`, background: "var(--lp-primary)" }}
           >
             次へ →
           </button>

@@ -189,7 +189,7 @@ export function LiteResult() {
         type="button"
         onClick={goV4}
         className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 text-left"
-        style={{ background: INK, color: "#fff" }}
+        style={{ background: "var(--lp-primary)", color: "#fff" }}
       >
         <span className="min-w-0">
           <span className="block text-[14px] font-bold">もっと詳しく調べたい方は「ライフプランシミュレーター 詳細版」へ</span>
@@ -232,7 +232,7 @@ export function LiteBar() {
       type="button"
       onClick={() => document.getElementById("lite-result")?.scrollIntoView({ behavior: "smooth" })}
       className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-2 px-4 py-3 text-left lg:hidden"
-      style={{ background: INK, color: "#fff", paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+      style={{ background: "var(--lp-primary)", color: "#fff", paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
     >
       <span className="text-[13px] font-bold" style={{ color: !r ? "#fff" : ok ? "#7ee2a0" : "#ff9b9b" }}>
         {!r ? "年収と生活費を入れると結果が出ます" : ok ? `${A.endAge}歳まで足りる見込み` : `${r.shortfallAge}歳で足りなくなる見込み`}
@@ -289,7 +289,7 @@ function Teasers({ teasers, onMore }: { teasers: { key: string; title: string; v
           </p>
         </li>
       </ul>
-      <button type="button" onClick={onMore} className="mt-3 w-full rounded-lg px-4 py-2.5 text-[13px] font-bold text-white" style={{ background: INK }}>
+      <button type="button" onClick={onMore} className="mt-3 w-full rounded-lg px-4 py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--lp-primary)" }}>
         この答えのまま、詳細版で続きを見る →
       </button>
     </div>

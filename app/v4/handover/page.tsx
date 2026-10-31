@@ -91,7 +91,7 @@ function FormCard({ no, title, note, children, defaultOpen = false }: { no: stri
   return (
     <div className="rounded-xl bg-white" style={{ border: `2.5px solid ${INK}` }}>
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-start gap-2 p-4 text-left">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white" style={{ background: INK }}>
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white" style={{ background: "var(--lp-primary)" }}>
           {no}
         </span>
         <span className="flex-1">
@@ -310,7 +310,7 @@ export default function HandoverPage() {
         <div className="flex items-start justify-between gap-2">
           <p className="text-[12px] font-bold">{c.title}</p>
           {list.length ? (
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold text-white" style={{ background: INK }}>
+            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold text-white" style={{ background: "var(--lp-primary)" }}>
               ある（{list.length}件）
             </span>
           ) : (
@@ -787,7 +787,7 @@ export default function HandoverPage() {
           <div className="flex flex-col gap-3">
             {steps.map((s) => (
               <section key={s.when} className="handover-item">
-                <p className="mb-1 inline-block rounded px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: INK }}>
+                <p className="mb-1 inline-block rounded px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: "var(--lp-primary)" }}>
                   {s.when}
                 </p>
                 <ul className="flex flex-col gap-1">
@@ -999,7 +999,7 @@ export default function HandoverPage() {
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={() => window.print()} className="rounded-lg px-4 py-2.5 text-[13px] font-bold text-white" style={{ background: INK }}>
+          <button type="button" onClick={() => window.print()} className="rounded-lg px-4 py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--lp-primary)" }}>
             ⎙ PDFで保存・印刷する
           </button>
           <button type="button" onClick={() => setShowForm((v) => !v)} className="rounded-lg px-4 py-2.5 text-[13px] font-bold" style={{ border: `2px solid ${INK}` }}>

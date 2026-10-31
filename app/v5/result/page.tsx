@@ -495,7 +495,7 @@ export default function ResultPage() {
       <div className="no-print mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
           href="/v5/detail"
-          className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+          className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[var(--lp-primary)] hover:text-white"
           style={{
             border: "2.5px solid #0a0a0a",
             borderRadius: 10,
@@ -508,7 +508,7 @@ export default function ResultPage() {
           href="/v5/suggest"
           className="flex-1 py-3 text-center text-xs font-bold text-white transition-colors hover:opacity-80"
           style={{
-            background: "#0a0a0a",
+            background: "var(--lp-primary)",
             border: "2.5px solid #0a0a0a",
             borderRadius: 10,
           }}
@@ -538,7 +538,7 @@ function ReportSection({
       <div className="mb-3 flex items-center gap-2">
         <span
           className="inline-flex h-5 items-center px-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white"
-          style={{ background: "#0a0a0a", borderRadius: 4 }}
+          style={{ background: "var(--lp-primary)", borderRadius: 4 }}
         >
           {no}
         </span>
@@ -774,7 +774,7 @@ function BalanceSheetTimeline({
                 setPlaying((p) => !p);
               }}
               className="rounded-md px-2.5 py-1 text-[11px] font-bold text-white"
-              style={{ background: "#0a0a0a" }}
+              style={{ background: "var(--lp-primary)" }}
               aria-label={playing ? "一時停止" : "再生"}
             >
               {playing ? "❚❚ 停止" : "▶ 再生"}
@@ -805,7 +805,7 @@ function BalanceSheetTimeline({
               }}
               className="rounded-md px-2 py-0.5 text-[10px] font-bold"
               style={{
-                background: shownAge === m.age ? "#0a0a0a" : "#f0f0ee",
+                background: shownAge === m.age ? "var(--lp-primary)" : "#f0f0ee",
                 color: shownAge === m.age ? "#fff" : "#0a0a0a",
               }}
             >
@@ -1117,7 +1117,7 @@ function BSColumnGrouped({
                 aria-hidden
                 style={{
                   height: 1,
-                  background: "#0a0a0a",
+                  background: "var(--lp-primary)",
                   flexShrink: 0,
                   margin: "4px 0",
                 }}

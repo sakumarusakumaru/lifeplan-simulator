@@ -101,7 +101,7 @@ export function Choice<T extends string>({
             onClick={() => onChange(o.value)}
             className="rounded-lg px-1.5 py-2 text-[12px] font-bold leading-tight"
             style={{
-              background: value === o.value ? INK : "#fff",
+              background: value === o.value ? "var(--lp-primary)" : "#fff",
               color: value === o.value ? "#fff" : INK,
               border: `2px solid ${INK}`,
             }}

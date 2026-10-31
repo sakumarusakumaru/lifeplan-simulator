@@ -61,7 +61,7 @@ function SpouseToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) =>
           onClick={() => onChange(o.v)}
           className="min-h-11 text-[13px] font-bold"
           style={{
-            background: on === o.v ? "#0a0a0a" : "#ffffff",
+            background: on === o.v ? "var(--lp-primary)" : "#ffffff",
             color: on === o.v ? "#ffffff" : "#0a0a0a",
             borderLeft: i === 0 ? "none" : "2px solid #0a0a0a",
           }}
@@ -302,7 +302,7 @@ export function SettingsMegaSection() {
                 onClick={() => setField("taxMode", "simple")}
                 className="px-4 py-3 text-xs font-bold transition-colors"
                 style={{
-                  background: !detailed ? "#0a0a0a" : "#ffffff",
+                  background: !detailed ? "var(--lp-primary)" : "#ffffff",
                   color: !detailed ? "#ffffff" : "#0a0a0a",
                   borderRight: "2.5px solid #0a0a0a",
                 }}
@@ -314,7 +314,7 @@ export function SettingsMegaSection() {
                 onClick={() => setField("taxMode", "detailed")}
                 className="px-4 py-3 text-xs font-bold transition-colors"
                 style={{
-                  background: detailed ? "#0a0a0a" : "#ffffff",
+                  background: detailed ? "var(--lp-primary)" : "#ffffff",
                   color: detailed ? "#ffffff" : "#0a0a0a",
                 }}
               >

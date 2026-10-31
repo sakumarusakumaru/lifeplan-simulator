@@ -77,7 +77,7 @@ export function AddButton({ label, onClick }: AddButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="px-4 py-2 text-sm font-bold transition-colors duration-150 hover:bg-[#0a0a0a] hover:text-white"
+      className="px-4 py-2 text-sm font-bold transition-colors duration-150 hover:bg-[var(--lp-primary)] hover:text-white"
       style={{
         background: "#f0f0ee",
         color: "#0a0a0a",

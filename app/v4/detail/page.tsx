@@ -142,7 +142,7 @@ export default function DetailPage() {
               <Link
                 href="/v4/result"
                 className="rounded-lg px-3 py-2 text-[12px] font-bold text-white"
-                style={{ background: "#0a0a0a" }}
+                style={{ background: "var(--lp-primary)" }}
               >
                 詳しいレポートを見る →
               </Link>

@@ -140,7 +140,7 @@ export function AllocationGuide({ plan, base }: { plan: PlanInput; base: Simulat
             onClick={() => setKey(s.key)}
             className="shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-bold"
             style={{
-              background: s.key === key ? INK : "#fff",
+              background: s.key === key ? "var(--lp-primary)" : "#fff",
               color: s.key === key ? "#fff" : INK,
               border: `2px solid ${INK}`,
             }}
@@ -181,7 +181,7 @@ export function AllocationGuide({ plan, base }: { plan: PlanInput; base: Simulat
                   className="absolute inset-y-0 rounded"
                   style={{ left: `${lo}%`, width: `${Math.max(1, hi - lo)}%`, background: "#22863a30", border: "1.5px dashed #22863a" }}
                 />
-                <div className="absolute -top-1 -bottom-1 w-[3px] rounded" style={{ left: `calc(${myRisky}% - 1.5px)`, background: INK }} />
+                <div className="absolute -top-1 -bottom-1 w-[3px] rounded" style={{ left: `calc(${myRisky}% - 1.5px)`, background: "var(--lp-primary)" }} />
               </div>
               <div className="relative mt-0.5 h-3 text-[9px] text-[#0a0a0a]/55">
                 <span className="absolute" style={{ left: 0 }}>0%</span>
@@ -202,7 +202,7 @@ export function AllocationGuide({ plan, base }: { plan: PlanInput; base: Simulat
         <ul className="mt-3 flex flex-col gap-1.5">
           {stage.points.map((p) => (
             <li key={p} className="flex gap-2 text-[12px] leading-relaxed text-[#0a0a0a]/80">
-              <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: INK }} />
+              <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--lp-primary)" }} />
               <span>{p}</span>
             </li>
           ))}

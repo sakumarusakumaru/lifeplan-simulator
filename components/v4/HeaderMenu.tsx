@@ -112,7 +112,7 @@ export function HeaderMenu({
         aria-expanded={open}
         className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold transition-colors"
         style={{
-          background: open ? "#0a0a0a" : "#ffffff",
+          background: open ? "var(--lp-primary)" : "#ffffff",
           color: open ? "#ffffff" : "#0a0a0a",
           border: "2px solid #0a0a0a",
           borderRadius: 8,

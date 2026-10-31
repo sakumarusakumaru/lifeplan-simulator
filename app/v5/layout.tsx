@@ -181,7 +181,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
             href={tab.href}
             aria-current={active ? "page" : undefined}
             className="flex flex-col items-center justify-center rounded-lg py-1 transition-colors"
-            style={{ background: active ? "#0a0a0a" : "transparent", color: active ? "#ffffff" : "#0a0a0a" }}
+            style={{ background: active ? "var(--lp-primary)" : "transparent", color: active ? "#ffffff" : "#0a0a0a" }}
           >
             <span className="whitespace-nowrap py-1 text-[12px] font-bold leading-none">{SHORT[i]}</span>
           </Link>
@@ -203,7 +203,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
             className="shrink-0 px-3 py-1 text-xs font-bold tracking-wide transition-opacity hover:opacity-80"
             style={{
               color: active ? "#ffffff" : "#0a0a0a",
-              background: active ? "#0a0a0a" : "transparent",
+              background: active ? "var(--lp-primary)" : "transparent",
               border: `1.5px solid ${active ? "#0a0a0a" : "#0a0a0a40"}`,
               borderRadius: 8,
             }}
@@ -251,7 +251,7 @@ export default function V5Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setGuideOpen(true)}
-              className="flex shrink-0 items-center gap-1 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+              className="flex shrink-0 items-center gap-1 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[var(--lp-primary)] hover:text-white"
               style={headerBtnStyle}
               title="使い方ガイドを開く（閉じると今の画面に戻ります）"
             >

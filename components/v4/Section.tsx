@@ -118,7 +118,7 @@ export function Section({
           <span
             className="flex h-7 w-7 shrink-0 items-center justify-center text-[10px] font-bold tabular-nums tracking-tight"
             style={{
-              background: open ? "#0a0a0a" : "#ffffff",
+              background: open ? "var(--lp-primary)" : "#ffffff",
               color: open ? "#ffffff" : "#0a0a0a",
               border: "2.5px solid #0a0a0a",
               borderRadius: 12,
@@ -180,7 +180,7 @@ export function Section({
                 disabled={!!blocked}
                 onClick={() => flow.onDone(id)}
                 className="w-full py-3 text-sm font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
-                style={{ background: isLast ? "#c8383a" : "#0a0a0a", border: "2.5px solid #0a0a0a", borderRadius: 12 }}
+                style={{ background: isLast ? "#c8383a" : "var(--lp-primary)", border: "none", borderRadius: 12 }}
               >
                 {isLast ? "入力完了・結果を表示する →" : `この内容でOK・次へ（${String(idx + 2).padStart(2, "0")}）→`}
               </button>
@@ -200,7 +200,7 @@ function StatusPill({ status, jp = false, active = false }: { status: SectionSta
         style={{
           height: 20,
           padding: "0 8px",
-          background: active ? "#0a0a0a" : "#ffffff",
+          background: active ? "var(--lp-primary)" : "#ffffff",
           color: active ? "#ffffff" : "#55555a",
           border: `2px solid ${active ? "#0a0a0a" : "#8a8a8e"}`,
           borderRadius: 12,

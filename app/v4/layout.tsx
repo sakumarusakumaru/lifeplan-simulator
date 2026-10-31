@@ -178,7 +178,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
             href={tab.href}
             aria-current={active ? "page" : undefined}
             className="flex flex-col items-center justify-center rounded-lg py-1 transition-colors"
-            style={{ background: active ? "#0a0a0a" : "transparent", color: active ? "#ffffff" : "#0a0a0a" }}
+            style={{ background: active ? "var(--lp-primary)" : "transparent", color: active ? "#ffffff" : "#0a0a0a" }}
           >
             <span className="text-[9px] font-bold tabular-nums leading-none" style={{ opacity: active ? 0.6 : 0.45 }}>
               {String(i + 1).padStart(2, "0")}
@@ -294,7 +294,7 @@ export default function V4Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setGuideOpen(true)}
-              className="flex shrink-0 items-center gap-1 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+              className="flex shrink-0 items-center gap-1 px-2.5 py-1 text-[10px] font-bold transition-colors hover:bg-[var(--lp-primary)] hover:text-white"
               style={headerBtnStyle}
               title="使い方ガイドを開く（閉じると今の画面に戻ります）"
             >

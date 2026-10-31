@@ -106,7 +106,7 @@ export function ConsentDialog() {
           disabled={!agreed}
           className="w-full py-3 text-xs font-bold transition-all"
           style={{
-            background: agreed ? "#0a0a0a" : "#9ca3af",
+            background: agreed ? "var(--lp-primary)" : "#9ca3af",
             color: "#ffffff",
             border: `2.5px solid ${agreed ? "#0a0a0a" : "#9ca3af"}`,
             borderRadius: 10,

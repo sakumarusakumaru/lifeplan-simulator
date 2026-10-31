@@ -90,7 +90,7 @@ export function InputProgress({
                 onClick={() => jump(id)}
                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left"
                 style={{
-                  background: ok ? "#f0fff4" : isCur ? "#0a0a0a" : "#f0f0ee",
+                  background: ok ? "#f0fff4" : isCur ? "var(--lp-primary)" : "#f0f0ee",
                   color: isCur && !ok ? "#ffffff" : "#0a0a0a",
                   border: `2px solid ${ok ? "#22863a" : "#0a0a0a"}`,
                 }}
@@ -98,7 +98,7 @@ export function InputProgress({
                 <span
                   className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
                   style={{
-                    background: ok ? "#22863a" : isCur ? "#ffffff" : "#0a0a0a",
+                    background: ok ? "#22863a" : isCur ? "#ffffff" : "var(--lp-primary)",
                     color: ok ? "#ffffff" : isCur ? "#0a0a0a" : "#ffffff",
                   }}
                 >
@@ -116,7 +116,7 @@ export function InputProgress({
           <Link
             href={`${base}/detail`}
             className="rounded-lg px-3 py-2 font-bold text-white"
-            style={{ background: "#0a0a0a" }}
+            style={{ background: "var(--lp-primary)" }}
           >
             入力を続ける →
           </Link>

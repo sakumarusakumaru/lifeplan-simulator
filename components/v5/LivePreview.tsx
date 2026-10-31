@@ -166,7 +166,7 @@ function Accuracy() {
       </div>
       <div className="grid grid-cols-4 gap-1" aria-hidden>
         {SECTION_ORDER.map((id) => (
-          <span key={id} className="h-1.5 rounded-full" style={{ background: confirmed[id] ? INK : "#0a0a0a22" }} />
+          <span key={id} className="h-1.5 rounded-full" style={{ background: confirmed[id] ? "var(--lp-primary)" : "#0a0a0a22" }} />
         ))}
       </div>
       {next ? (
@@ -249,7 +249,7 @@ export function LivePreview({
           type="button"
           onClick={onShowNow}
           disabled={!ready}
-          className="rounded-lg px-3 py-2.5 text-[12px] font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+          className="rounded-lg px-3 py-2.5 text-[12px] font-bold transition-colors hover:bg-[var(--lp-primary)] hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
           style={{ border: "2px solid #0a0a0a" }}
         >
           {actionLabel}

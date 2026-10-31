@@ -151,7 +151,7 @@ export default function DetailPage() {
                 type="button"
                 onClick={() => router.push("/v5/result")}
                 className="min-h-11 rounded-lg px-3 text-[12px] font-bold text-white"
-                style={{ background: INK }}
+                style={{ background: "var(--lp-primary)" }}
               >
                 詳しいレポートを見る →
               </button>
@@ -179,7 +179,7 @@ export default function DetailPage() {
                   aria-current={isCur ? "step" : undefined}
                   className="flex min-h-14 flex-col items-start justify-center gap-0.5 px-2 py-2 text-left sm:px-4"
                   style={{
-                    background: isCur ? INK : "#ffffff",
+                    background: isCur ? "var(--lp-primary)" : "#ffffff",
                     color: isCur ? "#ffffff" : INK,
                     borderLeft: i === 0 ? "none" : "1px solid #0a0a0a33",
                   }}

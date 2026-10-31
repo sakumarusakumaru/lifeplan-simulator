@@ -61,7 +61,7 @@ function Section({ no, title, children }: { no: string; title: string; children:
       <div className="mb-3 flex items-center gap-2">
         <span
           className="inline-flex h-5 items-center px-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white"
-          style={{ background: INK, borderRadius: 4 }}
+          style={{ background: "var(--lp-primary)", borderRadius: 4 }}
         >
           {no}
         </span>
@@ -169,7 +169,7 @@ export default function RiskPage() {
         <Link
           href="/v5/handover"
           className="mb-6 flex items-center gap-3 rounded-xl px-4 py-4 transition-opacity hover:opacity-90"
-          style={{ background: "#1d5c30", border: "2.5px solid #14401f", boxShadow: "0 3px 0 #14401f" }}
+          style={{ background: "var(--lp-primary)", border: "2.5px solid var(--lp-primary-dark)", boxShadow: "0 3px 0 var(--lp-primary-dark)" }}
         >
           <span className="text-2xl" aria-hidden>✉</span>
           <span className="flex flex-1 flex-col">

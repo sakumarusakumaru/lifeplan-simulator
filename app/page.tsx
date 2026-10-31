@@ -174,7 +174,7 @@ export default function LandingPage() {
           disabled={!agreed}
           className="mt-4 w-full py-4 text-sm font-bold uppercase tracking-[0.16em] transition-all"
           style={{
-            background: agreed ? "#0a0a0a" : "#d4d4d2",
+            background: agreed ? "var(--lp-primary)" : "#d4d4d2",
             color: agreed ? "#ffffff" : "#0a0a0a55",
             border: `2.5px solid ${agreed ? "#0a0a0a" : "#0a0a0a30"}`,
             borderRadius: 12,

@@ -167,7 +167,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
       <div className="mb-3 flex items-center gap-2">
         <span
           className="inline-flex h-5 items-center px-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white"
-          style={{ background: INK, borderRadius: 4 }}
+          style={{ background: "var(--lp-primary)", borderRadius: 4 }}
         >
           {no}
         </span>
@@ -202,7 +202,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
                   />
                   <span
                     className="absolute -top-0.5 -bottom-0.5 w-[2px]"
-                    style={{ left: `${(t.deduction / maxEstate) * 100}%`, background: INK }}
+                    style={{ left: `${(t.deduction / maxEstate) * 100}%`, background: "var(--lp-primary)" }}
                     title="基礎控除"
                   />
                 </span>
@@ -223,7 +223,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
             type="button"
             onClick={() => setKey(s.key)}
             className="shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-bold"
-            style={{ background: s.key === key ? INK : "#fff", color: s.key === key ? "#fff" : INK, border: `2px solid ${INK}` }}
+            style={{ background: s.key === key ? "var(--lp-primary)" : "#fff", color: s.key === key ? "#fff" : INK, border: `2px solid ${INK}` }}
           >
             {s.label}
             {s.key === current.key ? <span className="ml-1 text-[9px] opacity-70">いま</span> : null}
@@ -552,7 +552,7 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
         <ul className="mt-3 flex flex-col gap-1.5">
           {stage.points.map((p) => (
             <li key={p} className="flex gap-2 text-[12px] leading-relaxed text-[#0a0a0a]/80">
-              <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: INK }} />
+              <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--lp-primary)" }} />
               <span>{p}</span>
             </li>
           ))}

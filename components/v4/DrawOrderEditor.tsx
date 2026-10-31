@@ -77,7 +77,7 @@ export function DrawOrderEditor() {
               type="button"
               onClick={() => setField("drawOrder", o.v)}
               className="rounded-lg px-2 py-2 text-left"
-              style={{ background: active ? INK : "#fff", color: active ? "#fff" : INK, border: `2px solid ${INK}` }}
+              style={{ background: active ? "var(--lp-primary)" : "#fff", color: active ? "#fff" : INK, border: `2px solid ${INK}` }}
             >
               <span className="block text-[12px] font-bold">{o.label}</span>
               <span className="block text-[10px] opacity-70">{o.sub}</span>
@@ -106,7 +106,7 @@ export function DrawOrderEditor() {
             },
           ].map((s) => (
             <li key={s.no} className="flex gap-2">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: INK }}>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "var(--lp-primary)" }}>
                 {s.no}
               </span>
               <span className="flex flex-col">

@@ -112,7 +112,7 @@ export function EnvironmentPanel({
                       style={{
                         background: active
                           ? c.value === 0
-                            ? INK
+                            ? "var(--lp-primary)"
                             : RED
                           : "#fff",
                         color: active ? "#fff" : INK,

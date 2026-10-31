@@ -576,7 +576,7 @@ export default function SuggestPage() {
         {/* Base result */}
         <div
           className="mb-4 flex items-center justify-between gap-3 rounded-xl p-4"
-          style={{ background: "#0a0a0a", borderRadius: 12 }}
+          style={{ background: "var(--lp-primary)", borderRadius: 12 }}
         >
           <div>
             <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/50">
@@ -776,7 +776,7 @@ export default function SuggestPage() {
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <Link
           href="/v5/result"
-          className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[#0a0a0a] hover:text-white"
+          className="flex-1 py-3 text-center text-xs font-bold transition-colors hover:bg-[var(--lp-primary)] hover:text-white"
           style={{
             border: "2.5px solid #0a0a0a",
             borderRadius: 10,
@@ -789,7 +789,7 @@ export default function SuggestPage() {
           href="/v5/risk"
           className="flex-1 py-3 text-center text-xs font-bold text-white transition-colors hover:opacity-80"
           style={{
-            background: "#0a0a0a",
+            background: "var(--lp-primary)",
             border: "2.5px solid #0a0a0a",
             borderRadius: 10,
           }}
