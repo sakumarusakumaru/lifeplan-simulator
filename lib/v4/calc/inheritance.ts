@@ -304,7 +304,7 @@ export interface InheritancePlan {
 
 // 小規模宅地等の特例は、配偶者が相続した自宅の土地の分だけに使う。
 // 配偶者は自宅から先に相続するとみなし、配偶者の取り分が自宅の評価額に届かない分には使わない（土地は330㎡以内とみなす）
-function withLandCut(b: EstateBreakdown, ratio: number): EstateBreakdown {
+export function withLandCut(b: EstateBreakdown, ratio: number): EstateBreakdown {
   if (b.homeLandCut <= 0) return b;
   const homeFull = b.home + b.homeLandCut; // 本人名義の自宅（特例を使う前）
   const spouseTake = Math.max(0, ratio) * (b.total + b.homeLandCut);

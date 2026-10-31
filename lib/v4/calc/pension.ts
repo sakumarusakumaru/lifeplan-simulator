@@ -122,13 +122,14 @@ export function isKakyuuApplicable(
 
 // 在職老齢年金（会社員として働きながら老齢厚生年金を受ける年。繰上げ受給中・70歳以上も同じ）
 //   支給停止額（月）=（総報酬月額相当額 ＋ 基本月額 − 支給停止調整額）÷ 2。老齢厚生年金（報酬比例）が上限で、
-//   老齢基礎年金は減らない。支給停止調整額は2026年4月から62万（それまで51万）。年単位なので2026年分以後は62万
+//   老齢基礎年金は減らない。支給停止調整額は2026年4月から令和8年度の額65万（法律上は令和6年度価格62万を
+//   名目賃金で改定した額。令和7年度は51万）。年単位なので2026年分以後は65万とし、その後は index（賃金・物価の伸び）で改定する
 //   総報酬月額相当額 ≈ その年の給与 ÷ 12、基本月額 = 老齢厚生年金 ÷ 12（繰下げの増額分は除いて渡す）
 //   繰下げ待機中に停止される分は繰下げ増額の対象にならない点は入れていない
-export const ZAISHOKU_THRESHOLD_M = 620_000;
-export function zaishokuTeishiAnnual(koseiAnnual: number, wageY: number, year: number): number {
+export const ZAISHOKU_THRESHOLD_M = 650_000;
+export function zaishokuTeishiAnnual(koseiAnnual: number, wageY: number, year: number, index = 1): number {
   if (koseiAnnual <= 0 || wageY <= 0) return 0;
-  const threshold = year >= 2026 ? ZAISHOKU_THRESHOLD_M : 510_000;
+  const threshold = year >= 2026 ? ZAISHOKU_THRESHOLD_M * index : 510_000;
   const cutM = Math.max(0, (wageY / 12 + koseiAnnual / 12 - threshold) / 2);
   return Math.min(koseiAnnual, cutM * 12);
 }

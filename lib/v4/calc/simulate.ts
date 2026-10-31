@@ -293,7 +293,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const zaishokuCut = (penY: number, br: typeof selfPenBreak, wageY: number, employee: boolean) => {
       if (!employee || penY <= 0 || wageY <= 0) return { cut: 0, full: false };
       const kosei = (br.koseiMonthly * 12 * penIdx) / Math.max(1, br.adjustment);
-      const cut = zaishokuTeishiAnnual(kosei, wageY, year);
+      // 支給停止調整額は毎年度、名目賃金に合わせて改定される（ここでは物価の伸びで近似）
+      const cut = zaishokuTeishiAnnual(kosei, wageY, year, infl);
       return { cut, full: kosei > 0 && cut >= kosei };
     };
     const selfZ = zaishokuCut(selfPenY, selfPenBreak, job, selfWorkStyle === "employee");
@@ -301,7 +302,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     selfPenY -= selfZ.cut;
     spousePenY -= spouseZ.cut;
     if (selfZ.cut > 0 || spouseZ.cut > 0) {
-      warn("zaishoku", "働きながら老齢厚生年金を受ける年は、在職老齢年金のしくみで年金の一部が止まる計算にしています（給与と老齢厚生年金の月額の合計が62万円を超えた分の半分）。", "info");
+      warn("zaishoku", "働きながら老齢厚生年金を受ける年は、在職老齢年金のしくみで年金の一部が止まる計算にしています（給与と老齢厚生年金の月額の合計が65万円（2026年度。毎年度改定）を超えた分の半分）。", "info");
     }
     let kakyuu = 0;
     if (
@@ -501,7 +502,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
           spouse: null,
           kidAges: kidAgesNow,
           hlDeductCredit: 0,
-          extraDeduction: addDed(widowDeduction(kidsDependent, survivorSex), addDed(insDedSelf, insDedSpouse)),
+          extraDeduction: addDed(widowDeduction(kidsDependent, survivorSex, year), addDed(insDedSelf, insDedSpouse)),
         });
         tax = tr.total;
         socialIns = tr.shahoSelf;
@@ -544,7 +545,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         kidAges: kidAgesNow,
         hlDeductCredit: hlCredit,
         extraDeduction: spouseGone
-          ? addDed(widowDeduction(kidsDependent, survivorSex), addDed(insDedSelf, insDedSpouse))
+          ? addDed(widowDeduction(kidsDependent, survivorSex, year), addDed(insDedSelf, insDedSpouse))
           : insDedSelf,
         spouseExtraDeduction: insDedSpouse,
       });

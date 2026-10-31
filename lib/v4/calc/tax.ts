@@ -94,11 +94,11 @@ export function calcEmployeeShaho(wageY: number, age: number, year: number) {
 // 国民健康保険料（1人分・全国平均的な料率で概算）
 //   所得割: (所得 - 43万) × 医療・支援分 約9.5%（40-64歳は介護分 約2.5%を加算）
 //   均等割: 医療・支援分 約5万（40-64歳は介護分 約1.7万を加算）
-//   上限: 医療・支援 92万 / 介護 17万
+//   上限（令和8年度）: 医療67万＋支援26万 = 93万 / 介護 17万。子ども・子育て支援納付金（上限3万）は入れていない
 export function calcKokuho(shotokuY: number, age: number): number {
   if (age >= 75) return 0;
   const base = Math.max(0, shotokuY - 43 * MAN);
-  const iryo = Math.min(92 * MAN, base * 0.095 + 5 * MAN);
+  const iryo = Math.min(93 * MAN, base * 0.095 + 5 * MAN);
   const kaigo = age >= 40 && age < 65 ? Math.min(17 * MAN, base * 0.025 + 1.7 * MAN) : 0;
   return Math.round(iryo + kaigo);
 }
@@ -180,7 +180,7 @@ export function kisoKojoJumin(goukei: number): number {
 //   納税者の合計所得 900万以下を満額とし、950万以下 2/3、1,000万以下 1/3、超は0
 //   配偶者の合計所得 62万以下（2026〜）: 配偶者控除38万（70歳以上48万）
 //   62万超〜133万以下: 配偶者特別控除（38万→3万に逓減）
-function haigushaKojo(
+export function haigushaKojo(
   selfGoukei: number,
   spouseGoukei: number,
   spouseAge: number,
@@ -203,7 +203,8 @@ function haigushaKojo(
   else if (spouseGoukei <= 133 * MAN) base = 3 * MAN;
   else base = 0;
   if (kind === "jumin" && base > 33 * MAN) base = 33 * MAN;
-  return Math.round(base * scale);
+  // 納税者の所得が900万超のときの2/3・1/3は、国税庁の表のとおり1万円単位で切り上げる（例 38万→26万・13万）
+  return scale === 1 ? base : Math.ceil((base * scale) / MAN) * MAN;
 }
 
 // 子の扶養控除（16歳未満は児童手当があるため0、23歳以上は独立とみなす）
@@ -304,9 +305,11 @@ export interface HouseholdTaxInput {
 
 // 配偶者と死別したときの控除
 //   ひとり親控除: 生計を一にする子がいる（所得1,000万以下）所得税35万・住民税30万
+//     令和8年度改正で、所得税は2027年分から38万、住民税は2028年度分（2027年の所得）から33万
+//     （住民税は前年課税だが、このシミュレーターは同じ年の所得で計算するので、どちらも2027年から）
 //   寡婦控除: 子のいない妻（所得500万以下）所得税27万・住民税26万
-export function widowDeduction(hasDependentChild: boolean, sex: "female" | "male") {
-  if (hasDependentChild) return { income: 35 * MAN, jumin: 30 * MAN };
+export function widowDeduction(hasDependentChild: boolean, sex: "female" | "male", year = 2026) {
+  if (hasDependentChild) return year >= 2027 ? { income: 38 * MAN, jumin: 33 * MAN } : { income: 35 * MAN, jumin: 30 * MAN };
   if (sex === "female") return { income: 27 * MAN, jumin: 26 * MAN };
   return { income: 0, jumin: 0 };
 }
