@@ -64,7 +64,7 @@ export const DC_PAYOUT_MAX_AGE = 75;
 export const DC_TYPE_OPTIONS: { value: DcType; label: string }[] = [
   { value: "employee-none", label: "会社員（企業年金なし）" },
   { value: "employee-dc", label: "会社員（企業型DCあり）" },
-  { value: "employee-db", label: "会社員（DBあり）・公務員" },
+  { value: "employee-db", label: "会社員（確定給付の企業年金DBあり）・公務員" },
   { value: "self-employed", label: "自営業・フリーランス（第1号）" },
   { value: "dependent", label: "専業主婦（夫）（第3号）" },
 ];

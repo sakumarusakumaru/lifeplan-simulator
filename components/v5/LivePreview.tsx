@@ -165,7 +165,7 @@ function Accuracy() {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex justify-between text-[11px] font-bold">
-        <span>試算の精度</span>
+        <span>入力の進み具合</span>
         <span className="text-[#0a0a0a]/60">{done} / 4 ブロック入力済み</span>
       </div>
       <div className="grid grid-cols-4 gap-1" aria-hidden>

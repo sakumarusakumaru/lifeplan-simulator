@@ -294,7 +294,8 @@ export function IncomeMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
   // ver5: 配偶者が「いない」ときは配偶者の年金欄を出さない（ver4 はこれまでどおり出す）
-  const hasSpouse = !useContext(TabModeContext) || !!plan.spouseBirth;
+  const tabMode = useContext(TabModeContext);
+  const hasSpouse = !tabMode || !!plan.spouseBirth;
 
   const updateJob = (i: number, patch: Partial<Job>) =>
     setField("jobs", plan.jobs.map((j, idx) => (idx === i ? { ...j, ...patch } : j)));
@@ -381,6 +382,31 @@ export function IncomeMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
+        {/* ver5: 配偶者の働き方と年収は、本人の収入と同じブロックで聞く（ver4 は基本設定の中） */}
+        {tabMode && plan.spouseBirth ? (
+          <CollapsibleSubGroup title="配偶者の収入">
+            <SelectField
+              label="働き方"
+              value={plan.spouseWork}
+              onChange={(v) => setField("spouseWork", v)}
+              options={[
+                { value: "work" as const, label: "働いている" },
+                { value: "none" as const, label: "働いていない" },
+              ]}
+            />
+            {plan.spouseWork === "work" ? (
+              <>
+                <NumberField label="年収（額面）" value={plan.spouseIncY} onChange={(v) => setField("spouseIncY", v)} unit="円" />
+                <div className="grid grid-cols-2 gap-2">
+                  <NumberField label="働き始めた年齢" value={plan.spouseIncStart} onChange={(v) => setField("spouseIncStart", v)} unit="歳" />
+                  <NumberField label="働き終える年齢" value={plan.spouseIncEnd} onChange={(v) => setField("spouseIncEnd", v)} unit="歳" />
+                </div>
+                <p className="text-[11px] text-[#0a0a0a]/60">配偶者の年金の種類（会社員・自営業・扶養）は、下の「年金」で選びます</p>
+              </>
+            ) : null}
+          </CollapsibleSubGroup>
+        ) : null}
+
         <CollapsibleSubGroup title="年金">
           <div className="flex flex-col gap-3">
             {hasSpouse ? (
@@ -395,7 +421,7 @@ export function IncomeMegaSection() {
               value={plan.penIndex ?? 0}
               onChange={(v) => setField("penIndex", v)}
               step={0.1}
-              hint={`物価・賃金に連動するが、マクロ経済スライドで物価（${plan.infl.toFixed(1)}%）より低めに改定されるのが基本。2026年度は+1.9%`}
+              hint={`将来ずっと平均した目安（初期値1.0%）。年金は物価・賃金に合わせて毎年改定されますが、マクロ経済スライド（年金の伸びを少し抑える仕組み）で、物価（${plan.infl.toFixed(1)}%）より低めになるのが基本です。参考: 2026年度の改定は+1.9%`}
             />
             <PensionEditor
               kicker="本人"
@@ -417,6 +443,9 @@ export function IncomeMegaSection() {
             ) : null}
           </div>
         </CollapsibleSubGroup>
+        {tabMode ? (
+          <p className="text-[11px] text-[#0a0a0a]/60">相続・贈与などの一時的な収入は「4 支出 ＞ ライフイベント」で入れます</p>
+        ) : null}
       </div>
     </Section>
   );

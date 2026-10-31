@@ -28,10 +28,10 @@ const PROP_TYPE_OPTIONS: { value: RealEstateType; label: string }[] = [
 
 const STRUCTURE_OPTIONS: { value: BuildingStructure; label: string }[] = [
   { value: "wood", label: "木造（耐用22年）" },
-  { value: "lightSteel", label: "軽量鉄骨（27年）" },
-  { value: "heavySteel", label: "重量鉄骨（34年）" },
-  { value: "rc", label: "RC造（47年）" },
-  { value: "src", label: "SRC造（47年）" },
+  { value: "lightSteel", label: "軽量鉄骨（耐用27年）" },
+  { value: "heavySteel", label: "重量鉄骨（耐用34年）" },
+  { value: "rc", label: "鉄筋コンクリート（RC造・耐用47年）" },
+  { value: "src", label: "鉄骨鉄筋コンクリート（SRC造・耐用47年）" },
 ];
 
 const fmtMan = (yen: number) => {
@@ -322,6 +322,8 @@ export function AssetsMegaSection() {
             <NumberField
               label="新NISAで買った金額の合計（元本）"
               value={plan.nisaCost}
+                blankZero
+                placeholder="自動"
               onChange={(v) => setField("nisaCost", v)}
               unit="円"
               hint={`2024年以降に新NISAで買った金額（旧NISAの分は入れない）。年360万円までなので今年までの最大は${fmtMan(nisaMaxCostNow)}。空欄＝新NISA分の評価額と同じ`}
@@ -403,6 +405,8 @@ export function AssetsMegaSection() {
             <NumberField
               label="買った金額の合計（元本）"
               value={plan.tokuCost}
+                blankZero
+                placeholder="自動"
               onChange={(v) => setField("tokuCost", v)}
               unit="円"
               hint="売ったときの税金（利益の部分にかかる）の計算に使用。空欄＝評価額と同じ"
@@ -455,14 +459,14 @@ export function AssetsMegaSection() {
                 value={plan.saveDcM}
                 onChange={(v) => setField("saveDcM", v)}
                 unit="円"
-                hint="iDeCo・マッチング拠出。手取りから出る"
+                hint="iDeCo、または会社の企業型DCに自分で上乗せする分（マッチング拠出）。給料の手取りから出る"
               />
               <NumberField
                 label="会社が出す掛金(月)"
                 value={plan.dcEmployerM}
                 onChange={(v) => setField("dcEmployerM", v)}
                 unit="円"
-                hint="企業型DCの事業主掛金。手取りは減らない"
+                hint="会社が出してくれる企業型DCの掛金（事業主掛金）。手取りは減らない"
               />
               <NumberField
                 label="加入した年齢"
@@ -536,6 +540,8 @@ export function AssetsMegaSection() {
             <NumberField
               label="買った金額の合計（元本）"
               value={plan.cryptoCost}
+                blankZero
+                placeholder="自動"
               onChange={(v) => setField("cryptoCost", v)}
               unit="円"
               hint="空欄=残高と同じ"
@@ -578,6 +584,8 @@ export function AssetsMegaSection() {
             <NumberField
               label="買った金額の合計（元本）"
               value={plan.goldCost}
+                blankZero
+                placeholder="自動"
               onChange={(v) => setField("goldCost", v)}
               unit="円"
               hint="空欄=残高と同じ"
@@ -687,6 +695,8 @@ export function AssetsMegaSection() {
                       <NumberField
                         label="現在評価額（手動上書き・空欄=自動）"
                         value={r.currentValueOverride ?? 0}
+                blankZero
+                placeholder="自動"
                         onChange={(v) => updateRe(i, { currentValueOverride: v })}
                         unit="円"
                         hint={

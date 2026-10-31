@@ -35,10 +35,10 @@ const HOME_PROP_TYPE_OPTIONS: { value: RealEstateType; label: string }[] = [
 
 const HOME_STRUCTURE_OPTIONS: { value: BuildingStructure; label: string }[] = [
   { value: "wood", label: "木造（耐用22年）" },
-  { value: "lightSteel", label: "軽量鉄骨（27年）" },
-  { value: "heavySteel", label: "重量鉄骨（34年）" },
-  { value: "rc", label: "RC造（47年）" },
-  { value: "src", label: "SRC造（47年）" },
+  { value: "lightSteel", label: "軽量鉄骨（耐用27年）" },
+  { value: "heavySteel", label: "重量鉄骨（耐用34年）" },
+  { value: "rc", label: "鉄筋コンクリート（RC造・耐用47年）" },
+  { value: "src", label: "鉄骨鉄筋コンクリート（SRC造・耐用47年）" },
 ];
 
 const fmtMan = (yen: number) => {
@@ -102,7 +102,7 @@ const JUKU_PRESETS: JukuPreset[] = [
   },
 ];
 
-const NEW_KID = (): Kid => ({
+export const NEW_KID = (): Kid => ({
   name: "新しい子",
   birth: "",
   offset: 0,
@@ -244,7 +244,7 @@ export function ExpenseMegaSection() {
                   <p className="mb-1 text-[10px] font-bold text-[#c8383a]">✗ 含めない（別項目で入力）</p>
                   <ul className="text-[10px] leading-relaxed text-[#0a0a0a]/75">
                     <li>・家賃・住宅ローン → 住居</li>
-                    <li>・保険料 → 保険</li>
+                    <li>・保険料 → 保険（Lite版から引き継いだ生活費には保険料が入っています。保険を別に入れるときは、その分を生活費から引いてください）</li>
                     <li>・教育費・塾代 → 教育費</li>
                     <li>・投信/株/NISA積立 → 資産・運用</li>
                     <li>・介護費用 → 介護費用</li>
@@ -313,6 +313,31 @@ export function ExpenseMegaSection() {
               unit="歳"
               hint="この年齢から家賃が止まり、固定資産税がかかります。住宅ローンの開始年齢と頭金（ライフイベント）も合わせて入れてください。持ち家にチェックを入れると、買う年齢から自宅として数えます"
             />
+            {(plan.homeBuyAge ?? 0) > 0 ? (() => {
+              // 家を買う予定は3か所（持ち家・住宅ローンの開始・頭金）にまたがるので、ずれていたら知らせる
+              const buy = plan.homeBuyAge ?? 0;
+              const issues: { text: string; fix?: () => void; fixLabel?: string }[] = [];
+              if (!plan.homeOwned) issues.push({ text: "「持ち家」にチェックが入っていません（買ったあとの家が資産に入りません）", fix: () => setField("homeOwned", true), fixLabel: "チェックを入れる" });
+              if (plan.useHomeLoan && plan.hlStart !== buy)
+                issues.push({ text: `住宅ローンの返済開始（${plan.hlStart}歳）が、買う年齢（${buy}歳）と違います`, fix: () => setField("hlStart", buy), fixLabel: `${buy}歳にそろえる` });
+              if (!plan.lifeExpenses.some((e) => e.age === buy))
+                issues.push({ text: `${buy}歳の一時支出（頭金・諸費用）がありません。「ライフイベント」の一時支出に入れてください`, fix: () => setField("lifeExpenses", [...plan.lifeExpenses, { age: buy, amount: 0, label: "家の頭金・諸費用" }]), fixLabel: "欄を足す" });
+              return issues.length ? (
+                <div className="flex flex-col gap-1.5 rounded-lg p-3 text-[11px] leading-relaxed" style={{ background: "#fff8e6", border: "1.5px solid #d4a01760" }}>
+                  <p className="font-bold">家を買う予定とそろっていない所</p>
+                  {issues.map((it) => (
+                    <div key={it.text} className="flex flex-wrap items-center justify-between gap-2">
+                      <span>・{it.text}</span>
+                      {it.fix ? (
+                        <button type="button" onClick={it.fix} className="rounded-md px-2 py-1 text-[11px] font-bold" style={{ border: "1.5px solid #0a0a0a" }}>
+                          {it.fixLabel}
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            })() : null}
             <CheckboxField
               label="持ち家（自宅を所有している）"
               value={plan.homeOwned ?? plan.useHomeLoan}
@@ -324,7 +349,7 @@ export function ExpenseMegaSection() {
                 style={{ background: "#f0f7ff", border: "1.5px solid #3b82f640" }}
               >
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]/65">
-                  自宅の評価額（BSの資産側に計上）
+                  自宅の評価額（レポートの「資産と負債のバランス」に入ります）
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <SelectField
@@ -425,6 +450,8 @@ export function ExpenseMegaSection() {
                       <NumberField
                         label="現在評価額（手動上書き・空欄=自動）"
                         value={plan.homeCurrentValueOverride ?? 0}
+                blankZero
+                placeholder="自動"
                         onChange={(v) => setField("homeCurrentValueOverride", v)}
                         unit="円"
                       />
@@ -639,13 +666,16 @@ export function ExpenseMegaSection() {
                             value={k.birth}
                             onChange={(v) => updateKid(i, { birth: v })}
                           />
-                          <NumberField
-                            label="現在年齢"
-                            value={ca ?? 0}
-                            onChange={() => {}}
-                            unit="歳"
-                            hint="生年月日から自動"
-                          />
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0a0a0a]">現在年齢</span>
+                            <div
+                              className="flex h-[34px] items-center justify-end px-2 text-xs font-bold tabular-nums text-[#0a0a0a]/50"
+                              style={{ border: "2px solid #0a0a0a25", borderRadius: 8, background: "#f0f0ee" }}
+                            >
+                              {ca !== null && ca !== undefined ? `${ca} 歳` : "—"}
+                            </div>
+                            <span className="text-[10px] text-[#0a0a0a]/55">生年月日から自動</span>
+                          </div>
                         </div>
                       </div>
                       <div className="mt-4">

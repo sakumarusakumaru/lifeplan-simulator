@@ -56,9 +56,8 @@ function buildVerdict(
   const curIncome = Math.round((cur?.income ?? 0) / 10000);
   const curExp = Math.round((cur?.exp ?? 0) / 10000);
   const monthlyDeficit = Math.round((curExp - curIncome) / 12);
-  const totalCashAssets = Math.round(
-    (plan.cashBal + plan.nisaBal + plan.tokuBal) / 10000,
-  );
+  // 生活防衛資金は、すぐ使える預金だけで数える（目安は生活費の6〜12か月分。比較画面の資産配分の説明と同じ）
+  const totalCashAssets = Math.round(plan.cashBal / 10000);
   const monthlyExp = Math.round(curExp / 12);
   const livingDefenseMonths =
     monthlyExp > 0 ? Math.round((totalCashAssets / monthlyExp) * 10) / 10 : 0;
@@ -88,7 +87,7 @@ function buildVerdict(
 
     const headline = `${sa}歳で資金不足（あと${yearsLeft}年）`;
     const body =
-      `【現状診断】\n現役期の収支・積立水準では、${sa}歳時点（残り${yearsLeft}年）で運用資産・現金がともに枯渇する見込みです。現状の年間収支は手取り${curIncome}万円・支出${curExp}万円で${monthlyDeficit > 0 ? `月${monthlyDeficit}万円の不足` : `黒字${-monthlyDeficit}万円/月`}、年間積立${annualSave}万円という構造になっています。生活防衛資金は約${livingDefenseMonths}ヶ月分です。\n\n` +
+      `【現状診断】\n現役期の収支・積立水準では、${sa}歳時点（残り${yearsLeft}年）で運用資産・現金がともに枯渇する見込みです。現状の年間収支は手取り${curIncome}万円・支出${curExp}万円で${monthlyDeficit > 0 ? `月${monthlyDeficit}万円の不足` : `黒字${-monthlyDeficit}万円/月`}、年間積立${annualSave}万円という構造になっています。預金は生活費の約${livingDefenseMonths}か月分です。\n\n` +
       `【課題分析】\n資金ショートの根本原因は、(1) 老後の年金収入が現役期の生活水準をカバーしきれない、(2) 退職時${lastJobEndAge}歳から年金開始${penStartA}歳までのギャップ期間に取り崩しが集中、(3) インフレ進行で実質的な購買力が低下、の3点です。${koseiYears < 30 ? `特に厚生年金加入年数${koseiYears}年は短く、年金受給額が想定より低い可能性があります。` : ""}\n\n` +
       `【考えられる選択肢（${yearsLeft < 10 ? "即効性重視" : yearsLeft < 25 ? "中期構造改革" : "長期計画"}）】\n` +
       `・固定費の削減: 住居費・通信費・保険料の見直しで、月1〜3万円を捻出できる例が多いとされます。\n` +
@@ -126,9 +125,9 @@ function buildVerdict(
       level: "warn",
       headline: `${endAge}歳まで完走するも余裕わずか（${nwLabel(nw)}）`,
       body:
-        `【現状診断】\n${endAge}歳時点での純資産は${fmtMan(nw)}と、想定外の支出への耐性が限定的です。生活防衛資金は現在${livingDefenseMonths}ヶ月分（目安は12〜24ヶ月）${livingDefenseMonths >= 12 ? "で、当面の備えはできています" : "で、やや心もとない水準です"}。\n\n` +
+        `【現状診断】\n${endAge}歳時点での純資産は${fmtMan(nw)}と、想定外の支出への耐性が限定的です。預金は生活費の${livingDefenseMonths}か月分です（生活防衛資金の目安は6〜12か月分）${livingDefenseMonths >= 6 ? "。当面の備えはある水準です" : "。やや心もとない水準です"}。\n\n` +
         `【課題分析】\n医療費（70歳以降の高額療養費は月8〜25万円自己負担）、介護費（在宅で月8〜10万円・施設で月13〜25万円が5〜10年）、物価上昇（年1〜2%継続で30年で35〜80%減価）など、想定外リスクへのバッファが薄い状態です。\n\n` +
-        `【考えられる選択肢】\n${livingDefenseMonths < 12 ? `・生活防衛資金の確保: 生活費の12〜24ヶ月分（現在${livingDefenseMonths}ヶ月分）を預金など引き出しやすい形で確保。\n` : ""}・NISAの生涯枠（1,800万円）を早めに埋める: 年360万円なら最短5年。埋まった後は特定口座で続けるのが一般的です。\n・iDeCo の節税効果: 月2.3万円の掛金なら年27.6万円が所得控除され、税率30%（所得税20%・住民税10%）の人で年約8.3万円の節税。\n・医療保険の見直し: 高額療養費制度を踏まえ、過剰な保障を整理して可処分所得を確保。\n\n` +
+        `【考えられる選択肢】\n${livingDefenseMonths < 6 ? `・生活防衛資金: 生活費の6〜12か月分（現在${livingDefenseMonths}か月分）を、運用とは別に預金で持っておく考え方があります。\n` : ""}・NISAの生涯枠（1,800万円）を早めに埋める: 年360万円なら最短5年。埋まった後は特定口座で続けるのが一般的です。\n・iDeCo の節税効果: 月2.3万円の掛金なら年27.6万円が所得控除され、税率30%（所得税20%・住民税10%）の人で年約8.3万円の節税。\n・医療保険の見直し: 高額療養費制度を踏まえ、過剰な保障を整理して可処分所得を確保。\n\n` +
         `【次のステップ】\n月+1〜2万円の積立増による老後余裕度への影響は「比較」タブで試算できます。`,
     };
   }

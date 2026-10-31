@@ -14,6 +14,8 @@ interface NumberFieldProps {
   max?: number;
   step?: number;
   className?: string;
+  blankZero?: boolean; // 0のときは空欄で見せる（「空欄なら自動」の欄）
+  placeholder?: string;
 }
 
 export function NumberField({
@@ -26,6 +28,8 @@ export function NumberField({
   max,
   step,
   className,
+  blankZero = false,
+  placeholder,
 }: NumberFieldProps) {
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState(() => (value === 0 ? "" : String(value)));
@@ -46,7 +50,14 @@ export function NumberField({
     return v;
   };
 
-  const displayValue = focused ? text : value === 0 ? "0" : value.toLocaleString("ja-JP");
+  const displayValue = focused ? text : value === 0 ? (blankZero ? "" : "0") : value.toLocaleString("ja-JP");
+  // 円の欄は、桁を数えなくて済むように「600万円」と横に読みを出す
+  const manText =
+    unit === "円" && Math.abs(value) >= 10000
+      ? Math.abs(value) >= 100_000_000
+        ? `${Math.round(value / 1_000_000) / 100}億円`
+        : `${(Math.round(value / 1000) / 10).toLocaleString("ja-JP")}万円`
+      : null;
 
   return (
     <Field label={label} hint={hint} className={className}>
@@ -54,11 +65,17 @@ export function NumberField({
         className="flex overflow-hidden bg-white focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#c8383a]"
         style={{ border: "2px solid #0a0a0a", borderRadius: 8 }}
       >
+        {manText ? (
+          <span className="flex shrink-0 items-center pl-2 text-[10px] font-bold tabular-nums text-[#0a0a0a]/45" aria-hidden>
+            {manText}
+          </span>
+        ) : null}
         <input
           type="text"
           inputMode="numeric"
-          className="w-full px-2 py-1.5 text-right text-xs font-bold tabular-nums outline-none"
+          className="w-full min-w-0 px-2 py-1.5 text-right text-xs font-bold tabular-nums outline-none"
           value={displayValue}
+          placeholder={placeholder}
           onFocus={(e) => {
             const raw = value === 0 ? "" : String(value);
             setText(raw);

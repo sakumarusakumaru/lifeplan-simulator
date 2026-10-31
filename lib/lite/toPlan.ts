@@ -86,6 +86,7 @@ export function liteToPlan(q: LiteInput): PlanInput {
   if (buy) lifeExpenses.push({ age: q.buyAge, amount: (Math.min(q.buyDown, q.buyPrice) + (q.buyPrice * A.buyCostRate) / 100) * MAN, label: "家の頭金・諸費用" });
 
   const owner = q.home !== "rent" || buy;
+  const upkeepM = q.homeType === "house" ? A.upkeepHouseM : A.upkeepMansionM;
   const loan = q.home === "loan" && q.loanM > 0 && q.loanYears > 0;
   const investM = Math.max(0, q.investM) * MAN;
   const invest = Math.max(0, q.invest) * MAN;
@@ -121,11 +122,12 @@ export function liteToPlan(q: LiteInput): PlanInput {
     livingRetireM: q.retireLivingM > 0 ? q.retireLivingM * MAN : 0,
     livingRetireAge: retire,
     lifeExpenses,
-    rentM: q.home === "rent" ? Math.max(0, q.rentM) * MAN : 0,
+    // 今の持ち家の維持費（マンションは管理費・修繕積立金、戸建ては修繕の積立）は詳細版の「家賃/管理費(月)」へ。
+    // これから買う家は、買った年から家賃の欄が止まるので、維持費は固定資産税の欄に足す
+    rentM: q.home === "rent" ? Math.max(0, q.rentM) * MAN : owner ? upkeepM * MAN : 0,
     homeOwned: owner,
     homeBuyAge: buy ? q.buyAge : 0,
-    // 持ち家の固定資産税と維持費（マンションは管理費・修繕積立金、戸建ては修繕の積立）
-    homeTaxY: owner ? (A.homeTaxY + (q.homeType === "house" ? A.upkeepHouseM : A.upkeepMansionM) * 12) * MAN : 0,
+    homeTaxY: owner ? (A.homeTaxY + (buy ? upkeepM * 12 : 0)) * MAN : 0,
     ...(buy
       ? {
           homePropType: q.homeType,

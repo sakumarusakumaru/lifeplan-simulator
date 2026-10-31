@@ -250,6 +250,15 @@ export function HeaderMenu({
               </span>
             </span>
           </button>
+          {base === "/v5" ? (
+            <Link href="/v4/detail" role="menuitem" className={item} onClick={() => setOpen(false)}>
+              <span aria-hidden>↺</span>
+              <span className="flex flex-col">
+                <span className="font-bold">ひとつ前の版（ver4）を開く</span>
+                <span className="text-[10px] text-[#0a0a0a]/55">計算は同じで、画面の作りだけ違う版。入力データも共通</span>
+              </span>
+            </Link>
+          ) : null}
           <Link
             href="/v3/detail"
             role="menuitem"

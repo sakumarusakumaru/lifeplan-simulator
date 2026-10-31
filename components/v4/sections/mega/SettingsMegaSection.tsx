@@ -9,8 +9,12 @@ import { PercentField } from "@/components/v4/inputs/PercentField";
 import { SelectField } from "@/components/v4/inputs/SelectField";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { DrawOrderEditor } from "@/components/v4/DrawOrderEditor";
+import { AddButton, ListItemCard } from "@/components/v4/ListItemCard";
+import { TextField } from "@/components/v4/inputs/TextField";
 import { Section, TabModeContext } from "@/components/v4/Section";
-import { ageOn } from "@/lib/v4/calc/age";
+import { NEW_KID } from "@/components/v4/sections/mega/ExpenseMegaSection";
+import { ageOn, kidOffset } from "@/lib/v4/calc/age";
+import type { Kid } from "@/lib/v4/calc/types";
 import { calcHouseholdTax } from "@/lib/v4/calc/tax";
 import { usePlanStore } from "@/store/v4/plan-store";
 
@@ -34,7 +38,7 @@ function AgeDisplay({ birth }: { birth: string }) {
         className="flex h-[34px] items-center justify-end px-2 text-xs font-bold tabular-nums text-[#0a0a0a]/50"
         style={{ border: "2px solid #0a0a0a25", borderRadius: 8, background: "#f0f0ee" }}
       >
-        {age !== null ? `${age} 歳` : "—"}
+        {age !== null ? (age < 0 ? "これから" : `${age} 歳`) : "—"}
       </div>
     </div>
   );
@@ -92,6 +96,11 @@ export function SettingsMegaSection() {
   const [spouseOn, setSpouseOn] = useState(!!plan.spouseBirth);
   const showSpouse = !tabMode || spouseOn || !!plan.spouseBirth;
   const Detail = tabMode ? DetailWrap : Fragment;
+  const updateKid = (i: number, patch: Partial<Kid>) => {
+    const kids = plan.kids.map((k, idx) => (idx === i ? { ...k, ...patch } : k));
+    if (patch.birth !== undefined) kids[i] = { ...kids[i], offset: kidOffset(plan.selfBirth, plan.baseDate, patch.birth) };
+    setField("kids", kids);
+  };
   const pickSpouse = (v: boolean) => {
     setSpouseOn(v);
     if (!v && plan.spouseBirth) patch({ spouseBirth: "" });
@@ -181,6 +190,9 @@ export function SettingsMegaSection() {
               />
               <AgeDisplay birth={plan.spouseBirth} />
             </div>
+            {/* ver5 は配偶者の働き方・年収を「収入」ブロックで聞く */}
+            {tabMode ? null : (
+            <>
             <SelectField
               label="就労状況"
               value={plan.spouseWork}
@@ -207,12 +219,38 @@ export function SettingsMegaSection() {
                 unit="歳"
               />
             </div>
+            </>
+            )}
           </div>
           ) : null}
           {tabMode && showSpouse && !plan.spouseBirth ? (
             <p className="text-[11px] text-[#0a0a0a]/60">生年月日を入れると、配偶者の収入・年金も計算に入ります</p>
           ) : null}
+          {tabMode && plan.spouseBirth ? (
+            <p className="text-[11px] text-[#0a0a0a]/60">配偶者の働き方と年収は「2 収入」で入れます</p>
+          ) : null}
         </CollapsibleSubGroup>
+
+        {/* ver5: 子どもも家族の欄で聞く（ver4 は「支出 ＞ 教育費」の中だけ） */}
+        {tabMode ? (
+          <CollapsibleSubGroup title="子ども">
+            {plan.kids.map((k, i) => (
+              <ListItemCard key={i} kicker={`KID ${String(i + 1).padStart(2, "0")}`} onRemove={() => setField("kids", plan.kids.filter((_, idx) => idx !== i))}>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                  <TextField label="名前（呼び名）" value={k.name} onChange={(v) => updateKid(i, { name: v })} />
+                  <DateField label="生年月日（予定日でも可）" value={k.birth} onChange={(v) => updateKid(i, { birth: v })} />
+                  <AgeDisplay birth={k.birth} />
+                </div>
+              </ListItemCard>
+            ))}
+            <div className="flex flex-wrap items-center gap-3">
+              <AddButton label="子どもを追加" onClick={() => setField("kids", [...plan.kids, { ...NEW_KID(), name: `子${plan.kids.length + 1}` }])} />
+              <span className="text-[11px] text-[#0a0a0a]/60">
+                {plan.kids.length ? "進学（公立・私立）や塾代は「4 支出 ＞ 教育費」で。はじめは全部公立で計算します" : "いなければ、そのままで大丈夫です"}
+              </span>
+            </div>
+          </CollapsibleSubGroup>
+        ) : null}
 
         <Detail>
         <CollapsibleSubGroup title="シミュレーション設定" defaultOpen={tabMode}>
@@ -231,7 +269,7 @@ export function SettingsMegaSection() {
               onChange={(v) => setField("infl", v)}
             />
             <NumberField
-              label="現金保有下限額"
+              label="手元に残す預金の最低額（現金保有下限額）"
               value={plan.cashFloor}
               onChange={(v) => setField("cashFloor", v)}
               unit="円"
