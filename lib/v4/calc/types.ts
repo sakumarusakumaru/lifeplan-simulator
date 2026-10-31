@@ -529,6 +529,19 @@ export interface YearlyResult {
   survChukorei: number;  // 中高齢寡婦加算
   deathLump: number;     // 死亡時の一時金（保険金・死亡退職金・DC死亡一時金）
   incomeProt: number;    // 収入保障保険
+  // ver5.20 年次サマリーの内訳用（額面。税・社会保険料は taxWage＋sevTax＋dcTax＋insSepTax でまとめて引く）
+  wageSelf: number;      // 本人の給与（額面）
+  wageSpouse: number;    // 配偶者の給与（額面）
+  sideInc: number;       // 副業の所得
+  pubPen: number;        // 公的年金（本人＋配偶者＋加給年金。額面）
+  corpPen: number;       // 企業年金・DC年金・退職金の年金受取（額面）
+  dcLump: number;        // DC一時金（額面）
+  survPen: number;       // 遺族年金の合計（もしものときだけ）
+  insSepTax: number;     // 保険の満期金などにかかった分離課税
+  nisaIn: number;        // NISAへの積立（年間枠・生涯枠の調整後）
+  tokuIn: number;        // 特定口座への積立（NISA枠を超えて回した分を含む）
+  cryptoIn: number;      // 暗号資産への積立
+  goldIn: number;        // 金への積立
 }
 
 export interface SimulationWarning {

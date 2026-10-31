@@ -863,6 +863,18 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       deathLump,
       incomeProt,
       insPayout: insY.payout,
+      wageSelf: job,
+      wageSpouse: spouseJob,
+      sideInc: side,
+      pubPen: pen,
+      corpPen: dcAnnuity + sevAnnuity,
+      dcLump,
+      survPen: surv.total,
+      insSepTax: insY.separateTax,
+      nisaIn,
+      tokuIn: tToku,
+      cryptoIn: tK,
+      goldIn: tG,
     });
   }
 

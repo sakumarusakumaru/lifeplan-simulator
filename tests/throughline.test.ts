@@ -208,3 +208,20 @@ test("THRU-03 T3 年金取り崩し: 取り崩しは69歳から、特定口座�
   // 税＋社保（譲渡税除く）は独立計算と全年±2万円以内で一致済み。代表して76歳を固定
   near(taxOf(a76), 189_950, 1_000);
 });
+
+test("THRU-04 年次サマリーの内訳: 収入・支出・積立の内訳を足すと、どの年も合計と1円以内で合う", () => {
+  const withWindfall: PlanInput = { ...DEFAULT_PLAN, inheritances: [{ label: "親からの相続", age: 60, amount: 10_000_000 }], lifeExpenses: [{ label: "車", age: 45, amount: 2_000_000 }] };
+  for (const plan of [T1, T2, T3, DEFAULT_PLAN, withWindfall]) {
+    for (const r of simulate(plan).rows) {
+      const incomeParts =
+        r.wageSelf + r.wageSpouse + r.sideInc + r.pubPen + r.corpPen + r.sevGross + r.dcLump + r.childAllow +
+        r.insPayout + r.incomeProt + r.deathLump + r.survPen + r.reInc + r.inherit -
+        (r.taxWage + r.sevTax + r.dcTax + r.insSepTax);
+      assert.ok(Math.abs(incomeParts - r.income) < 1, `${r.age}歳 収入 ${incomeParts} ≠ ${r.income}`);
+      const expParts = r.basicL + r.special + r.homeRent + r.homeTax + r.homePay + r.eduT + r.eduJ + r.ins + r.care + r.lifeExp + r.otherLoanPay;
+      assert.ok(Math.abs(expParts - r.exp) < 1, `${r.age}歳 支出 ${expParts} ≠ ${r.exp}`);
+      const invParts = r.nisaIn + r.tokuIn + r.cryptoIn + r.goldIn + r.dcContribSelf;
+      assert.ok(Math.abs(invParts - r.inv) < 1, `${r.age}歳 積立 ${invParts} ≠ ${r.inv}`);
+    }
+  }
+});
