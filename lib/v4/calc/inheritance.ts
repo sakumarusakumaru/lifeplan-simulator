@@ -247,6 +247,9 @@ export function estateBreakdown(plan: PlanInput, row: YearlyResult, heirCount: n
   const share = hasSpouse ? Math.min(100, Math.max(0, s.selfSharePct)) / 100 : 1;
   const a = row.ass;
   const householdFin = a.c + a.nisa + a.toku + a.k + a.g;
+  // ver6: 配偶者名義と分かっている口座（NISA・特定口座）は、名義の割合にかかわらず配偶者の財産
+  const spouseNamed = hasSpouse ? Math.max(0, (row.spNisa ?? 0) + (row.spToku ?? 0)) : 0;
+  const sharedFin = householdFin - spouseNamed;
   const props = realEstateEval(plan, year, s).map((p) => ({ ...p, market: p.market / deflate, land: p.land / deflate, building: p.building / deflate, value: p.value / deflate }));
   const home = props.find((p) => p.key === "home");
   const hv = home?.value ?? 0;
@@ -266,10 +269,10 @@ export function estateBreakdown(plan: PlanInput, row: YearlyResult, heirCount: n
   // 住宅ローンは本人の債務（団信があれば亡くなると0になるので債務から外す）
   const hlDebt = plan.risk?.danshin ? 0 : row.hlBal;
   const reLoans = loans - row.hlBal;
-  const total = Math.max(0, householdFin * share + homeSelf - homeLandCut + re + insurance + retirement - hlDebt - reLoans);
-  const spouseOwn = hasSpouse ? Math.max(0, (householdFin + hv) * (1 - share)) : 0;
+  const total = Math.max(0, sharedFin * share + homeSelf - homeLandCut + re + insurance + retirement - hlDebt - reLoans);
+  const spouseOwn = hasSpouse ? Math.max(0, (sharedFin + hv) * (1 - share) + spouseNamed) : 0;
   return {
-    financial: householdFin * share,
+    financial: sharedFin * share,
     home: homeSelf - homeLandCut,
     homeLandCut,
     realEstate: re,

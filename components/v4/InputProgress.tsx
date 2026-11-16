@@ -58,7 +58,7 @@ export function InputProgress({
   return (
     <div className="rounded-xl bg-white p-4 sm:p-5" style={{ border: "1.5px solid #0a0a0a" }}>
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0a0a0a]/50">
-        {mode === "gate" ? "まだ結果は出ていません" : base === "/v5" ? `入力　${done} / 4 ブロック完了` : `STEP ${Math.min(done + 1, 4)} / 4`}
+        {mode === "gate" ? "まだ結果は出ていません" : base !== "/v4" ? `入力　${done} / 4 ブロック完了` : `STEP ${Math.min(done + 1, 4)} / 4`}
       </p>
       <h1 className="mt-0.5 text-lg font-bold leading-snug text-[#0a0a0a] sm:text-xl">
         {mode === "gate"
@@ -67,7 +67,7 @@ export function InputProgress({
             ? "まずは、あなたのことを教えてください"
             : "その調子です。続きを入力しましょう"}
       </h1>
-      {base === "/v5" && mode === "input" ? (
+      {base !== "/v4" && mode === "input" ? (
         <p className="mt-1 text-[12px] leading-relaxed text-[#0a0a0a]/75">
           必須は<strong className="text-[#cf7a4a]">本人の生年月日</strong>。判定には<strong className="text-[#cf7a4a]">毎月の生活費</strong>も要ります。ほかの金額は、空欄なら0円として計算します。
           入れるたびに<span className="hidden lg:inline">右</span><span className="lg:hidden">下</span>の試算が動きます。

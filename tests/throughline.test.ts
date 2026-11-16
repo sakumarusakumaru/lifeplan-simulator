@@ -211,11 +211,12 @@ test("THRU-03 T3 年金取り崩し: 取り崩しは69歳から、特定口座�
 
 test("THRU-04 年次サマリーの内訳: 収入・支出・積立の内訳を足すと、どの年も合計と1円以内で合う", () => {
   const withWindfall: PlanInput = { ...DEFAULT_PLAN, inheritances: [{ label: "親からの相続", age: 60, amount: 10_000_000 }], lifeExpenses: [{ label: "車", age: 45, amount: 2_000_000 }] };
-  for (const plan of [T1, T2, T3, DEFAULT_PLAN, withWindfall]) {
+  const withV6: PlanInput = { ...T2, spNisaBal: 500 * MAN, spNisaTsumitateM: 5 * MAN, spNisaEndAge: 60, spTokuBal: 2000 * MAN, spDivTokuY: 3.5, divNisaY: 2, nisaBal: 800 * MAN };
+  for (const plan of [T1, T2, T3, DEFAULT_PLAN, withWindfall, withV6]) {
     for (const r of simulate(plan).rows) {
       const incomeParts =
         r.wageSelf + r.wageSpouse + r.sideInc + r.pubPen + r.corpPen + r.sevGross + r.dcLump + r.childAllow +
-        r.insPayout + r.incomeProt + r.deathLump + r.survPen + r.reInc + r.inherit -
+        r.insPayout + r.incomeProt + r.deathLump + r.survPen + r.reInc + r.inherit + r.divGross - r.divTax -
         (r.taxWage + r.sevTax + r.dcTax + r.insSepTax);
       assert.ok(Math.abs(incomeParts - r.income) < 1, `${r.age}歳 収入 ${incomeParts} ≠ ${r.income}`);
       const expParts = r.basicL + r.special + r.homeRent + r.homeTax + r.homePay + r.eduT + r.eduJ + r.ins + r.care + r.lifeExp + r.otherLoanPay;

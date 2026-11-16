@@ -38,7 +38,7 @@ const toJp = (k: string) => KICKER_JP.reduce((s, [re, to]) => s.replace(re, to),
 
 export function ListItemCard({ kicker, onRemove, children, tone = "default", summary }: ListItemCardProps) {
   const t = TONES[tone];
-  const jp = useVBase() === "/v5";
+  const jp = useVBase() !== "/v4";
   const [open, setOpen] = useState(true);
   const shown = !jp || open;
   const removeBtn = onRemove ? (

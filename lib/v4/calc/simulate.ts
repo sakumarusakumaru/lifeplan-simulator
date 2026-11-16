@@ -95,8 +95,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
 
   const ass: AssetSnapshot = {
     c: input.cashBal,
-    nisa: input.nisaBal,
-    toku: input.tokuBal,
+    nisa: input.nisaBal + (input.spNisaBal ?? 0),
+    toku: input.tokuBal + (input.spTokuBal ?? 0),
     k: input.cryptoBal,
     g: input.goldBal,
     dc: input.dcBal,
@@ -105,11 +105,19 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
   const cost = {
     // 旧NISA（2023年まで）の分は新NISAの生涯枠に数えない
     nisa: input.nisaCost > 0 ? input.nisaCost : Math.max(0, input.nisaBal - (input.nisaSplit?.oldBal ?? 0)),
-    toku: input.tokuCost > 0 ? input.tokuCost : input.tokuBal,
+    toku: (input.tokuCost > 0 ? input.tokuCost : input.tokuBal) + ((input.spTokuCost ?? 0) > 0 ? (input.spTokuCost ?? 0) : (input.spTokuBal ?? 0)),
     k: input.cryptoCost > 0 ? input.cryptoCost : input.cryptoBal,
     g: input.goldCost > 0 ? input.goldCost : input.goldBal,
   };
   let nisaGrowthCost = 0; // 成長投資枠の簿価（今後の買付分のみ追跡）
+  // ver6: 配偶者名義のNISA・特定口座。ass.nisa / ass.toku（世帯の合計）の内数として、同じ利回りで運用する。
+  // NISAの年間枠・生涯枠は本人とは別に判定する。特定口座の簿価は世帯でまとめて持つ（税率が同じで、売るときは名義の割合で売るため）
+  const sp = {
+    nisa: Math.max(0, input.spNisaBal ?? 0),
+    toku: Math.max(0, input.spTokuBal ?? 0),
+    nisaCost: (input.spNisaCost ?? 0) > 0 ? (input.spNisaCost ?? 0) : Math.max(0, input.spNisaBal ?? 0),
+    nisaGrowthCost: 0,
+  };
   // 旧NISA（2023年まで）の分。NISA残高の内数として同じ利回りで運用し、取り崩すときは旧NISAから先に使う。
   // 旧NISAを売っても新NISAの簿価（生涯枠）は変わらない
   let nisaOld = Math.min(Math.max(0, input.nisaBal), Math.max(0, input.nisaSplit?.oldBal ?? 0));
@@ -709,13 +717,45 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       }
     }
     const tokuFromOverflow = input.nisaOverflowToToku ? nisaOverflow : 0;
-    const tToku = (investing && age < input.saveTokuEndAge ? input.saveTokuM * 12 : 0) + tokuFromOverflow;
+    const tTokuSelf = (investing && age < input.saveTokuEndAge ? input.saveTokuM * 12 : 0) + tokuFromOverflow;
+
+    // ver6: 配偶者のNISA・特定口座への積立（年齢は配偶者の年齢。枠は1人ずつ）
+    const spInvesting = investing && spouseAge !== null && !spouseGone;
+    let spNisaT = spInvesting && spouseAge < (input.spNisaEndAge ?? 0) ? (input.spNisaTsumitateM ?? 0) * 12 : 0;
+    let spNisaG = spInvesting && spouseAge < (input.spNisaEndAge ?? 0) ? (input.spNisaGrowthM ?? 0) * 12 : 0;
+    const spNisaRequested = spNisaT + spNisaG;
+    spNisaT = Math.min(spNisaT, NISA.tsumitateYear);
+    spNisaG = Math.min(spNisaG, NISA.growthYear);
+    const spRoom = Math.max(0, NISA.lifetime - sp.nisaCost);
+    spNisaT = Math.min(spNisaT, spRoom);
+    spNisaG = Math.min(spNisaG, spRoom - spNisaT, Math.max(0, NISA.growthLifetime - sp.nisaGrowthCost));
+    const spNisaIn = spNisaT + spNisaG;
+    const spNisaOverflow = spNisaRequested - spNisaIn;
+    if (spNisaOverflow > 0) {
+      if ((input.spNisaTsumitateM ?? 0) > 100_000 || (input.spNisaGrowthM ?? 0) > 200_000) {
+        warn("sp-nisa-year", "配偶者のNISAの年間枠（つみたて月10万・成長月20万）を超える分は" + (input.nisaOverflowToToku ? "配偶者の特定口座で積み立てる計算にしています。" : "積み立てずに現金に残す計算にしています。"));
+      } else {
+        warn("sp-nisa-life", `配偶者が${spouseAge}歳でNISAの生涯枠（簿価1,800万・うち成長枠1,200万）に達します。以降の積立は` + (input.nisaOverflowToToku ? "配偶者の特定口座に回して計算しています。" : "現金に残して計算しています。"), "info");
+      }
+    }
+    const spTokuIn =
+      (spInvesting && spouseAge < (input.spSaveTokuEndAge ?? 0) ? (input.spSaveTokuM ?? 0) * 12 : 0) +
+      (input.nisaOverflowToToku ? spNisaOverflow : 0);
+    const tToku = tTokuSelf + spTokuIn;
     const tK = investing && age < input.saveCryptoEndAge ? input.saveCryptoM * 12 : 0;
     const tG = investing && age < input.saveGoldEndAge ? input.saveGoldM * 12 : 0;
-    const inv = nisaIn + tToku + tK + tG + dcSelf;
+    const inv = nisaIn + spNisaIn + tToku + tK + tG + dcSelf;
 
     const exp = basic + home + edu + ins + care + lifeExp + otherLoanPay;
-    const cf = net + reInc + inherit + deathLump - exp - inv;
+    // ver6: 配当・分配金（年初の評価額 × 利回り）。受け取って現金に入れる。特定口座は20.315%を源泉で引く（申告不要）
+    const selfNisaNow = Math.max(0, ass.nisa - sp.nisa);
+    const selfTokuNow = Math.max(0, ass.toku - sp.toku);
+    const divNisa = (selfNisaNow * (input.divNisaY ?? 0) + sp.nisa * (input.spDivNisaY ?? 0)) / 100;
+    const divToku = (selfTokuNow * (input.divTokuY ?? 0) + sp.toku * (input.spDivTokuY ?? 0)) / 100;
+    const divGross = divNisa + divToku;
+    const divTax = divToku * CAPITAL_GAIN_TAX;
+
+    const cf = net + reInc + inherit + deathLump + divGross - divTax - exp - inv;
 
     // ── 現金（利息は20.315%源泉徴収後）──
     ass.c += cf;
@@ -727,12 +767,17 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const g = (base: number, path?: number[]) =>
       path ? (1 + base / 100) * (1 + path[t]) - 1 : base / 100;
     const nisaGrowth = 1 + g(input.nisaR, shock?.sec);
-    ass.nisa = (ass.nisa + nisaIn) * nisaGrowth;
+    ass.nisa = (ass.nisa + nisaIn + spNisaIn) * nisaGrowth;
     nisaOld *= nisaGrowth;
     cost.nisa += nisaIn;
     nisaGrowthCost += nisaG;
-    ass.toku = (ass.toku + tToku) * (1 + g(input.tokuR, shock?.sec));
+    sp.nisa = (sp.nisa + spNisaIn) * nisaGrowth;
+    sp.nisaCost += spNisaIn;
+    sp.nisaGrowthCost += spNisaG;
+    const tokuGrowth = 1 + g(input.tokuR, shock?.sec);
+    ass.toku = (ass.toku + tToku) * tokuGrowth;
     cost.toku += tToku;
+    sp.toku = (sp.toku + spTokuIn) * tokuGrowth;
     ass.k = (ass.k + tK) * (1 + g(input.cryptoR, shock?.crypto));
     cost.k += tK;
     ass.g = (ass.g + tG) * (1 + g(input.goldR, shock?.gold));
@@ -770,15 +815,25 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         const taxPaid = gross * gainRatio * rate;
         ass[key as DrawAsset] -= gross;
         if (key === "nisa") {
-          // 旧NISAから先に使い、残りを新NISAから。新NISAの簿価は新NISA部分の売却割合だけ減らす
-          const fromOld = Math.min(gross, nisaOld);
-          const newBal = bal - nisaOld;
-          const fromNew = gross - fromOld;
+          // 本人と配偶者の名義の割合で売る（ver6。配偶者の分がなければ全部本人）
+          const spPart = sp.nisa > 0 ? gross * (sp.nisa / bal) : 0;
+          const selfPart = gross - spPart;
+          if (spPart > 0) {
+            const spRatio = spPart / sp.nisa;
+            sp.nisaCost -= sp.nisaCost * spRatio;
+            sp.nisaGrowthCost -= sp.nisaGrowthCost * spRatio;
+            sp.nisa -= spPart;
+          }
+          // 本人の分は、旧NISAから先に使い、残りを新NISAから。新NISAの簿価は新NISA部分の売却割合だけ減らす
+          const fromOld = Math.min(selfPart, nisaOld);
+          const newBal = bal - spPart - (sp.nisa > 0 ? sp.nisa : 0) - nisaOld;
+          const fromNew = selfPart - fromOld;
           nisaOld -= fromOld;
           const newRatio = newBal > 0 ? fromNew / newBal : 0;
           cost.nisa -= cost.nisa * newRatio;
           nisaGrowthCost -= nisaGrowthCost * newRatio;
         } else {
+          if (key === "toku" && sp.toku > 0) sp.toku -= sp.toku * (gross / bal);
           cost[key] -= cost[key] * (gross / bal);
         }
         const got = gross - taxPaid;
@@ -810,7 +865,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       ass: { ...ass },
       reInc,
       net,
-      income: net + reInc + inherit + deathLump,
+      income: net + reInc + inherit + deathLump + divGross - divTax,
       exp,
       inv,
       edu,
@@ -850,7 +905,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       hlDeduct,
       saleTax,
       nisaCost: cost.nisa,
-      nisaOverflow,
+      nisaOverflow: nisaOverflow + spNisaOverflow,
       sevAnnuity,
       latentTax:
         Math.max(0, ass.toku - cost.toku) * CAPITAL_GAIN_TAX +
@@ -871,10 +926,14 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       dcLump,
       survPen: surv.total,
       insSepTax: insY.separateTax,
-      nisaIn,
+      nisaIn: nisaIn + spNisaIn,
       tokuIn: tToku,
       cryptoIn: tK,
       goldIn: tG,
+      divGross,
+      divTax,
+      spNisa: sp.nisa,
+      spToku: sp.toku,
     });
   }
 

@@ -70,7 +70,7 @@ export function MonteCarloBadge() {
         {Math.round(mc.successRate * 100)}%
       </span>
       <span className="flex flex-col text-[11px] leading-snug">
-        <span className="font-bold text-[#0a0a0a]">{base === "/v5" ? `${MC_RUNS.toLocaleString()}通りのうち、最後まで足りた割合` : "最後まで資金がもつ確率（振れ幅あり）"}</span>
+        <span className="font-bold text-[#0a0a0a]">{base !== "/v4" ? `${MC_RUNS.toLocaleString()}通りのうち、最後まで足りた割合` : "最後まで資金がもつ確率（振れ幅あり）"}</span>
         <span className="text-[#0a0a0a]/60">
           {risk.label}・{MC_RUNS.toLocaleString()}回試算
           {mc.worstDepletionAge !== null ? ` ／ 悪いケースで${mc.worstDepletionAge}歳に枯渇` : " ／ 悪いケースでも枯渇なし"}
@@ -87,7 +87,7 @@ export function MonteCarloPanel() {
   const setField = usePlanStore((s) => s.setField);
   const real = useUiStore((s) => s.realValue);
   const mc = useMonteCarlo(plan);
-  const jp = useVBase() === "/v5"; // ver5 は「確率」と言い切らず「〜通りのうち足りた割合」と書く
+  const jp = useVBase() !== "/v4"; // ver5 は「確率」と言い切らず「〜通りのうち足りた割合」と書く
   const compact = useIsNarrow();
   const riskKey: McRisk = plan.mcRisk ?? "balanced";
 

@@ -71,7 +71,7 @@ export function ScenarioPreviewChart({
   domainSeries?: SimulationSummary[];
   onHoverChange?: (over: boolean) => void; // グラフにマウスが乗っている間は、いま映している条件を保つため
 }) {
-  const jp = useVBase() === "/v5"; // ver5 は「金融純資産」「条件」の言葉で
+  const jp = useVBase() !== "/v4"; // ver5 は「金融純資産」「条件」の言葉で
   const ref = normal ?? base;
   const shown = preview ?? base;
   const delta = preview ? preview.finalNetWorth - base.finalNetWorth : 0;

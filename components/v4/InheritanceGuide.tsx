@@ -103,7 +103,7 @@ const STAGES: Stage[] = [
 ];
 
 export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanInput; base: SimulationSummary; real: boolean; no?: string }) {
-  const jp = useVBase() === "/v5"; // ver5 は見出しを日本語だけに
+  const jp = useVBase() !== "/v4"; // ver5 は見出しを日本語だけに
   const hasSpouse = ageOn(plan.spouseBirth, plan.baseDate) !== null;
   // 配偶者も子もいない場合は、親または兄弟姉妹の1人が相続すると仮定する
   const noFamily = !hasSpouse && plan.kids.length === 0;

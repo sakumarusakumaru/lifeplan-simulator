@@ -320,6 +320,24 @@ export interface PlanInput {
   // NISA枠を超えた積立は特定口座へ回す（オフなら枠超過分は現金のまま）
   nisaOverflowToToku: boolean;
 
+  // ver6: 配偶者名義のNISA・特定口座（本人とは別に、1人ずつ年間枠・生涯枠を判定）。
+  // 利回りは本人と同じ nisaR / tokuR。積立を終える年齢は配偶者の年齢。未入力（0）なら ver5 と同じ結果
+  spNisaBal?: number;
+  spNisaCost?: number;          // 0 なら残高と同額（新NISAの簿価として生涯枠に数える）
+  spNisaTsumitateM?: number;
+  spNisaGrowthM?: number;
+  spNisaEndAge?: number;        // 配偶者が何歳まで積み立てるか
+  spTokuBal?: number;
+  spTokuCost?: number;
+  spSaveTokuM?: number;
+  spSaveTokuEndAge?: number;    // 配偶者の年齢
+  // ver6: 配当・分配金を受け取って生活費に回す（年利回り %・その年の年初の評価額に対して）。
+  // 受け取る配当は口座の値上がり（nisaR / tokuR）とは別に入る。特定口座は20.315%の源泉分離（申告不要）、NISAは非課税
+  divNisaY?: number;
+  divTokuY?: number;
+  spDivNisaY?: number;
+  spDivTokuY?: number;
+
   // 暗号資産 — 売却益は雑所得（総合課税）。税率は所得に応じて15〜55%
   cryptoBal: number;
   cryptoCost: number;
@@ -445,8 +463,8 @@ export interface PensionBreakdown {
 
 export interface AssetSnapshot {
   c: number;
-  nisa: number;    // NISA口座（時価）
-  toku: number;    // 特定口座（時価）
+  nisa: number;    // NISA口座（時価）。ver6〜 配偶者名義の分も含めた世帯の合計
+  toku: number;    // 特定口座（時価）。同上
   k: number;       // 暗号資産
   dc: number;      // iDeCo・企業型DC
   g: number;       // 金
@@ -542,6 +560,11 @@ export interface YearlyResult {
   tokuIn: number;        // 特定口座への積立（NISA枠を超えて回した分を含む）
   cryptoIn: number;      // 暗号資産への積立
   goldIn: number;        // 金への積立
+  // ver6
+  divGross: number;      // 受け取った配当・分配金（税引き前。NISA＋特定口座、本人＋配偶者）
+  divTax: number;        // 特定口座の配当にかかった税（20.315%）
+  spNisa: number;        // 配偶者名義のNISA（ass.nisa の内数）
+  spToku: number;        // 配偶者名義の特定口座（ass.toku の内数）
 }
 
 export interface SimulationWarning {

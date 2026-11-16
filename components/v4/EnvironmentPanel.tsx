@@ -37,7 +37,7 @@ export function EnvironmentPanel({
   normal: SimulationSummary;
   current: SimulationSummary;
 }) {
-  const jp = useVBase() === "/v5"; // ver5 は英語の小見出しを出さない
+  const jp = useVBase() !== "/v4"; // ver5 は英語の小見出しを出さない
   const on = envActive(env);
   const [open, setOpen] = useState(true);
   const delta = current.finalNetWorth - normal.finalNetWorth;

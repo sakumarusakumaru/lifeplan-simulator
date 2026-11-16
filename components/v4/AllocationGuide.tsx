@@ -111,7 +111,7 @@ function stageOf(age: number): Stage {
 const bandOf = (age: number) => ({ lo: Math.max(0, Math.min(100, 100 - age)), hi: Math.max(0, Math.min(100, 120 - age)) });
 
 export function AllocationGuide({ plan, base }: { plan: PlanInput; base: SimulationSummary }) {
-  const jp = useVBase() === "/v5";
+  const jp = useVBase() !== "/v4";
   const [age, setAge] = useState(plan.curAge);
 
   // 年ごとの割合（%）と目安の帯

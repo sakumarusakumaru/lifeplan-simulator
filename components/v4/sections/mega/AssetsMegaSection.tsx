@@ -21,6 +21,7 @@ import type {
   RealEstate,
   RealEstateType,
 } from "@/lib/v4/calc/types";
+import { useVBase } from "@/components/v4/useVBase";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { removeLinked } from "@/store/v4/remove-linked";
 
@@ -96,6 +97,27 @@ function Quad({
 }
 
 // 口座ごとの色帯ヘッダー
+// ver6: 配当・分配金を受け取る利回り。入れると、いまの評価額での年額（税引き後）をその場で見せる
+function DividendField({ value, onChange, bal, taxed }: { value: number; onChange: (v: number) => void; bal: number; taxed: boolean }) {
+  const gross = (bal * value) / 100;
+  const net = taxed ? gross * (1 - 0.20315) : gross;
+  return (
+    <div className="flex flex-col gap-1">
+      <PercentField
+        label="配当・分配金を受け取る（利回り・年）"
+        value={value}
+        onChange={onChange}
+        hint={`受け取って生活費に回す分。再投資するなら0のまま。${taxed ? "20.315%が引かれて入る（申告不要として計算）" : "NISAなので非課税"}`}
+      />
+      {value > 0 && bal > 0 ? (
+        <p className="text-[11px] leading-relaxed text-[#0a0a0a]/70">
+          いまの評価額だと 年{fmtMan(gross)}{taxed ? `（税引き後 ${fmtMan(net)}）` : "（非課税）"}。毎年、その年の評価額 × 利回りで計算します
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function AccountBox({
   tone,
   title,
@@ -225,6 +247,9 @@ export function AssetsMegaSection() {
   const plan = usePlanStore((s) => s.plan);
   const setField = usePlanStore((s) => s.setField);
   const patch = usePlanStore((s) => s.patch);
+  // ver6: 配偶者のNISA・特定口座と、配当の受け取りを入れられる
+  const v6 = useVBase() === "/v6";
+  const hasSpouse = !!plan.spouseBirth;
 
   // 種類ごとの入力から、口座の合計・平均利回りを計算して反映する
   const nisaSplit: SplitInput = { ...{ on: true, fundBal: 0, fundR: 4, stockBal: 0, stockR: 6, oldBal: 0, oldR: 4 }, ...(plan.nisaSplit ?? {}) };
@@ -249,7 +274,11 @@ export function AssetsMegaSection() {
   const removeRe = (i: number) => removeLinked("res", i);
 
   const totalBal =
-    plan.cashBal + plan.nisaBal + plan.tokuBal + plan.cryptoBal + plan.goldBal + plan.dcBal;
+    plan.cashBal + plan.nisaBal + plan.tokuBal + plan.cryptoBal + plan.goldBal + plan.dcBal + (plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0);
+
+  // 配偶者のNISA: 生涯枠の消化状況
+  const spNisaCostNow = (plan.spNisaCost ?? 0) > 0 ? (plan.spNisaCost ?? 0) : (plan.spNisaBal ?? 0);
+  const spNisaYearOver = (plan.spNisaTsumitateM ?? 0) > 100_000 || (plan.spNisaGrowthM ?? 0) > 200_000;
 
   // NISA: 生涯枠の消化状況と、枠を使い切る年齢
   const nisaCostNow = plan.nisaCost > 0 ? plan.nisaCost : Math.max(0, plan.nisaBal - (plan.nisaSplit?.oldBal ?? 0));
@@ -295,7 +324,7 @@ export function AssetsMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="NISA口座（非課税）">
+        <CollapsibleSubGroup title={v6 && hasSpouse ? "NISA口座（本人・非課税）" : "NISA口座（非課税）"}>
           <AccountBox tone="green" title="NISA口座" note="運用益も、売ったときの利益も非課税">
             <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
               NISA口座で持っているものを、種類ごとに入れてください。<b>持っていない種類は0のままでOK</b>です。
@@ -385,10 +414,13 @@ export function AssetsMegaSection() {
               value={plan.nisaOverflowToToku}
               onChange={(v) => setField("nisaOverflowToToku", v)}
             />
+            {v6 ? (
+              <DividendField value={plan.divNisaY ?? 0} onChange={(v) => setField("divNisaY", v)} bal={plan.nisaBal} taxed={false} />
+            ) : null}
           </AccountBox>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="特定口座（NISA以外の証券口座）" defaultOpen={false}>
+        <CollapsibleSubGroup title={v6 && hasSpouse ? "特定口座（本人・NISA以外の証券口座）" : "特定口座（NISA以外の証券口座）"} defaultOpen={v6 && (plan.tokuBal > 0 || (plan.divTokuY ?? 0) > 0)}>
           <AccountBox tone="gray" title="特定口座・一般口座" note="NISA以外の証券口座。売ったときに利益へ20.315%">
             <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
               NISA以外の証券口座で持っているものを、種類ごとに入れてください。<b>持っていない種類は0のままでOK</b>です。
@@ -440,8 +472,72 @@ export function AssetsMegaSection() {
             <Note>
               税金は「売ったとき」に利益部分だけにかかります（毎年の運用益には課税しない計算）。NISAに空きがあるなら、新しい積立はNISAが先です。
             </Note>
+            {v6 ? (
+              <DividendField value={plan.divTokuY ?? 0} onChange={(v) => setField("divTokuY", v)} bal={plan.tokuBal} taxed />
+            ) : null}
           </AccountBox>
         </CollapsibleSubGroup>
+
+        {v6 && hasSpouse ? (
+          <CollapsibleSubGroup title="配偶者のNISA・特定口座" defaultOpen={(plan.spNisaBal ?? 0) > 0 || (plan.spTokuBal ?? 0) > 0 || (plan.spNisaTsumitateM ?? 0) > 0}>
+            <p className="text-[11px] leading-relaxed text-[#0a0a0a]/70">
+              配偶者の名義の口座です。NISAの年間枠（つみたて月10万・成長月20万）と生涯枠1,800万円は、本人とは別に1人ずつあります。
+              利回りは本人の口座と同じで計算します。積立を終える年齢は配偶者の年齢です。
+            </p>
+            <AccountBox tone="green" title="配偶者のNISA口座" note="運用益も、売ったときの利益も非課税">
+              <div className="grid grid-cols-2 items-start gap-2">
+                <NumberField label="今の評価額" value={plan.spNisaBal ?? 0} onChange={(v) => setField("spNisaBal", v)} unit="円" />
+                <NumberField
+                  label="新NISAで買った金額（元本）"
+                  value={plan.spNisaCost ?? 0}
+                  blankZero
+                  placeholder="自動"
+                  onChange={(v) => setField("spNisaCost", v)}
+                  unit="円"
+                  hint="空欄＝評価額と同じ"
+                />
+              </div>
+              <p className="mt-1 text-[11px] font-bold text-[#0a0a0a]">これからの積立</p>
+              <div className="grid grid-cols-2 items-start gap-2">
+                <NumberField label="つみたて投資枠(月)" value={plan.spNisaTsumitateM ?? 0} onChange={(v) => setField("spNisaTsumitateM", v)} unit="円" hint="上限 月10万（年120万）" />
+                <NumberField label="成長投資枠(月)" value={plan.spNisaGrowthM ?? 0} onChange={(v) => setField("spNisaGrowthM", v)} unit="円" hint="上限 月20万（年240万）" />
+                <NumberField label="積立終了（配偶者の年齢）" value={plan.spNisaEndAge ?? 60} onChange={(v) => setField("spNisaEndAge", v)} unit="歳" />
+              </div>
+              <Meter label="配偶者の生涯枠1,800万円の使用状況（元本ベース）" used={spNisaCostNow} max={18_000_000} />
+              {spNisaYearOver ? (
+                <Note warn>
+                  配偶者の年間枠を超えています（つみたて月10万・成長月20万まで）。超えた分は
+                  {plan.nisaOverflowToToku ? "配偶者の特定口座" : "現金のまま"}として計算します。
+                </Note>
+              ) : null}
+              <DividendField value={plan.spDivNisaY ?? 0} onChange={(v) => setField("spDivNisaY", v)} bal={plan.spNisaBal ?? 0} taxed={false} />
+            </AccountBox>
+            <AccountBox tone="gray" title="配偶者の特定口座" note="売ったときと配当に20.315%">
+              <div className="grid grid-cols-2 items-start gap-2">
+                <NumberField label="今の評価額" value={plan.spTokuBal ?? 0} onChange={(v) => setField("spTokuBal", v)} unit="円" />
+                <NumberField
+                  label="買った金額（元本）"
+                  value={plan.spTokuCost ?? 0}
+                  blankZero
+                  placeholder="自動"
+                  onChange={(v) => setField("spTokuCost", v)}
+                  unit="円"
+                  hint="空欄＝評価額と同じ"
+                />
+                <NumberField label="積立(月)" value={plan.spSaveTokuM ?? 0} onChange={(v) => setField("spSaveTokuM", v)} unit="円" />
+                <NumberField label="積立終了（配偶者の年齢）" value={plan.spSaveTokuEndAge ?? 60} onChange={(v) => setField("spSaveTokuEndAge", v)} unit="歳" />
+              </div>
+              <DividendField value={plan.spDivTokuY ?? 0} onChange={(v) => setField("spDivTokuY", v)} bal={plan.spTokuBal ?? 0} taxed />
+            </AccountBox>
+          </CollapsibleSubGroup>
+        ) : null}
+
+        {v6 && ((plan.divNisaY ?? 0) > 0 || (plan.divTokuY ?? 0) > 0 || (plan.spDivNisaY ?? 0) > 0 || (plan.spDivTokuY ?? 0) > 0) ? (
+          <Note>
+            配当を受け取る口座の「想定利回り」は、値上がりの分だけ（配当を除く）にしてください。合計のもうけ＝値上がり＋配当です（例: 値上がり2%＋配当4%）。
+            特定口座の配当は20.315%が引かれる「申告不要」として計算しています。確定申告（総合課税など）を選ぶと、税金や国民健康保険料が変わります。
+          </Note>
+        ) : null}
 
         <CollapsibleSubGroup title="iDeCo・企業型DC（確定拠出年金）" defaultOpen={false}>
           <AccountBox tone="blue" title="確定拠出年金" note="掛金は全額所得控除。60〜75歳の間に一時金か年金で受け取る">

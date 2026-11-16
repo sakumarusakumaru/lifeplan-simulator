@@ -54,7 +54,7 @@ export function Section({
   // ステップ入力中は「OK」したかどうかで DONE/TODO を出す
   const pill: SectionStatus = confirmed ? "entered" : unlocked ? status : "default";
   // ver5: 状態を日本語で（完了／入力中／未入力）
-  const jp = useVBase() === "/v5";
+  const jp = useVBase() !== "/v4";
   const idx = SECTION_ORDER.indexOf(id as (typeof SECTION_ORDER)[number]);
   const isLast = idx === SECTION_ORDER.length - 1;
   const blocked = flow.enabled ? flow.canProceed(id) : null;

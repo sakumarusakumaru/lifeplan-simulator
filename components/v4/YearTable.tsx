@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { useIsNarrow } from "@/components/v4/useIsNarrow";
+import { useVBase } from "@/components/v4/useVBase";
 import { ageOn, parseYMD } from "@/lib/v4/calc/age";
 import { deflator } from "@/lib/v4/calc/realValue";
 import type { LifeEvent, PlanInput, YearlyResult } from "@/lib/v4/calc/types";
@@ -37,6 +38,7 @@ export interface YearRow {
   income: number;
   wage: number;
   pension: number;
+  div: number; // 配当・分配金の手取り（ver6）
   incOther: number;
   exp: number;
   living: number;
@@ -87,7 +89,7 @@ export function buildYearRows(
     const prev = i > 0 ? rows[i - 1] : null;
     const startTradable = prev
       ? (prev.ass.nisa + prev.ass.toku + prev.ass.k + prev.ass.g) * (df(prev.age) / df(r.age))
-      : (plan.nisaBal + plan.tokuBal + plan.cryptoBal + plan.goldBal) / df(r.age);
+      : (plan.nisaBal + plan.tokuBal + plan.cryptoBal + plan.goldBal + (plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0)) / df(r.age);
     const tradableIn = r.inv - r.dcContribSelf;
     const tradableGain = tradable - startTradable - tradableIn + r.draw + r.saleTax;
     const dcGain = 1 + dcR > 0 ? (a.dc * dcR) / (1 + dcR) : 0;
@@ -117,7 +119,8 @@ export function buildYearRows(
       income: r.income,
       wage,
       pension,
-      incOther: r.income - wage - pension,
+      div: r.divGross - r.divTax,
+      incOther: r.income - wage - pension - (r.divGross - r.divTax),
       exp: r.exp,
       living,
       housing,
@@ -163,6 +166,7 @@ const COLS: Col[] = [
   { key: "income", label: "収入計", group: "income", total: true },
   { key: "wage", label: "給与", group: "income" },
   { key: "pension", label: "年金", group: "income" },
+  { key: "div", label: "配当", group: "income" },
   { key: "incOther", label: "その他", group: "income" },
   { key: "exp", label: "支出計", group: "exp", total: true },
   { key: "living", label: "生活費", group: "exp" },
@@ -175,6 +179,8 @@ const COLS: Col[] = [
   { key: "fin", label: "金融資産", group: "bal", total: true, narrow: true },
   { key: "loan", label: "ローン", group: "bal", total: true, minus: true },
 ];
+const MAX_COLS = 14; // A4縦（印刷幅190mm）に7.5ptで収まる数字の列の上限
+
 const GROUP_LABEL: Record<Group, string> = {
   income: "収入（手取り）",
   exp: "支出",
@@ -203,8 +209,20 @@ export function YearTable({
     () => buildYearRows(rows, plan, real, lifeEvents, shortfallAge),
     [rows, plan, real, lifeEvents, shortfallAge],
   );
-  // 列はいつも同じ（0の年ばかりの列も残して、表の形をそろえる）
-  const cols = narrow && !showAll ? COLS.filter((c) => c.narrow) : COLS.filter((c) => c.total || detail);
+  // 列はいつも同じ（0の年ばかりの列も残して、表の形をそろえる）。
+  // ver6 で配当がある年があれば「配当」の列を足す。A4縦の上限14列を超えるときは、どの年も0の内訳の列を外して収める
+  const v6 = useVBase() === "/v6";
+  const showDiv = v6 && data.some((d) => manOf(d.div) !== 0);
+  const rowsShown = useMemo(() => (showDiv ? data : data.map((d) => ({ ...d, incOther: d.incOther + d.div, div: 0 }))), [data, showDiv]);
+  const cols = useMemo(() => {
+    if (narrow && !showAll) return COLS.filter((c) => c.narrow);
+    let list = COLS.filter((c) => (c.total || detail) && (c.key !== "div" || showDiv));
+    for (const c of [...list].reverse()) {
+      if (list.length <= MAX_COLS) break;
+      if (!c.total && rowsShown.every((d) => manOf(d[c.key]) === 0)) list = list.filter((x) => x !== c);
+    }
+    return list;
+  }, [narrow, showAll, detail, showDiv, rowsShown]);
   const hasSpouse = data.some((d) => d.spouseAge !== null);
 
   // グループ見出し（収支・運用・年末の残高）の幅
@@ -320,7 +338,7 @@ export function YearTable({
             </tr>
           </thead>
           <tbody>
-            {data.map((d) => {
+            {rowsShown.map((d) => {
               // 横にスクロールしても下が透けないよう、左端の固定列と同じ不透明な色にする
               const bg = d.short ? SHORT_BG : d.event ? "var(--lp-primary-soft)" : "#ffffff";
               return (
@@ -373,7 +391,7 @@ export function YearTable({
 
       {/* 列の意味（短く） */}
       <ul className="flex flex-col gap-0.5 px-4 pb-3 text-[10px] leading-relaxed text-[#0a0a0a]/55">
-        <li>収入（手取り）: 給与・年金は税・社会保険料を引いた手取り。その他 ＝ 退職金・DC一時金（手取り）、児童手当、不動産の手残り、臨時収入、保険金など</li>
+        <li>収入（手取り）: 給与・年金は税・社会保険料を引いた手取り。{showDiv ? "配当 ＝ 受け取った配当・分配金（特定口座は20.315%を引いた手取り）。" : ""}その他 ＝ 退職金・DC一時金（手取り）、児童手当、不動産の手残り、臨時収入、保険金など{showDiv ? "" : "（配当を受け取っていればここに入る）"}</li>
         <li>支出: 生活費 ＝ 毎月の生活費＋特別費、住まい ＝ 家賃・管理費・固定資産税＋住宅ローン、教育 ＝ 学費＋塾・習い事、その他 ＝ 保険料・介護・一時支出・車などのローン</li>
         <li>年間収支 ＝ 収入（手取り）− 支出 − 積立。マイナスの年は、預金か運用資産の取り崩しで埋めます</li>
         <li>運用益 ＝ その年に運用で増えた分（年初から年末の増減から、積立と取り崩しを除いたもの。預金の利息は入れない）</li>

@@ -24,7 +24,7 @@ const yenToOkuMan = (yen: number): string => {
 export function ResultsPanel() {
   const plan = usePlanStore((s) => s.plan);
   const result = useSimResult(plan);
-  const jp = useVBase() === "/v5";
+  const jp = useVBase() !== "/v4";
   // ver5 は frame.ts のルールで「結果の本体（表）ははじめから開く」。ver4 は従来どおり閉じて始める
   const [showTable, setShowTable] = useState(jp);
 
@@ -140,7 +140,7 @@ export function ResultsPanel() {
 
 // ver4 の年次サマリー（ver5 は YearTable.tsx）
 function YearlyTable({ rows }: { rows: YearlyResult[] }) {
-  const jp = useVBase() === "/v5"; // ver5 は「金融純資産」（いまは ver4 だけが使う）
+  const jp = useVBase() !== "/v4"; // ver5 は「金融純資産」（いまは ver4 だけが使う）
   // デザイントークン（サイト統一）
   const BG_H1  = "#0a0a0a";
   const BG_INC = "#2a2a2a";

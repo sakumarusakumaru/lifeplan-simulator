@@ -82,9 +82,9 @@ const KEY_TO_FILL: Record<string, keyof typeof FILLS> = {
 
 export function AssetsChart({ rows, lifeEvents = [], highlightAge }: AssetsChartProps) {
   const pathname = usePathname();
-  const isV3 = (pathname?.startsWith("/v4") || pathname?.startsWith("/v5")) ?? false;
+  const isV3 = (pathname?.startsWith("/v4") || pathname?.startsWith("/v5") || pathname?.startsWith("/v6")) ?? false;
   // ver5 は見出しを日本語にして、何のグラフか一言添える（ver4 は英語の見出しのまま）
-  const jp = pathname?.startsWith("/v5") ?? false;
+  const jp = (pathname?.startsWith("/v5") || pathname?.startsWith("/v6")) ?? false;
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）
