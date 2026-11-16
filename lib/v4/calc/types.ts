@@ -332,7 +332,9 @@ export interface PlanInput {
   spSaveTokuM?: number;
   spSaveTokuEndAge?: number;    // 配偶者の年齢
   // ver6: 配当・分配金を受け取って生活費に回す（年利回り %・その年の年初の評価額に対して）。
-  // 受け取る配当は口座の値上がり（nisaR / tokuR）とは別に入る。特定口座は20.315%の源泉分離（申告不要）、NISAは非課税
+  // 口座の想定利回り（nisaR / tokuR）は配当込みの合計のもうけ。受け取る分はその中から取り出す（値上がり＝合計−配当）。
+  // 特定口座は20.315%の源泉分離（申告不要）、NISAは非課税。受け取り始めるまでは再投資（合計の利回りで増える）
+  divStartAge?: number;         // 配当を受け取り始める年齢（本人の年齢。0・未入力＝今から）
   divNisaY?: number;
   divTokuY?: number;
   spDivNisaY?: number;

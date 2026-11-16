@@ -212,7 +212,9 @@ export function YearTable({
   // 列はいつも同じ（0の年ばかりの列も残して、表の形をそろえる）。
   // ver6 で配当がある年があれば「配当」の列を足す。A4縦の上限14列を超えるときは、どの年も0の内訳の列を外して収める
   const v6 = useVBase() === "/v6";
-  const showDiv = v6 && data.some((d) => manOf(d.div) !== 0);
+  // 配当の列を足しても14列に収まらない（0の内訳の列がない）ときは、配当を「その他」にまとめる
+  const zeroParts = COLS.filter((c) => !c.total && c.key !== "div" && data.every((d) => manOf(d[c.key]) === 0)).length;
+  const showDiv = v6 && data.some((d) => manOf(d.div) !== 0) && (!detail || COLS.length - zeroParts <= MAX_COLS);
   const rowsShown = useMemo(() => (showDiv ? data : data.map((d) => ({ ...d, incOther: d.incOther + d.div, div: 0 }))), [data, showDiv]);
   const cols = useMemo(() => {
     if (narrow && !showAll) return COLS.filter((c) => c.narrow);
@@ -391,7 +393,7 @@ export function YearTable({
 
       {/* 列の意味（短く） */}
       <ul className="flex flex-col gap-0.5 px-4 pb-3 text-[10px] leading-relaxed text-[#0a0a0a]/55">
-        <li>収入（手取り）: 給与・年金は税・社会保険料を引いた手取り。{showDiv ? "配当 ＝ 受け取った配当・分配金（特定口座は20.315%を引いた手取り）。" : ""}その他 ＝ 退職金・DC一時金（手取り）、児童手当、不動産の手残り、臨時収入、保険金など{showDiv ? "" : "（配当を受け取っていればここに入る）"}</li>
+        <li>収入（手取り）: 給与・年金は税・社会保険料を引いた手取り。{showDiv && detail ? "配当 ＝ 受け取った配当・分配金（特定口座は20.315%を引いた手取り）。" : ""}その他 ＝ 退職金・DC一時金（手取り）、児童手当、不動産の手残り、臨時収入、保険金など{v6 && !(showDiv && detail) ? "（受け取った配当もここに入る）" : ""}</li>
         <li>支出: 生活費 ＝ 毎月の生活費＋特別費、住まい ＝ 家賃・管理費・固定資産税＋住宅ローン、教育 ＝ 学費＋塾・習い事、その他 ＝ 保険料・介護・一時支出・車などのローン</li>
         <li>年間収支 ＝ 収入（手取り）− 支出 − 積立。マイナスの年は、預金か運用資産の取り崩しで埋めます</li>
         <li>運用益 ＝ その年に運用で増えた分（年初から年末の増減から、積立と取り崩しを除いたもの。預金の利息は入れない）</li>

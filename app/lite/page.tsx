@@ -18,7 +18,7 @@ export default function LitePage() {
   const openDetail = () => {
     const q = useLiteStore.getState().q;
     if (q.income > 0 && q.livingM > 0) sendToV4(q);
-    router.push("/v5/detail");
+    router.push("/v6/detail");
   };
 
   return (

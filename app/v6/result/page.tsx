@@ -64,7 +64,8 @@ function buildVerdict(
   const livingDefenseMonths =
     monthlyExp > 0 ? Math.round((totalCashAssets / monthlyExp) * 10) / 10 : 0;
   const totalSaveM =
-    plan.nisaTsumitateM + plan.nisaGrowthM + plan.saveTokuM + plan.saveDcM + plan.saveCryptoM + plan.saveGoldM;
+    plan.nisaTsumitateM + plan.nisaGrowthM + plan.saveTokuM + plan.saveDcM + plan.saveCryptoM + plan.saveGoldM +
+    (plan.spouseBirth ? (plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0) : 0);
   const annualSave = Math.round((totalSaveM * 12) / 10000);
   const koseiYears = plan.selfPension?.koseiYears ?? 0;
   const penStartA = plan.penStartA;
@@ -396,7 +397,7 @@ export default function ResultPage() {
           <SummaryCard
             label="現状の年収（手取り）"
             value={fmtMan(cur?.income ?? 0)}
-            sub={`内訳: 給与+副業 ${fmtMan(cur?.jobNet ?? 0)} / 不動産 ${fmtMan(cur?.reInc ?? 0)}`}
+            sub={`内訳: 給与+副業 ${fmtMan(cur?.jobNet ?? 0)} / 不動産 ${fmtMan(cur?.reInc ?? 0)}${(cur?.divGross ?? 0) > 0 ? ` / 配当（手取り） ${fmtMan((cur?.divGross ?? 0) - (cur?.divTax ?? 0))}` : ""}`}
           />
           <SummaryCard
             label="現状の年支出"
@@ -406,7 +407,7 @@ export default function ResultPage() {
           <SummaryCard
             label="年間積立"
             value={fmtMan(cur?.inv ?? 0)}
-            sub={`NISA ${fmtMan((plan.nisaTsumitateM + plan.nisaGrowthM) * 12)} / 特定口座 ${fmtMan(plan.saveTokuM * 12)} / iDeCo等(自分) ${fmtMan(plan.saveDcM * 12)}${plan.dcEmployerM > 0 ? ` / DC(会社) ${fmtMan(plan.dcEmployerM * 12)}` : ""}`}
+            sub={`NISA ${fmtMan((plan.nisaTsumitateM + plan.nisaGrowthM) * 12)} / 特定口座 ${fmtMan(plan.saveTokuM * 12)}${plan.spouseBirth && ((plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0)) > 0 ? ` / 配偶者のNISA・特定 ${fmtMan(((plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0)) * 12)}` : ""} / iDeCo等(自分) ${fmtMan(plan.saveDcM * 12)}${plan.dcEmployerM > 0 ? ` / DC(会社) ${fmtMan(plan.dcEmployerM * 12)}` : ""}`}
           />
         </div>
 

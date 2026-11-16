@@ -97,22 +97,44 @@ function Quad({
 }
 
 // 口座ごとの色帯ヘッダー
-// ver6: 配当・分配金を受け取る利回り。入れると、いまの評価額での年額（税引き後）をその場で見せる
-function DividendField({ value, onChange, bal, taxed }: { value: number; onChange: (v: number) => void; bal: number; taxed: boolean }) {
+// ver6: 配当・分配金を受け取る利回り。年額でも入れられる（いまの評価額で利回りに直して保存する）。
+// 配当は口座の想定利回り（配当込みの合計のもうけ）の中から受け取る。入れると「値上がり＝合計−配当」をその場で見せる
+function DividendField({ value, onChange, bal, taxed, r }: { value: number; onChange: (v: number) => void; bal: number; taxed: boolean; r: number }) {
   const gross = (bal * value) / 100;
   const net = taxed ? gross * (1 - 0.20315) : gross;
+  const rise = Math.round((r - value) * 100) / 100;
   return (
-    <div className="flex flex-col gap-1">
-      <PercentField
-        label="配当・分配金を受け取る（利回り・年）"
-        value={value}
-        onChange={onChange}
-        hint={`受け取って生活費に回す分。再投資するなら0のまま。${taxed ? "20.315%が引かれて入る（申告不要として計算）" : "NISAなので非課税"}`}
-      />
-      {value > 0 && bal > 0 ? (
-        <p className="text-[11px] leading-relaxed text-[#0a0a0a]/70">
-          いまの評価額だと 年{fmtMan(gross)}{taxed ? `（税引き後 ${fmtMan(net)}）` : "（非課税）"}。毎年、その年の評価額 × 利回りで計算します
+    <div className="flex flex-col gap-1.5 border-t pt-2" style={{ borderColor: "#0a0a0a14" }}>
+      <p className="text-[11px] font-bold text-[#0a0a0a]">配当・分配金を受け取る（生活費に回す分）</p>
+      <div className="grid grid-cols-2 items-start gap-2">
+        <PercentField label="利回り（口座全体に対して・年）" value={value} onChange={onChange} hint="再投資するなら0のまま" />
+        {bal > 0 ? (
+          <NumberField
+            label="年額（税引き前）"
+            value={Math.round(gross)}
+            onChange={(v) => onChange(bal > 0 ? Math.round((v / bal) * 1_000_000) / 10_000 : 0)}
+            unit="円"
+            hint="去年受け取った額などを入れると、利回りに直します"
+          />
+        ) : null}
+      </div>
+      {value > 0 ? (
+        <p className="text-[11px] leading-relaxed text-[#0a0a0a]/75">
+          {bal > 0 ? (
+            <>
+              いまの評価額だと 年{fmtMan(gross)}
+              {taxed ? `（20.315%を引いて ${fmtMan(net)}）` : "（非課税）"}。
+            </>
+          ) : null}
+          合計のもうけ {r}% のうち配当 {value}% を受け取り、値上がりは {rise}% で計算します。使わなかった配当は現金にたまります（自動では再投資しません）。
         </p>
+      ) : null}
+      {value > r ? (
+        <Note warn>配当の利回りが、この口座の想定利回り（合計のもうけ）より大きいので、口座の評価額が毎年減る計算です。想定利回りは配当込みの数字にしてください。</Note>
+      ) : value > 0 && r - value < 1 ? (
+        <Note warn>
+          値上がりが{rise}%の計算です。配当とは別に値上がりも見込むなら、上の想定利回りを「値上がり＋配当」の合計にしてください（例: 値上がり2%＋配当4%なら6%）。
+        </Note>
       ) : null}
     </div>
   );
@@ -212,6 +234,7 @@ function HoldingCard({
   setR: (v: number) => void;
   rHint: string;
 }) {
+  const v6 = useVBase() === "/v6";
   return (
     <div className="flex flex-col gap-1.5 p-2.5" style={INNER2}>
       <div>
@@ -220,7 +243,7 @@ function HoldingCard({
       </div>
       <div className="grid grid-cols-[3fr_2fr] items-start gap-2">
         <NumberField label="今の評価額" value={bal} onChange={setBal} unit="円" />
-        <PercentField label="想定利回り(年)" value={r} onChange={setR} hint={rHint} />
+        <PercentField label={v6 ? "想定利回り（配当込み・年）" : "想定利回り(年)"} value={r} onChange={setR} hint={rHint} />
       </div>
     </div>
   );
@@ -307,6 +330,11 @@ export function AssetsMegaSection() {
       status={totalBal > 0 ? "entered" : "default"}
     >
       <div className="flex flex-col gap-2">
+        {/* ver6 で入れた配偶者の口座・配当は、欄のない旧版でも計算に入る（入力データは共通） */}
+        {!v6 && ((plan.spouseBirth && ((plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0) + (plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0) > 0)) ||
+          (plan.divNisaY ?? 0) + (plan.divTokuY ?? 0) + (plan.spDivNisaY ?? 0) + (plan.spDivTokuY ?? 0) > 0) ? (
+          <Note warn>ver6 で入れた配偶者の口座・配当の受け取りが、この試算にも入っています。直すときは ver6（/v6）の画面で。</Note>
+        ) : null}
         <CollapsibleSubGroup title="現金・預金">
           <div className="grid grid-cols-2 gap-2">
             <NumberField
@@ -415,7 +443,7 @@ export function AssetsMegaSection() {
               onChange={(v) => setField("nisaOverflowToToku", v)}
             />
             {v6 ? (
-              <DividendField value={plan.divNisaY ?? 0} onChange={(v) => setField("divNisaY", v)} bal={plan.nisaBal} taxed={false} />
+              <DividendField value={plan.divNisaY ?? 0} onChange={(v) => setField("divNisaY", v)} bal={plan.nisaBal} taxed={false} r={plan.nisaR} />
             ) : null}
           </AccountBox>
         </CollapsibleSubGroup>
@@ -473,7 +501,7 @@ export function AssetsMegaSection() {
               税金は「売ったとき」に利益部分だけにかかります（毎年の運用益には課税しない計算）。NISAに空きがあるなら、新しい積立はNISAが先です。
             </Note>
             {v6 ? (
-              <DividendField value={plan.divTokuY ?? 0} onChange={(v) => setField("divTokuY", v)} bal={plan.tokuBal} taxed />
+              <DividendField value={plan.divTokuY ?? 0} onChange={(v) => setField("divTokuY", v)} bal={plan.tokuBal} taxed r={plan.tokuR} />
             ) : null}
           </AccountBox>
         </CollapsibleSubGroup>
@@ -482,8 +510,12 @@ export function AssetsMegaSection() {
           <CollapsibleSubGroup title="配偶者のNISA・特定口座" defaultOpen={(plan.spNisaBal ?? 0) > 0 || (plan.spTokuBal ?? 0) > 0 || (plan.spNisaTsumitateM ?? 0) > 0}>
             <p className="text-[11px] leading-relaxed text-[#0a0a0a]/70">
               配偶者の名義の口座です。NISAの年間枠（つみたて月10万・成長月20万）と生涯枠1,800万円は、本人とは別に1人ずつあります。
-              利回りは本人の口座と同じで計算します。積立を終える年齢は配偶者の年齢です。
+              利回りは本人の口座と同じで計算します。積立を終える年齢は配偶者の年齢です。取り崩すときは、夫婦の口座から残高の割合で売る計算です。
             </p>
+            <Note warn>
+              配偶者の口座への積立は、配偶者自身の収入や貯金から出す前提です。本人のお金から年110万円を超えて入れると贈与税の対象になるか、
+              贈与と認められなければ相続のときに「名義預金」として本人の財産に数えられます（この試算の相続では、配偶者名義の口座は配偶者の財産として扱います）。
+            </Note>
             <AccountBox tone="green" title="配偶者のNISA口座" note="運用益も、売ったときの利益も非課税">
               <div className="grid grid-cols-2 items-start gap-2">
                 <NumberField label="今の評価額" value={plan.spNisaBal ?? 0} onChange={(v) => setField("spNisaBal", v)} unit="円" />
@@ -494,7 +526,7 @@ export function AssetsMegaSection() {
                   placeholder="自動"
                   onChange={(v) => setField("spNisaCost", v)}
                   unit="円"
-                  hint="空欄＝評価額と同じ"
+                  hint="生涯枠の計算に使用。空欄だと含み益の分も枠を使った扱いになるので、わかれば入れてください"
                 />
               </div>
               <p className="mt-1 text-[11px] font-bold text-[#0a0a0a]">これからの積立</p>
@@ -510,7 +542,7 @@ export function AssetsMegaSection() {
                   {plan.nisaOverflowToToku ? "配偶者の特定口座" : "現金のまま"}として計算します。
                 </Note>
               ) : null}
-              <DividendField value={plan.spDivNisaY ?? 0} onChange={(v) => setField("spDivNisaY", v)} bal={plan.spNisaBal ?? 0} taxed={false} />
+              <DividendField value={plan.spDivNisaY ?? 0} onChange={(v) => setField("spDivNisaY", v)} bal={plan.spNisaBal ?? 0} taxed={false} r={plan.nisaR} />
             </AccountBox>
             <AccountBox tone="gray" title="配偶者の特定口座" note="売ったときと配当に20.315%">
               <div className="grid grid-cols-2 items-start gap-2">
@@ -527,16 +559,31 @@ export function AssetsMegaSection() {
                 <NumberField label="積立(月)" value={plan.spSaveTokuM ?? 0} onChange={(v) => setField("spSaveTokuM", v)} unit="円" />
                 <NumberField label="積立終了（配偶者の年齢）" value={plan.spSaveTokuEndAge ?? 60} onChange={(v) => setField("spSaveTokuEndAge", v)} unit="歳" />
               </div>
-              <DividendField value={plan.spDivTokuY ?? 0} onChange={(v) => setField("spDivTokuY", v)} bal={plan.spTokuBal ?? 0} taxed />
+              <DividendField value={plan.spDivTokuY ?? 0} onChange={(v) => setField("spDivTokuY", v)} bal={plan.spTokuBal ?? 0} taxed r={plan.tokuR} />
             </AccountBox>
           </CollapsibleSubGroup>
         ) : null}
 
         {v6 && ((plan.divNisaY ?? 0) > 0 || (plan.divTokuY ?? 0) > 0 || (plan.spDivNisaY ?? 0) > 0 || (plan.spDivTokuY ?? 0) > 0) ? (
-          <Note>
-            配当を受け取る口座の「想定利回り」は、値上がりの分だけ（配当を除く）にしてください。合計のもうけ＝値上がり＋配当です（例: 値上がり2%＋配当4%）。
-            特定口座の配当は20.315%が引かれる「申告不要」として計算しています。確定申告（総合課税など）を選ぶと、税金や国民健康保険料が変わります。
-          </Note>
+          <CollapsibleSubGroup title="配当・分配金の受け取り（共通の設定と注意）">
+            <NumberField
+              label="受け取り始める年齢（本人の年齢）"
+              value={plan.divStartAge ?? 0}
+              blankZero
+              placeholder="今から"
+              onChange={(v) => setField("divStartAge", v)}
+              unit="歳"
+              hint="それまでは配当を再投資する計算（NISAは想定利回りどおり、特定口座は再投資する配当にも20.315%がかかる分だけ増え方が落ちる）。空欄＝今から受け取る。働いているうちは再投資し、退職後に受け取りに切り替える人が多いです"
+            />
+            <ul className="flex flex-col gap-1 text-[11px] leading-relaxed text-[#0a0a0a]/75">
+              <li>○ 各口座の「想定利回り」は配当込みの合計のもうけです。受け取る配当はその中から取り出し、残りを値上がりとして計算します</li>
+              <li>○ 特定口座の配当は、20.315%（うち住民税5%）が引かれて終わる「申告不要」として計算しています。このほかに住民税や、国民健康保険・後期高齢者医療・介護の保険料が増えることはありません</li>
+              <li>○ 国内株の配当は、所得が少ない人（課税所得がおおむね695万円以下）なら確定申告（総合課税＋配当控除）で税金が軽くなることがあります。ただし国民健康保険などの保険料や、医療費の負担割合の判定に入ります。外国株・REITの配当には配当控除がありません（この試算には入れていません）</li>
+              <li>○ NISAの配当が非課税になるのは、国内の株・ETF・REITでは受け取り方を「株式数比例配分方式」（証券口座で受け取る）にしたときだけです。銀行振込などでは20.315%かかります</li>
+              <li>○ 外国株・海外ETFの配当は、先に現地で税が引かれます（米国は10%）。NISAでも現地の税は残り、特定口座では合計約28%（確定申告の外国税額控除で一部戻せるが、申告すると保険料に影響することがある）。外国株は、現地の税を引いたあとの配当利回りを入れ、想定利回りもその分だけ低めにしてください</li>
+              <li>○ 景気が悪い年の減配は入れていません（運用の振れ幅は値上がりの分にだけかかります）</li>
+            </ul>
+          </CollapsibleSubGroup>
         ) : null}
 
         <CollapsibleSubGroup title="iDeCo・企業型DC（確定拠出年金）" defaultOpen={false}>

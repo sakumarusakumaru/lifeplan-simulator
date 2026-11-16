@@ -265,7 +265,11 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
                 />
                 <b className="w-10 text-right text-[12px] tabular-nums">{set.selfSharePct}%</b>
               </span>
-              <span className="text-[9px] leading-snug text-[#0a0a0a]/55">現金・運用資産・自宅のうち本人名義の分。残りは配偶者の財産（二次相続で使う）</span>
+              <span className="text-[9px] leading-snug text-[#0a0a0a]/55">
+                {(plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0) > 0
+                  ? `配偶者名義で入れたNISA・特定口座（いま${Math.round(((plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0)) / 10000).toLocaleString()}万円）を除いた、現金・本人の口座・自宅のうち本人名義の分。配偶者名義の口座と残りは配偶者の財産（二次相続で使う）`
+                  : "現金・運用資産・自宅のうち本人名義の分。残りは配偶者の財産（二次相続で使う）"}
+              </span>
             </label>
           ) : null}
           {canSplit ? (

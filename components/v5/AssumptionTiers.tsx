@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { CARD } from "@/components/v4/frame";
+import { useVBase } from "@/components/v4/useVBase";
 
 // ver5: 計算の中身を「制度どおり」「仮定を置いたもの」「対象外」の3つに分けて見せる
 // （細かく計算している所と、単純にしている所の両方を、隠さずに並べる）。ふだんは見出しだけで、開くと中身
@@ -56,11 +57,38 @@ const TIERS: { title: string; note: string; color: string; items: string[] }[] =
   },
 ];
 
+// ver6: 配当を計算に入れたので「入れていないもの」を差し替え、夫婦の口座・配当の前提を足す
+const V6_ADD: Record<string, string[]> = {
+  制度どおりに計算しているもの: [
+    "NISAの年間枠・生涯枠は夫婦1人ずつ。配当利回りを入れた口座の配当は、特定口座は20.315%（申告不要。受け取りを始める前に再投資する分にもかける）、NISAは非課税",
+  ],
+  仮定を置いて計算しているもの: [
+    "配当は、口座の想定利回り（配当込みの合計）の中から、年初の評価額×配当利回りで受け取る。配偶者の口座の利回りは本人と同じ",
+    "配偶者名義の口座は、配偶者自身のお金で積み立てたものとして、相続では配偶者の財産に数える",
+  ],
+  計算に入れていないもの: [
+    "配当の総合課税・申告分離課税を選んだときの税金と保険料、外国株の現地の税（外国税額控除）、減配",
+    "申告不要の配当を後期高齢者医療などの保険料に反映する見直し（検討中の制度）",
+    "亡くなった人のNISAが非課税でなくなること、配偶者が先に亡くなったときの相続税",
+  ],
+};
+const V6_DROP = "特定口座の分配金・配当の毎年の課税、損益通算・繰越控除";
+
 export function AssumptionTiers() {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const v6 = useVBase() === "/v6";
+  const tiers = v6
+    ? TIERS.map((t) => ({
+        ...t,
+        items: [
+          ...t.items.map((x) => (x === V6_DROP ? "配当利回りを入れていない口座の配当・分配金にかかる毎年の税、損益通算・繰越控除" : x)),
+          ...(V6_ADD[t.title] ?? []),
+        ],
+      }))
+    : TIERS;
   return (
     <div className="mt-3 flex flex-col gap-2">
-      {TIERS.map((t) => {
+      {tiers.map((t) => {
         const isOpen = !!open[t.title];
         return (
           <div key={t.title} style={CARD}>
