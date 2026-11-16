@@ -1,4 +1,5 @@
 import { ageOn } from "./age";
+import { spLastWorkEnd } from "./workStyle";
 import { scheduleLoans } from "./homeLoan";
 import type { LifeEvent, PlanInput } from "./types";
 
@@ -40,8 +41,10 @@ export function generateLifeEvents(plan: PlanInput): LifeEvent[] {
   }
 
   // 配偶者就労終了
-  if (plan.spouseWork === "work" && plan.spouseIncEnd > 0) {
-    const a = toSelf(plan.spouseIncEnd);
+  //   ver6.2: 勤務先を新しい形（spJobs）で入れていれば、いちばん遅い退職年齢
+  const spEnd = plan.spJobs ? spLastWorkEnd(plan) : plan.spouseWork === "work" && plan.spouseIncEnd > 0 ? plan.spouseIncEnd : null;
+  if (spEnd !== null && spEnd > 0) {
+    const a = toSelf(spEnd);
     if (a !== null) add(a, "配偶者退職");
   }
 

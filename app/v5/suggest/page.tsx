@@ -186,6 +186,10 @@ export default function SuggestPage() {
         spouseIncY: p.spouseIncY + 1_000_000,
         spouseIncStart: p.spouseWork === "work" ? p.spouseIncStart : p.curAge,
         spouseIncEnd: p.spouseWork === "work" ? p.spouseIncEnd : 65,
+        // ver6 で配偶者の勤務先を入れている人は、そちら（spJobs）が計算に使われるので、最初の勤務先に100万円を足す
+        ...(p.spJobs
+          ? { spJobs: p.spJobs.length ? p.spJobs.map((j, k) => (k === 0 ? { ...j, inc: j.inc + 1_000_000 } : j)) : [{ name: "配偶者の勤務先", start: p.curAge, end: 65, inc: 1_000_000, raise: 0, sev: 0, sevAge: 65 }] }
+          : {}),
       })),
       category: "income",
     });

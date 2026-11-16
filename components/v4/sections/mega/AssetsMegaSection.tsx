@@ -13,7 +13,7 @@ import { loanTotals } from "@/lib/v4/calc/homeLoan";
 import { Section } from "@/components/v4/Section";
 import { CheckboxField } from "@/components/v4/inputs/CheckboxField";
 import { computeRealEstateValue } from "@/lib/v4/calc/finance";
-import { DC_TYPE_OPTIONS, dcSelfLimit } from "@/lib/v4/calc/rules";
+import { DC_TYPE_OPTIONS, SP_DEFAULTS, dcSelfLimit } from "@/lib/v4/calc/rules";
 import type {
   BuildingStructure,
   DcPayoutMethod,
@@ -22,6 +22,7 @@ import type {
   RealEstateType,
 } from "@/lib/v4/calc/types";
 import { useVBase } from "@/components/v4/useVBase";
+import { spDcTypeOf } from "@/lib/v4/calc/workStyle";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { removeLinked } from "@/store/v4/remove-linked";
 
@@ -297,7 +298,8 @@ export function AssetsMegaSection() {
   const removeRe = (i: number) => removeLinked("res", i);
 
   const totalBal =
-    plan.cashBal + plan.nisaBal + plan.tokuBal + plan.cryptoBal + plan.goldBal + plan.dcBal + (plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0);
+    plan.cashBal + plan.nisaBal + plan.tokuBal + plan.cryptoBal + plan.goldBal + plan.dcBal +
+    (plan.spouseBirth ? (plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0) + (plan.spDcBal ?? 0) : 0);
 
   // 配偶者のNISA: 生涯枠の消化状況
   const spNisaCostNow = (plan.spNisaCost ?? 0) > 0 ? (plan.spNisaCost ?? 0) : (plan.spNisaBal ?? 0);
@@ -320,6 +322,12 @@ export function AssetsMegaSection() {
   const dcLimitNow = dcSelfLimit(plan.dcType, plan.dcEmployerM, thisYear);
   const dcLimitNew = dcSelfLimit(plan.dcType, plan.dcEmployerM, Math.max(2027, thisYear));
   const dcOver = plan.saveDcM > dcLimitNew.selfMax || plan.saveDcM > dcLimitNow.selfMax;
+  // ver6.2: 配偶者の iDeCo・DC（未入力の既定はエンジンと同じ SP_DEFAULTS）
+  const spDcType = spDcTypeOf(plan);
+  const spDcLimitNow = dcSelfLimit(spDcType, plan.spDcEmployerM ?? 0, thisYear);
+  const spDcLimitNew = dcSelfLimit(spDcType, plan.spDcEmployerM ?? 0, Math.max(2027, thisYear));
+  const spDcOver = (plan.spSaveDcM ?? 0) > spDcLimitNew.selfMax || (plan.spSaveDcM ?? 0) > spDcLimitNow.selfMax;
+  const spDcMethod = plan.spDcMethod ?? SP_DEFAULTS.dcMethod;
 
   return (
     <Section
@@ -331,9 +339,9 @@ export function AssetsMegaSection() {
     >
       <div className="flex flex-col gap-2">
         {/* ver6 で入れた配偶者の口座・配当は、欄のない旧版でも計算に入る（入力データは共通） */}
-        {!v6 && ((plan.spouseBirth && ((plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0) + (plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0) > 0)) ||
+        {!v6 && ((plan.spouseBirth && ((plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0) + (plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0) + (plan.spDcBal ?? 0) + (plan.spSaveDcM ?? 0) + (plan.spDcEmployerM ?? 0) > 0)) ||
           (plan.divNisaY ?? 0) + (plan.divTokuY ?? 0) + (plan.spDivNisaY ?? 0) + (plan.spDivTokuY ?? 0) > 0) ? (
-          <Note warn>ver6 で入れた配偶者の口座・配当の受け取りが、この試算にも入っています。直すときは ver6（/v6）の画面で。</Note>
+          <Note warn>ver6 で入れた配偶者の口座（NISA・特定口座・iDeCo）・配当の受け取りが、この試算にも入っています。直すときは ver6（/v6）の画面で。</Note>
         ) : null}
         <CollapsibleSubGroup title="現金・預金">
           <div className="grid grid-cols-2 gap-2">
@@ -507,7 +515,7 @@ export function AssetsMegaSection() {
         </CollapsibleSubGroup>
 
         {v6 && hasSpouse ? (
-          <CollapsibleSubGroup title="配偶者のNISA・特定口座" defaultOpen={(plan.spNisaBal ?? 0) > 0 || (plan.spTokuBal ?? 0) > 0 || (plan.spNisaTsumitateM ?? 0) > 0}>
+          <CollapsibleSubGroup title="配偶者のNISA・特定口座・iDeCo" defaultOpen={(plan.spNisaBal ?? 0) > 0 || (plan.spTokuBal ?? 0) > 0 || (plan.spNisaTsumitateM ?? 0) > 0 || (plan.spDcBal ?? 0) > 0 || (plan.spSaveDcM ?? 0) > 0}>
             <p className="text-[11px] leading-relaxed text-[#0a0a0a]/70">
               配偶者の名義の口座です。NISAの年間枠（つみたて月10万・成長月20万）と生涯枠1,800万円は、本人とは別に1人ずつあります。
               利回りは本人の口座と同じで計算します。積立を終える年齢は配偶者の年齢です。取り崩すときは、夫婦の口座から残高の割合で売る計算です。
@@ -533,7 +541,7 @@ export function AssetsMegaSection() {
               <div className="grid grid-cols-2 items-start gap-2">
                 <NumberField label="つみたて投資枠(月)" value={plan.spNisaTsumitateM ?? 0} onChange={(v) => setField("spNisaTsumitateM", v)} unit="円" hint="上限 月10万（年120万）" />
                 <NumberField label="成長投資枠(月)" value={plan.spNisaGrowthM ?? 0} onChange={(v) => setField("spNisaGrowthM", v)} unit="円" hint="上限 月20万（年240万）" />
-                <NumberField label="積立終了（配偶者の年齢）" value={plan.spNisaEndAge ?? 60} onChange={(v) => setField("spNisaEndAge", v)} unit="歳" />
+                <NumberField label="積立終了（配偶者の年齢）" value={plan.spNisaEndAge ?? SP_DEFAULTS.nisaEndAge} onChange={(v) => setField("spNisaEndAge", v)} unit="歳" />
               </div>
               <Meter label="配偶者の生涯枠1,800万円の使用状況（元本ベース）" used={spNisaCostNow} max={18_000_000} />
               {spNisaYearOver ? (
@@ -557,9 +565,48 @@ export function AssetsMegaSection() {
                   hint="空欄＝評価額と同じ"
                 />
                 <NumberField label="積立(月)" value={plan.spSaveTokuM ?? 0} onChange={(v) => setField("spSaveTokuM", v)} unit="円" />
-                <NumberField label="積立終了（配偶者の年齢）" value={plan.spSaveTokuEndAge ?? 60} onChange={(v) => setField("spSaveTokuEndAge", v)} unit="歳" />
+                <NumberField label="積立終了（配偶者の年齢）" value={plan.spSaveTokuEndAge ?? SP_DEFAULTS.tokuEndAge} onChange={(v) => setField("spSaveTokuEndAge", v)} unit="歳" />
               </div>
               <DividendField value={plan.spDivTokuY ?? 0} onChange={(v) => setField("spDivTokuY", v)} bal={plan.spTokuBal ?? 0} taxed r={plan.tokuR} />
+            </AccountBox>
+            <AccountBox tone="blue" title="配偶者のiDeCo・企業型DC" note="掛金は配偶者の所得から控除。受取は配偶者の年齢で60〜75歳">
+              <SelectField
+                label="配偶者の区分（掛金の上限が決まる）"
+                value={spDcType}
+                onChange={(v) => setField("spDcType", v)}
+                options={DC_TYPE_OPTIONS}
+                hint="配偶者の働き方・年金の種類から自動で入ります。企業型DC・DBがあるときはここで直してください"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField label="今の資産額" value={plan.spDcBal ?? 0} onChange={(v) => setField("spDcBal", v)} unit="円" hint={`利回りは本人と同じ（年${plan.dcR}%）`} />
+                <NumberField
+                  label="加入した年齢（配偶者）"
+                  value={plan.spDcJoinAge ?? 0}
+                  blankZero
+                  placeholder="今から"
+                  onChange={(v) => setField("spDcJoinAge", v)}
+                  unit="歳"
+                  hint="受取時の退職所得控除の年数に使う。残高があるのに空欄だと、今の年齢から加入した扱いになり、一時金の税金がかなり多めに出ます"
+                />
+                <NumberField label="自分で出す掛金(月)" value={plan.spSaveDcM ?? 0} onChange={(v) => setField("spSaveDcM", v)} unit="円" hint="配偶者の所得から全額控除。扶養内で所得税がかからない人は節税にならない" />
+                <NumberField label="会社が出す掛金(月)" value={plan.spDcEmployerM ?? 0} onChange={(v) => setField("spDcEmployerM", v)} unit="円" />
+                <NumberField label="掛金をやめる年齢（配偶者）" value={plan.spSaveDcEndAge ?? SP_DEFAULTS.dcEndAge} onChange={(v) => setField("spSaveDcEndAge", v)} unit="歳" hint="iDeCoは70歳未満まで（2026年12月〜）" />
+              </div>
+              <div
+                className="rounded-md px-2.5 py-1.5 text-[10px] leading-relaxed"
+                style={{ background: spDcOver ? "#fdf0e7" : "#f0f0ee", color: spDcOver ? "#cf7a4a" : "#0a0a0ab3" }}
+              >
+                上限（2027年〜）: {spDcLimitNew.note}
+                {spDcLimitNew.note !== spDcLimitNow.note ? <><br />2026年11月掛金分まで: {spDcLimitNow.note}</> : null}
+                {spDcOver ? <><br />→ 上限を超える分は計算に入れていません</> : null}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField label="受取開始年齢（配偶者）" value={plan.spDcStartAge ?? SP_DEFAULTS.dcStartAge} onChange={(v) => setField("spDcStartAge", v)} unit="歳" min={60} max={75} hint="60〜75歳" />
+                <SelectField label="受け取り方" value={spDcMethod} onChange={(v) => setField("spDcMethod", v)} options={DC_METHOD_OPTIONS} />
+                {spDcMethod === "annuity" ? (
+                  <NumberField label="受取年数" value={plan.spDcYears ?? SP_DEFAULTS.dcYears} onChange={(v) => setField("spDcYears", v)} unit="年" min={5} max={20} hint="5〜20年" />
+                ) : null}
+              </div>
             </AccountBox>
           </CollapsibleSubGroup>
         ) : null}
@@ -586,7 +633,7 @@ export function AssetsMegaSection() {
           </CollapsibleSubGroup>
         ) : null}
 
-        <CollapsibleSubGroup title="iDeCo・企業型DC（確定拠出年金）" defaultOpen={false}>
+        <CollapsibleSubGroup title={v6 && hasSpouse ? "iDeCo・企業型DC（本人・確定拠出年金）" : "iDeCo・企業型DC（確定拠出年金）"} defaultOpen={false}>
           <AccountBox tone="blue" title="確定拠出年金" note="掛金は全額所得控除。60〜75歳の間に一時金か年金で受け取る">
             <SelectField
               label="あなたの区分（掛金の上限が決まる）"

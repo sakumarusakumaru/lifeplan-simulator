@@ -15,7 +15,9 @@ import {
   type EnvInput,
 } from "@/lib/v4/calc/environment";
 import { ScenarioPreviewChart } from "@/components/v4/ScenarioPreviewChart";
+import { ageOn } from "@/lib/v4/calc/age";
 import { dcSelfLimit } from "@/lib/v4/calc/rules";
+import { spJobsOf } from "@/lib/v4/calc/workStyle";
 import { simulate } from "@/lib/v4/calc/simulate";
 import { usePlanStore } from "@/store/v4/plan-store";
 import { useDisplayConverter } from "@/store/v4/useSimResult";
@@ -172,23 +174,29 @@ export default function SuggestPage() {
       category: "income",
     });
 
-    // 配偶者がいる人だけ
-    if (plan.spouseBirth) list.push({
-      id: "spouse",
-      title: "配偶者の収入が年100万円多い場合",
-      detail:
-        plan.spouseWork === "work"
-          ? `配偶者収入 ${(plan.spouseIncY / 10000).toFixed(0)}万円/年 → ${((plan.spouseIncY + 1_000_000) / 10000).toFixed(0)}万円/年`
+    // 配偶者がいる人だけ（ver6.2: 配偶者の勤務先は spJobs。いま働いている勤務先の年収に100万円を足す）
+    if (plan.spouseBirth) {
+      const spAgeNow = ageOn(plan.spouseBirth, plan.baseDate) ?? plan.curAge;
+      const spJobsNow = spJobsOf(plan);
+      const idx = spJobsNow.findIndex((j) => spAgeNow >= j.start && spAgeNow < j.end);
+      const working = plan.spouseWork === "work" && idx >= 0;
+      const cur = working ? spJobsNow[idx].inc : 0;
+      list.push({
+        id: "spouse",
+        title: "配偶者の収入が年100万円多い場合",
+        detail: working
+          ? `配偶者収入 ${(cur / 10000).toFixed(0)}万円/年 → ${((cur + 1_000_000) / 10000).toFixed(0)}万円/年`
           : `配偶者の就労を開始（年100万円・社保扶養内目安）`,
-      mod: ((p) => ({
-        ...p,
-        spouseWork: "work",
-        spouseIncY: p.spouseIncY + 1_000_000,
-        spouseIncStart: p.spouseWork === "work" ? p.spouseIncStart : p.curAge,
-        spouseIncEnd: p.spouseWork === "work" ? p.spouseIncEnd : 65,
-      })),
-      category: "income",
-    });
+        mod: ((p) => ({
+          ...p,
+          spouseWork: "work",
+          spJobs: working
+            ? spJobsNow.map((j, k) => (k === idx ? { ...j, inc: j.inc + 1_000_000 } : j))
+            : [...(p.spouseWork === "work" ? spJobsNow : []), { name: "配偶者の勤務先", start: spAgeNow, end: Math.max(65, spAgeNow + 1), inc: 1_000_000, raise: 0, sev: 0, sevAge: 65 }],
+        })),
+        category: "income",
+      });
+    }
 
     // ─────────────────────────
     // 02 積立・投資を増やす

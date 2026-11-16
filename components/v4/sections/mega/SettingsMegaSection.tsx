@@ -17,6 +17,8 @@ import { NEW_KID } from "@/components/v4/sections/mega/ExpenseMegaSection";
 import { ageOn, kidOffset } from "@/lib/v4/calc/age";
 import type { Kid } from "@/lib/v4/calc/types";
 import { calcHouseholdTax } from "@/lib/v4/calc/tax";
+import { SELF_WORK_OPTIONS, SP_WORK_OPTIONS, applySelfWork, applySpWork, koseiLeftOut, selfWorkOf, spJobsOf, spWorkOf } from "@/lib/v4/calc/workStyle";
+import { useVBase } from "@/components/v4/useVBase";
 import { usePlanStore } from "@/store/v4/plan-store";
 
 const fmtMan = (yen: number) => {
@@ -98,6 +100,8 @@ export function SettingsMegaSection() {
 
   const detailed = plan.taxMode === "detailed";
   const tabMode = useContext(TabModeContext);
+  // ver6.2: 働き方を基本で1回選ぶ。年金の種類・iDeCoの区分・後のタブの入力欄がこれで決まる
+  const v6 = useVBase() === "/v6";
   const [spouseOn, setSpouseOn] = useState(!!plan.spouseBirth);
   const showSpouse = !tabMode || spouseOn || !!plan.spouseBirth;
   const Detail = tabMode ? DetailWrap : Fragment;
@@ -116,11 +120,8 @@ export function SettingsMegaSection() {
       return j.start <= plan.curAge && plan.curAge < j.end ? acc + j.inc : acc;
     }, 0);
     const spouseAge = ageOn(plan.spouseBirth, undefined);
-    const spouseWageY = plan.spouseWork === "work"
-      && spouseAge !== null
-      && spouseAge >= plan.spouseIncStart
-      && spouseAge < plan.spouseIncEnd
-      ? plan.spouseIncY
+    const spouseWageY = plan.spouseWork === "work" && spouseAge !== null
+      ? spJobsOf(plan).reduce((acc, j) => (spouseAge >= j.start && spouseAge < j.end ? acc + j.inc : acc), 0)
       : 0;
     const kidAgesNow: number[] = plan.kids
       .map((k) => plan.curAge - k.offset)
@@ -181,6 +182,29 @@ export function SettingsMegaSection() {
             />
             <AgeDisplay birth={plan.selfBirth} />
           </div>
+          {v6 && tabMode ? (
+            <>
+              <SelectField
+                label="働き方"
+                value={selfWorkOf(plan)}
+                onChange={(v) => patch(applySelfWork(plan, v))}
+                options={SELF_WORK_OPTIONS}
+                hint={
+                  selfWorkOf(plan) === "employee"
+                    ? "年金は厚生年金、収入は「勤務先の年収（額面）」で入れます。iDeCoの上限は会社員の区分になります"
+                    : selfWorkOf(plan) === "self"
+                      ? "年金は国民年金、収入は「事業の所得（売上−経費）」で入れます。国民健康保険・個人事業税を計算します"
+                      : "年金の種類は今のまま変えません（会社員だった人の厚生年金はそのまま計算します）。これから働く予定や退職金の予定があれば「2 収入」で入れられます"
+                }
+              />
+              {koseiLeftOut(plan.selfPension) ? (
+                <p className="text-[11px] font-bold leading-relaxed text-[#9a7430]">
+                  ● 会社員だった期間の厚生年金（{plan.selfPension.koseiYears}年）は、いまの年金の種類（国民年金）では計算に入っていません。
+                  入れるには「2 収入 ＞ 年金」で「手動指定」にして、ねんきん定期便の見込額を入れてください。
+                </p>
+              ) : null}
+            </>
+          ) : null}
         </CollapsibleSubGroup>
 
         <CollapsibleSubGroup title="配偶者">
@@ -195,6 +219,37 @@ export function SettingsMegaSection() {
               />
               <AgeDisplay birth={plan.spouseBirth} />
             </div>
+            {v6 && tabMode && plan.spouseBirth ? (
+              <>
+                <SelectField
+                  label="働き方"
+                  value={spWorkOf(plan)}
+                  onChange={(v) => patch(applySpWork(plan, v, undefined, ageOn(plan.spouseBirth, plan.baseDate)))}
+                  options={SP_WORK_OPTIONS}
+                  hint={
+                    spWorkOf(plan) === "employee"
+                      ? "配偶者も厚生年金。税金・社会保険は配偶者の年収で別に計算します"
+                      : spWorkOf(plan) === "part"
+                        ? plan.spousePension.category === "dependent"
+                          ? "本人の扶養（年金は第3号・保険料なし）。年収が130万円以上になると扶養から外れる計算です（勤め先の規模によっては106万円から社会保険に入ります。その場合は「会社員・公務員」を選んでください）"
+                          : "本人が会社員・公務員ではないので扶養にはならず、国民年金・国民健康保険を自分で払う計算です"
+                        : spWorkOf(plan) === "self"
+                          ? "年金は国民年金。収入は「事業の所得（売上−経費）」で入れます"
+                          : plan.spousePension.category === "dependent"
+                            ? "本人の扶養（年金は第3号）。配偶者の収入は0円として計算します"
+                            : plan.spousePension.category === "kosei"
+                              ? "配偶者の収入は0円として計算します。年金の種類は厚生年金のまま（会社員だった期間の年金を計算します）"
+                              : "国民年金（第1号）。配偶者の収入は0円として計算します"
+                  }
+                />
+                {koseiLeftOut(plan.spousePension) ? (
+                  <p className="text-[11px] font-bold leading-relaxed text-[#9a7430]">
+                    ● 配偶者が会社員だった期間の厚生年金（{plan.spousePension.koseiYears}年）は、いまの年金の種類（{plan.spousePension.category === "dependent" ? "扶養・第3号" : "国民年金"}）では計算に入っていません。
+                    入れるには「2 収入 ＞ 年金」の配偶者を「手動指定」にして、ねんきん定期便の見込額を入れてください。
+                  </p>
+                ) : null}
+              </>
+            ) : null}
             {/* ver5 は配偶者の働き方・年収を「収入」ブロックで聞く */}
             {tabMode ? null : (
             <>
@@ -232,7 +287,9 @@ export function SettingsMegaSection() {
             <p className="text-[11px] text-[#0a0a0a]/60">生年月日を入れると、配偶者の収入・年金も計算に入ります</p>
           ) : null}
           {tabMode && plan.spouseBirth ? (
-            <p className="text-[11px] text-[#0a0a0a]/60">配偶者の働き方と年収は「2 収入」で入れます</p>
+            <p className="text-[11px] text-[#0a0a0a]/60">
+              {v6 ? "配偶者の勤務先・年収・副業は「2 収入」、NISA・iDeCoなどは「3 資産」で入れます" : "配偶者の働き方と年収は「2 収入」で入れます"}
+            </p>
           ) : null}
         </CollapsibleSubGroup>
 

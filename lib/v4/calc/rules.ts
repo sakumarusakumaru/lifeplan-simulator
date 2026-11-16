@@ -79,3 +79,14 @@ export function childAllowanceMonthly(kidAge: number, rank: number): number {
   if (rank >= 3) return 30_000;
   return kidAge < 3 ? 15_000 : 10_000;
 }
+
+// ver6: 配偶者の欄が未入力のときの既定値。画面の表示とエンジンで必ず同じ値を使う
+// （画面だけ60歳と見せてエンジンが0歳で計算する、というずれを起こさないため）
+export const SP_DEFAULTS = {
+  nisaEndAge: 60,
+  tokuEndAge: 60,
+  dcEndAge: 60,
+  dcStartAge: 65,
+  dcYears: 10,
+  dcMethod: "lump" as const,
+};

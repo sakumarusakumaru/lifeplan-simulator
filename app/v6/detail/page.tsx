@@ -23,9 +23,9 @@ import { useSimResult } from "@/store/v4/useSimResult";
 type SectionId = (typeof SECTION_ORDER)[number];
 
 const BLOCKS: { id: SectionId; label: string; desc: string; Comp: ComponentType }[] = [
-  { id: "ch-settings", label: "基本", desc: "本人・配偶者（計算の条件と税金は「詳細設定」に）", Comp: SettingsMegaSection },
-  { id: "ch-income", label: "収入", desc: "給与・副業・年金・臨時収入（相続・贈与など）", Comp: IncomeMegaSection },
-  { id: "ch-assets", label: "資産", desc: "現金・NISA・特定口座・iDeCo/DC・暗号資産・金・不動産投資", Comp: AssetsMegaSection },
+  { id: "ch-settings", label: "基本", desc: "本人・配偶者の生年月日と働き方、子ども（計算の条件と税金は「詳細設定」に）", Comp: SettingsMegaSection },
+  { id: "ch-income", label: "収入", desc: "本人と配偶者の給与・副業・年金、臨時収入（相続・贈与など）", Comp: IncomeMegaSection },
+  { id: "ch-assets", label: "資産", desc: "現金・NISA・特定口座・iDeCo/DC（本人と配偶者）・暗号資産・金・不動産投資", Comp: AssetsMegaSection },
   { id: "ch-expense", label: "支出", desc: "生活費・住まい・教育・保険・ライフイベント・介護", Comp: ExpenseMegaSection },
 ];
 
@@ -38,7 +38,7 @@ function filledByContent(plan: ReturnType<typeof usePlanStore.getState>["plan"],
     case "ch-settings":
       return !!plan.selfBirth;
     case "ch-income":
-      return plan.jobs.some((j) => j.inc > 0) || plan.sideJobs.some((j) => j.inc > 0) || plan.selfPension.mode === "manual";
+      return plan.jobs.some((j) => j.inc > 0) || plan.sideJobs.some((j) => j.inc > 0) || plan.selfPension.mode === "manual" || (plan.spJobs ?? []).some((j) => j.inc > 0);
     case "ch-assets":
       return plan.cashBal > 0 || plan.nisaBal > 0 || plan.tokuBal > 0 || plan.dcBal > 0 || (plan.spNisaBal ?? 0) > 0 || (plan.spTokuBal ?? 0) > 0;
     case "ch-expense":
@@ -116,7 +116,7 @@ export default function DetailPage() {
         : "本人の生年月日（1 基本）を入れると、結果を見られます"
       : null;
   const note =
-    block.id === "ch-income" && plan.jobs.every((j) => !j.inc) && plan.sideJobs.every((j) => !j.inc)
+    block.id === "ch-income" && plan.jobs.every((j) => !j.inc) && plan.sideJobs.every((j) => !j.inc) && plan.selfWork !== "none"
       ? "年収が0円のままです。働いている方は「年収（額面）」を入れてください（収入がない場合はこのままでOK）"
       : block.id === "ch-expense" && !plan.livingM
         ? "毎月の生活費が0円のままです。だいたいの金額を入れると結果が現実に近くなります"

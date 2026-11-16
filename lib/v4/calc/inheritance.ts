@@ -264,13 +264,15 @@ export function estateBreakdown(plan: PlanInput, row: YearlyResult, heirCount: n
   const insuranceGross = (listedLump + selfDeathBenefitAt(insList, row.age) + selfIncomeProtValueAt(insList, row.age)) / deflate;
   const insurance = Math.max(0, insuranceGross - 500 * MAN * heirCount);
   // DC（iDeCo・企業型DC）は本人名義。死亡一時金は退職手当金と同じ非課税枠
-  const retirementGross = a.dc + deathSeverance(plan, row.age) / deflate;
+  // ver6.2: ass.dc は配偶者名義のDCを含む合計なので、本人の分だけにする
+  const spouseDc = hasSpouse ? Math.max(0, row.spDc ?? 0) : 0;
+  const retirementGross = a.dc - spouseDc + deathSeverance(plan, row.age) / deflate;
   const retirement = Math.max(0, retirementGross - 500 * MAN * heirCount);
   // 住宅ローンは本人の債務（団信があれば亡くなると0になるので債務から外す）
   const hlDebt = plan.risk?.danshin ? 0 : row.hlBal;
   const reLoans = loans - row.hlBal;
   const total = Math.max(0, sharedFin * share + homeSelf - homeLandCut + re + insurance + retirement - hlDebt - reLoans);
-  const spouseOwn = hasSpouse ? Math.max(0, (sharedFin + hv) * (1 - share) + spouseNamed) : 0;
+  const spouseOwn = hasSpouse ? Math.max(0, (sharedFin + hv) * (1 - share) + spouseNamed + spouseDc) : 0;
   return {
     financial: sharedFin * share,
     home: homeSelf - homeLandCut,

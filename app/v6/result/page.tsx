@@ -65,7 +65,7 @@ function buildVerdict(
     monthlyExp > 0 ? Math.round((totalCashAssets / monthlyExp) * 10) / 10 : 0;
   const totalSaveM =
     plan.nisaTsumitateM + plan.nisaGrowthM + plan.saveTokuM + plan.saveDcM + plan.saveCryptoM + plan.saveGoldM +
-    (plan.spouseBirth ? (plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0) : 0);
+    (plan.spouseBirth ? (plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0) + (plan.spSaveDcM ?? 0) : 0);
   const annualSave = Math.round((totalSaveM * 12) / 10000);
   const koseiYears = plan.selfPension?.koseiYears ?? 0;
   const penStartA = plan.penStartA;
@@ -407,7 +407,7 @@ export default function ResultPage() {
           <SummaryCard
             label="年間積立"
             value={fmtMan(cur?.inv ?? 0)}
-            sub={`NISA ${fmtMan((plan.nisaTsumitateM + plan.nisaGrowthM) * 12)} / 特定口座 ${fmtMan(plan.saveTokuM * 12)}${plan.spouseBirth && ((plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0)) > 0 ? ` / 配偶者のNISA・特定 ${fmtMan(((plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0)) * 12)}` : ""} / iDeCo等(自分) ${fmtMan(plan.saveDcM * 12)}${plan.dcEmployerM > 0 ? ` / DC(会社) ${fmtMan(plan.dcEmployerM * 12)}` : ""}`}
+            sub={`NISA ${fmtMan((plan.nisaTsumitateM + plan.nisaGrowthM) * 12)} / 特定口座 ${fmtMan(plan.saveTokuM * 12)}${plan.spouseBirth && ((plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0)) > 0 ? ` / 配偶者のNISA・特定 ${fmtMan(((plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0)) * 12)}` : ""} / iDeCo等(自分) ${fmtMan(plan.saveDcM * 12)}${plan.spouseBirth && (plan.spSaveDcM ?? 0) > 0 ? ` / 配偶者のiDeCo等 ${fmtMan((plan.spSaveDcM ?? 0) * 12)}` : ""}${plan.dcEmployerM > 0 ? ` / DC(会社) ${fmtMan(plan.dcEmployerM * 12)}` : ""}`}
           />
         </div>
 
@@ -424,7 +424,7 @@ export default function ResultPage() {
               { label: "特定口座", value: plan.tokuBal + (plan.spTokuBal ?? 0), color: BS_COLORS.toku, category: "current" },
               { label: "暗号資産", value: plan.cryptoBal, color: BS_COLORS.crypto, category: "current" },
               { label: "金・コモディティ", value: plan.goldBal, color: BS_COLORS.gold, category: "current" },
-              { label: "iDeCo・DC", value: plan.dcBal, color: BS_COLORS.dc, category: "fixed" },
+              { label: "iDeCo・DC", value: plan.dcBal + (plan.spouseBirth ? (plan.spDcBal ?? 0) : 0), color: BS_COLORS.dc, category: "fixed" },
               { label: "自宅（評価額）", value: homeValue, color: BS_COLORS.home, category: "fixed" },
               { label: "不動産投資（評価額）", value: realEstateValue, color: BS_COLORS.re, category: "fixed" },
             ],

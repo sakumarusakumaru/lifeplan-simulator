@@ -212,7 +212,16 @@ test("THRU-03 T3 年金取り崩し: 取り崩しは69歳から、特定口座�
 test("THRU-04 年次サマリーの内訳: 収入・支出・積立の内訳を足すと、どの年も合計と1円以内で合う", () => {
   const withWindfall: PlanInput = { ...DEFAULT_PLAN, inheritances: [{ label: "親からの相続", age: 60, amount: 10_000_000 }], lifeExpenses: [{ label: "車", age: 45, amount: 2_000_000 }] };
   const withV6: PlanInput = { ...T2, spNisaBal: 500 * MAN, spNisaTsumitateM: 5 * MAN, spNisaEndAge: 60, spTokuBal: 2000 * MAN, spDivTokuY: 3.5, divNisaY: 2, nisaBal: 800 * MAN };
-  for (const plan of [T1, T2, T3, DEFAULT_PLAN, withWindfall, withV6]) {
+  // ver6.2: 配偶者の勤務先（昇給・退職金）・副業・iDeCo（一時金と年金の両方）
+  const withSpWork: PlanInput = {
+    ...T2,
+    spJobs: [{ name: "配偶者の勤務先", start: 25, end: 60, inc: 450 * MAN, raise: 1, sev: 1500 * MAN, sevAge: 60, sevMethod: "mix", sevYears: 10, sevRate: 1.5, sevLumpPct: 50 }],
+    spSideJobs: [{ name: "副業", start: 40, end: 55, inc: 60 * MAN }],
+    spousePension: { ...T2.spousePension, category: "kosei", koseiYears: 35, koseiAvgIncome: 450 * MAN },
+    spDcBal: 300 * MAN, spSaveDcM: 20000, spDcType: "employee-none", spDcJoinAge: 30, spDcStartAge: 60, spDcMethod: "lump",
+  };
+  const withSpDcAnnuity: PlanInput = { ...withSpWork, spDcMethod: "annuity", spDcYears: 10, spDcStartAge: 65 };
+  for (const plan of [T1, T2, T3, DEFAULT_PLAN, withWindfall, withV6, withSpWork, withSpDcAnnuity]) {
     for (const r of simulate(plan).rows) {
       const incomeParts =
         r.wageSelf + r.wageSpouse + r.sideInc + r.pubPen + r.corpPen + r.sevGross + r.dcLump + r.childAllow +

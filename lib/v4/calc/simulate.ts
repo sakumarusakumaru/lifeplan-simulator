@@ -9,10 +9,12 @@ import {
   DC_PAYOUT_MAX_AGE,
   DC_PAYOUT_MIN_AGE,
   NISA,
+  SP_DEFAULTS,
   childAllowanceMonthly,
   dcSelfLimit,
 } from "./rules";
 import { survivorBenefitForYear, type DeceasedRecord } from "./survivor";
+import { spDcTypeOf } from "./workStyle";
 import {
   CAPITAL_GAIN_TAX,
   calcHouseholdTax,
@@ -97,13 +99,14 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
   const spOk = ageOn(input.spouseBirth, input.baseDate) !== null;
   const spNisaBal0 = spOk ? Math.max(0, input.spNisaBal ?? 0) : 0;
   const spTokuBal0 = spOk ? Math.max(0, input.spTokuBal ?? 0) : 0;
+  const spDcBal0 = spOk ? Math.max(0, input.spDcBal ?? 0) : 0;
   const ass: AssetSnapshot = {
     c: input.cashBal,
     nisa: input.nisaBal + spNisaBal0,
     toku: input.tokuBal + spTokuBal0,
     k: input.cryptoBal,
     g: input.goldBal,
-    dc: input.dcBal,
+    dc: input.dcBal + spDcBal0,
   };
   // 取得額（簿価）。0 なら残高と同額（含み益なし）とみなす
   const cost = {
@@ -121,6 +124,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     toku: spTokuBal0,
     nisaCost: spNisaBal0 > 0 && (input.spNisaCost ?? 0) > 0 ? (input.spNisaCost ?? 0) : spNisaBal0,
     nisaGrowthCost: 0,
+    dc: spDcBal0, // ver6.2: 配偶者名義の iDeCo・DC（ass.dc の内数）
   };
   // 旧NISA（2023年まで）の分。NISA残高の内数として同じ利回りで運用し、取り崩すときは旧NISAから先に使う。
   // 旧NISAを売っても新NISAの簿価（生涯枠）は変わらない
@@ -213,6 +217,76 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
 
   const lumps: LumpRecord[] = [];
 
+  // ver6.2: 配偶者の iDeCo・企業型DC（年齢は配偶者の年齢。未入力の既定は SP_DEFAULTS）
+  const spDcOn = spOk && (spDcBal0 > 0 || (input.spSaveDcM ?? 0) > 0 || (input.spDcEmployerM ?? 0) > 0);
+  const spDcStartAge = Math.min(DC_PAYOUT_MAX_AGE, Math.max(DC_PAYOUT_MIN_AGE, input.spDcStartAge ?? SP_DEFAULTS.dcStartAge));
+  const spDcYears = Math.min(20, Math.max(5, input.spDcYears || SP_DEFAULTS.dcYears));
+  const spDcMethod = input.spDcMethod ?? SP_DEFAULTS.dcMethod;
+  const spDcContribEnd = Math.min(input.spSaveDcEndAge ?? SP_DEFAULTS.dcEndAge, spDcStartAge, DC_MAX_CONTRIB_AGE);
+  const spDcSelfEnd = Math.min(spDcContribEnd, input.penStartB);
+  const spDcPeriodEnd = (input.spDcEmployerM ?? 0) > 0 ? spDcContribEnd : spDcSelfEnd;
+  const spDcType = spDcTypeOf(input);
+  // 加入した年齢が空欄なら、今の年齢から加入したものとして計算する（控除が小さく、税は多めに出る）
+  const spDcJoinAge = (input.spDcJoinAge ?? 0) > 0 ? (input.spDcJoinAge as number) : spouseCurAge ?? 0;
+  // 退職所得控除の期間（加入〜掛金の終わり）。受取開始を過ぎて入力したときなどに逆転しないよう、最低1年
+  const spDcPeriodTo = Math.max(spDcPeriodEnd, spDcJoinAge + 1);
+  if (spDcBal0 > 0 && !((input.spDcJoinAge ?? 0) > 0)) {
+    warn("sp-dc-join", "配偶者のiDeCo・DCの「加入した年齢」が空欄です。今の年齢から加入したものとして計算するので、一時金で受け取るときの退職所得控除が小さくなり、税金が多めに出ます（「3 資産」で入れてください）。");
+  }
+  if (spDcOn && (input.spSaveDcEndAge ?? SP_DEFAULTS.dcEndAge) > spDcContribEnd) {
+    warn("sp-dc-start", `配偶者のDCは、受取開始（${spDcStartAge}歳）以降と70歳以降は掛金を出せないため、配偶者が${spDcContribEnd}歳になる年で掛金を止めて計算しています。`);
+  }
+  if (spDcOn && (input.spSaveDcM ?? 0) > 0 && spDcSelfEnd < spDcContribEnd) {
+    warn("sp-dc-pension", `老齢基礎年金を受け始める${input.penStartB}歳からはiDeCoの掛金を出せないため、配偶者が${input.penStartB}歳になる年で本人掛金を止めて計算しています。`);
+  }
+  const spLumps: LumpRecord[] = [];
+
+  // 退職所得（退職金・DC一時金）の税: 同年は合算、前後は重複調整。本人と配偶者で同じ計算（年齢はその人の年齢）
+  const lumpTax = (o: {
+    sevJobs: { from: number; to: number; amount: number }[];
+    sevGross: number;
+    dcLump: number;
+    dcFrom: number;
+    dcTo: number;
+    hist: LumpRecord[];
+    pAge: number;
+    year: number;
+    spouse: boolean;
+  }) => {
+    const parts: { from: number; to: number }[] = o.sevJobs.map((x) => ({ from: x.from, to: x.to }));
+    if (o.dcLump > 0) parts.push({ from: o.dcFrom, to: o.dcTo });
+    const from = Math.min(...parts.map((x) => x.from));
+    const to = Math.max(...parts.map((x) => x.to));
+    // 勤続年数: 同じ年に受け取る分の期間を重ねた長さ（勤め先の間の空白は数えない）
+    const years = Math.max(1, unionYears(parts));
+    let overlap = 0;
+    for (const x of o.hist) {
+      // 今回がDC一時金を含む → 前年以前19年内の退職金等と重複調整
+      // 今回が退職金のみ → 前年以前9年内のDC一時金（2026年〜）／4年内の退職金と重複調整
+      const window = o.dcLump > 0 ? 19 : x.hasDc ? 9 : 4;
+      if (o.pAge - x.age <= window) {
+        overlap = Math.max(overlap, overlapYears([x.from, x.to], [from, to]));
+      }
+    }
+    let kojo = taishokuShotokuKojo(years);
+    if (overlap > 0) {
+      kojo = Math.max(80 * MAN, kojo - kojoForYears(overlap));
+      warn(
+        `${o.spouse ? "sp-" : ""}lump-overlap-${o.pAge}`,
+        `${o.spouse ? "配偶者が" : ""}${o.pAge}歳の${o.dcLump > 0 ? "DC一時金" : "退職金"}は、前回の受取と期間が重なるため退職所得控除が減ります（DC一時金→退職金は10年、退職金→DC一時金は20年空けると調整なし）。`,
+      );
+    }
+    const amount = o.sevGross + o.dcLump;
+    // 勤続5年以下は短期退職手当等（控除後300万を超える部分は1/2にならない）
+    const totalTax = calcTaishokuTaxWithKojo(amount, kojo, o.year, years <= 5);
+    const sevTax = amount > 0 ? (totalTax * o.sevGross) / amount : 0;
+    // 受け取った額が控除額に満たないときは、次の重複調整では勤続期間を金額から読み替える（所得税法施行令70条2項）
+    //   800万以下: 金額÷40万、800万超: (金額−800万)÷70万＋20（1年未満切り捨て）年だけ、勤め始めから数える
+    const convYears = amount < kojo ? (amount <= 800 * MAN ? Math.floor(amount / (40 * MAN)) : Math.floor((amount - 800 * MAN) / (70 * MAN)) + 20) : Infinity;
+    o.hist.push({ age: o.pAge, hasDc: o.dcLump > 0, from, to: Math.min(to, from + convYears) });
+    return { sevTax, dcTax: totalTax - sevTax };
+  };
+
   // 保険（旧データの種類名もここで読み替える）
   const insList = (input.ins ?? []).map((p) => normalizeInsurance(p as never, input.curAge, input.endAge));
   const insState = createInsuranceState(insList, input.curAge);
@@ -269,10 +343,16 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         hlBal = 0;
         hlCleared = true;
       }
-      // 本人のDC残高は死亡一時金として遺族へ
-      if (selfDies && ass.dc > 0) {
-        deathLump += ass.dc;
-        ass.dc = 0;
+      // 本人のDC残高は死亡一時金として遺族へ（配偶者名義の分は残る）
+      if (selfDies && ass.dc - sp.dc > 0) {
+        deathLump += ass.dc - sp.dc;
+        ass.dc = sp.dc;
+      }
+      // 配偶者が亡くなる場合は、配偶者のDC残高が死亡一時金に
+      if (spouseDies && sp.dc > 0) {
+        deathLump += sp.dc;
+        ass.dc -= sp.dc;
+        sp.dc = 0;
       }
     }
 
@@ -316,9 +396,46 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       if (!selfGone && age >= j.start && age < j.end) side += j.inc;
     }
     let spouseJob = 0;
-    if (input.spouseWork === "work" && spouseAge !== null && !spouseGone) {
-      if (spouseAge >= input.spouseIncStart && spouseAge < input.spouseIncEnd) {
+    let spSevGross = 0;
+    let spSevAnnuity = 0;
+    let spSide = 0;
+    const spSevJobs: { from: number; to: number; amount: number }[] = [];
+    if (input.spouseWork === "work" && spouseAge !== null && spouseCurAge !== null) {
+      if (input.spJobs) {
+        // ver6.2: 配偶者の勤務先（本人と同じ計算。年齢は配偶者の年齢）
+        for (const j of input.spJobs) {
+          if (spouseGone) {
+            if (age === deathAge && j.sev > 0 && spouseAge === j.sevAge) {
+              deathLump += j.sev;
+            } else if (age === deathAge && spouseAge >= j.start && spouseAge < j.end && j.sev > 0) {
+              deathLump += j.sev * Math.min(1, (spouseAge - j.start) / Math.max(1, j.end - j.start));
+            }
+            if (age === deathAge && j.sev > 0) {
+              const plan = sevPlanOf(j);
+              const k = spouseAge - j.sevAge;
+              if (plan.annual > 0 && k >= 1 && k < plan.years) deathLump += presentValue(plan.annual, plan.rate, plan.years - k);
+            }
+            continue;
+          }
+          if (spouseAge >= j.start && spouseAge < j.end) {
+            spouseJob += j.inc * Math.pow(1 + (j.raise || 0) / 100, spouseAge - Math.max(spouseCurAge, j.start));
+          }
+          if (j.sev > 0) {
+            const plan = sevPlanOf(j);
+            if (spouseAge === j.sevAge && plan.lump > 0) {
+              spSevGross += plan.lump;
+              spSevJobs.push({ from: j.start, to: j.end, amount: plan.lump });
+            }
+            if (plan.annual > 0 && spouseAge >= j.sevAge && spouseAge < j.sevAge + plan.years) spSevAnnuity += plan.annual;
+          }
+        }
+      } else if (!spouseGone && spouseAge >= input.spouseIncStart && spouseAge < input.spouseIncEnd) {
         spouseJob += input.spouseIncY;
+      }
+      if (!spouseGone) {
+        for (const j of input.spSideJobs ?? []) {
+          if (spouseAge >= j.start && spouseAge < j.end) spSide += j.inc;
+        }
       }
     }
 
@@ -414,58 +531,68 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       dcEmp = input.dcEmployerM * 12;
     }
 
-    // ── DC受取 ──
+    // ver6.2: 配偶者の掛金（上限は配偶者の区分で判定。本人が亡くなったあとは止める）
+    let spDcSelf = 0;
+    let spDcEmp = 0;
+    if (spDcOn && spouseAge !== null && !spouseGone && spouseAge < spDcContribEnd) {
+      const lim = dcSelfLimit(spDcType, input.spDcEmployerM ?? 0, year);
+      const want = input.spSaveDcM ?? 0;
+      if (want > lim.selfMax) {
+        warn(
+          `sp-dc-limit-${year >= 2027 ? "new" : "old"}`,
+          `配偶者のDCの本人掛金 月${want.toLocaleString()}円は上限（${lim.note}）を超えるため、${year}年分以降は月${lim.selfMax.toLocaleString()}円で計算しています。`,
+        );
+      }
+      // 本人が亡くなったあとは、配偶者が自分で出す掛金は止める（会社掛金は続く）
+      spDcSelf = !dead && spouseAge < spDcSelfEnd ? Math.min(want, lim.selfMax) * 12 : 0;
+      spDcEmp = (input.spDcEmployerM ?? 0) * 12;
+    }
+
+    // ── DC受取（本人の分。ass.dc は配偶者名義を含む合計なので、本人の分だけ取り出す）──
     let dcPayout = 0;
     let dcLump = 0;
     let dcAnnuity = 0;
-    if (ass.dc > 0) {
+    const selfDc = ass.dc - sp.dc;
+    if (selfDc > 0) {
       if (input.dcMethod === "lump" && age === dcStartAge) {
-        dcLump = ass.dc;
-        ass.dc = 0;
+        dcLump = selfDc;
+        ass.dc -= selfDc;
       } else if (input.dcMethod === "annuity" && age >= dcStartAge && age < dcStartAge + dcYears) {
         const remain = dcStartAge + dcYears - age;
-        dcAnnuity = ass.dc / remain;
+        dcAnnuity = selfDc / remain;
         ass.dc -= dcAnnuity;
       }
       dcPayout = dcLump + dcAnnuity;
     }
+    // ver6.2: 配偶者のDC受取（受取開始の年齢をもう過ぎていれば、最初の年に受け取る）
+    let spDcLump = 0;
+    let spDcAnnuity = 0;
+    if (sp.dc > 0 && spouseAge !== null && spouseCurAge !== null && !spouseGone) {
+      const startAt = Math.max(spDcStartAge, spouseCurAge);
+      if (spDcMethod === "lump" && spouseAge === startAt) {
+        spDcLump = sp.dc;
+      } else if (spDcMethod === "annuity" && spouseAge >= startAt && spouseAge < startAt + spDcYears) {
+        spDcAnnuity = sp.dc / (startAt + spDcYears - spouseAge);
+      }
+      sp.dc -= spDcLump + spDcAnnuity;
+      ass.dc -= spDcLump + spDcAnnuity;
+      dcPayout += spDcLump + spDcAnnuity;
+    }
 
-    // ── 退職所得（退職金・DC一時金）: 同年は合算、前後は重複調整 ──
+    // ── 退職所得（退職金・DC一時金）: 同年は合算、前後は重複調整（lumpTax）──
     let sevTax = 0;
     let dcTax = 0;
     if (sevGross > 0 || dcLump > 0) {
-      const parts: { from: number; to: number }[] = sevJobs.map((s) => ({ from: s.from, to: s.to }));
-      if (dcLump > 0) parts.push({ from: input.dcJoinAge, to: dcPeriodEnd });
-      const from = Math.min(...parts.map((p) => p.from));
-      const to = Math.max(...parts.map((p) => p.to));
-      // 勤続年数: 同じ年に受け取る分の期間を重ねた長さ（勤め先の間の空白は数えない）
-      const years = Math.max(1, unionYears(parts));
-      let overlap = 0;
-      for (const p of lumps) {
-        // 今回がDC一時金を含む → 前年以前19年内の退職金等と重複調整
-        // 今回が退職金のみ → 前年以前9年内のDC一時金（2026年〜）／4年内の退職金と重複調整
-        const window = dcLump > 0 ? 19 : p.hasDc ? 9 : 4;
-        if (age - p.age <= window) {
-          overlap = Math.max(overlap, overlapYears([p.from, p.to], [from, to]));
-        }
-      }
-      let kojo = taishokuShotokuKojo(years);
-      if (overlap > 0) {
-        kojo = Math.max(80 * MAN, kojo - kojoForYears(overlap));
-        warn(
-          `lump-overlap-${age}`,
-          `${age}歳の${dcLump > 0 ? "DC一時金" : "退職金"}は、前回の受取と期間が重なるため退職所得控除が減ります（DC一時金→退職金は10年、退職金→DC一時金は20年空けると調整なし）。`,
-        );
-      }
-      const amount = sevGross + dcLump;
-      // 勤続5年以下は短期退職手当等（控除後300万を超える部分は1/2にならない）
-      const totalTax = calcTaishokuTaxWithKojo(amount, kojo, year, years <= 5);
-      sevTax = amount > 0 ? (totalTax * sevGross) / amount : 0;
-      dcTax = totalTax - sevTax;
-      // 受け取った額が控除額に満たないときは、次の重複調整では勤続期間を金額から読み替える（所得税法施行令70条2項）
-      //   800万以下: 金額÷40万、800万超: (金額−800万)÷70万＋20（1年未満切り捨て）年だけ、勤め始めから数える
-      const convYears = amount < kojo ? (amount <= 800 * MAN ? Math.floor(amount / (40 * MAN)) : Math.floor((amount - 800 * MAN) / (70 * MAN)) + 20) : Infinity;
-      lumps.push({ age, hasDc: dcLump > 0, from, to: Math.min(to, from + convYears) });
+      const tx = lumpTax({ sevJobs, sevGross, dcLump, dcFrom: input.dcJoinAge, dcTo: dcPeriodEnd, hist: lumps, pAge: age, year, spouse: false });
+      sevTax = tx.sevTax;
+      dcTax = tx.dcTax;
+    }
+    let spSevTax = 0;
+    let spDcTax = 0;
+    if ((spSevGross > 0 || spDcLump > 0) && spouseAge !== null) {
+      const tx = lumpTax({ sevJobs: spSevJobs, sevGross: spSevGross, dcLump: spDcLump, dcFrom: spDcJoinAge, dcTo: spDcPeriodTo, hist: spLumps, pAge: spouseAge, year, spouse: true });
+      spSevTax = tx.sevTax;
+      spDcTax = tx.dcTax;
     }
 
     // ── 不動産投資（家賃・ローン）──
@@ -519,7 +646,9 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     let socialIns = 0;
     let hlDeduct = 0;
     let marginal = input.taxRate / 100;
-    const ordinaryGross = job + side + spouseJob + pen + dcAnnuity + sevAnnuity;
+    // 配偶者の企業年金・DC年金・退職金の年金受取（公的年金等として配偶者の所得に入る）
+    const spCorpPen = spDcAnnuity + spSevAnnuity;
+    const ordinaryGross = job + side + spouseJob + spSide + pen + dcAnnuity + sevAnnuity + spCorpPen;
     const kidsDependent = kidAgesNow.some((a) => a <= 22);
     // 生命保険料控除・地震保険料控除（保険料を払う人＝契約者ごと）
     const insDedSelf = insuranceDeduction(insY.dedPrem["本人"], year, kidsDependent);
@@ -537,9 +666,9 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
             age: spouseAge,
             wageY: spouseJob,
             workStyle: spouseWorkStyle,
-            penY: spousePenY,
-            otherShotokuY: reProfitTot + insY.taxable["本人"] + insY.taxable["配偶者"],
-            dcSelfContribY: 0,
+            penY: spousePenY + spCorpPen,
+            otherShotokuY: spSide + reProfitTot + insY.taxable["本人"] + insY.taxable["配偶者"],
+            dcSelfContribY: spDcSelf,
             dependentOfSpouse: false,
           },
           spouse: null,
@@ -568,9 +697,9 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
               age: spouseAge,
               wageY: spouseJob,
               workStyle: spouseWorkStyle,
-              penY: spousePenY,
-              otherShotokuY: insY.taxable["配偶者"],
-              dcSelfContribY: 0,
+              penY: spousePenY + spCorpPen,
+              otherShotokuY: spSide + insY.taxable["配偶者"],
+              dcSelfContribY: spDcSelf,
               // 健康保険の扶養: 会社員（75歳未満）の配偶者で、年収130万未満（60歳以上は年金を含めて180万未満）。
               // 国民年金の第3号は60歳で終わるが、健康保険の扶養は75歳まで続く
               dependentOfSpouse:
@@ -578,7 +707,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
                 selfEmployedNow &&
                 age < 75 &&
                 spouseAge < 75 &&
-                spouseJob + spousePenY < (spouseAge >= 60 ? 180 : 130) * MAN,
+                spouseJob + spSide + spousePenY + spCorpPen < (spouseAge >= 60 ? 180 : 130) * MAN,
             }
           : null;
       const tr = calcHouseholdTax({
@@ -600,9 +729,9 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       const rate = input.taxRate / 100;
       const penRate = (input.taxRatePen ?? 10) / 100;
       const raw =
-        (job + side + spouseJob + Math.max(0, reProfitTot) - dcSelf + insY.taxable["本人"] + insY.taxable["配偶者"] -
+        (job + side + spouseJob + spSide + Math.max(0, reProfitTot) - dcSelf - Math.min(spDcSelf, spouseJob + spSide) + insY.taxable["本人"] + insY.taxable["配偶者"] -
           insDedSelf.income - insDedSpouse.income) * rate +
-        (pen + dcAnnuity + sevAnnuity) * penRate;
+        (pen + dcAnnuity + sevAnnuity + spCorpPen) * penRate;
       hlDeduct = Math.min(Math.max(0, raw), hlCredit);
       tax = Math.max(0, raw - hlDeduct);
     }
@@ -616,7 +745,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     const reTaxTot = Math.max(0, reProfitTot) * marginal;
 
     const net =
-      ordinaryGross + childAllow - tax + (sevGross - sevTax) + (dcLump - dcTax) + surv.total + incomeProt + insY.payout - insY.separateTax;
+      ordinaryGross + childAllow - tax + (sevGross - sevTax) + (dcLump - dcTax) + (spSevGross - spSevTax) + (spDcLump - spDcTax) +
+      surv.total + incomeProt + insY.payout - insY.separateTax;
 
     // ── 一時収支・その他ローン・介護 ──
     let inherit = 0;
@@ -726,8 +856,8 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     // ver6: 配偶者のNISA・特定口座への積立（年齢は配偶者の年齢。枠は1人ずつ）
     const spInvesting = investing && spouseAge !== null && !spouseGone;
     // 積立を終える年齢が未入力なら、画面の表示と同じ60歳
-    let spNisaT = spInvesting && spouseAge < (input.spNisaEndAge ?? 60) ? (input.spNisaTsumitateM ?? 0) * 12 : 0;
-    let spNisaG = spInvesting && spouseAge < (input.spNisaEndAge ?? 60) ? (input.spNisaGrowthM ?? 0) * 12 : 0;
+    let spNisaT = spInvesting && spouseAge < (input.spNisaEndAge ?? SP_DEFAULTS.nisaEndAge) ? (input.spNisaTsumitateM ?? 0) * 12 : 0;
+    let spNisaG = spInvesting && spouseAge < (input.spNisaEndAge ?? SP_DEFAULTS.nisaEndAge) ? (input.spNisaGrowthM ?? 0) * 12 : 0;
     const spNisaRequested = spNisaT + spNisaG;
     spNisaT = Math.min(spNisaT, NISA.tsumitateYear);
     spNisaG = Math.min(spNisaG, NISA.growthYear);
@@ -744,12 +874,12 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       }
     }
     const spTokuIn =
-      (spInvesting && spouseAge < (input.spSaveTokuEndAge ?? 60) ? (input.spSaveTokuM ?? 0) * 12 : 0) +
+      (spInvesting && spouseAge < (input.spSaveTokuEndAge ?? SP_DEFAULTS.tokuEndAge) ? (input.spSaveTokuM ?? 0) * 12 : 0) +
       (input.nisaOverflowToToku ? spNisaOverflow : 0);
     const tToku = tTokuSelf + spTokuIn;
     const tK = investing && age < input.saveCryptoEndAge ? input.saveCryptoM * 12 : 0;
     const tG = investing && age < input.saveGoldEndAge ? input.saveGoldM * 12 : 0;
-    const inv = nisaIn + spNisaIn + tToku + tK + tG + dcSelf;
+    const inv = nisaIn + spNisaIn + tToku + tK + tG + dcSelf + spDcSelf;
 
     const exp = basic + home + edu + ins + care + lifeExp + otherLoanPay;
     // ver6: 配当・分配金（年初の評価額 × 利回り）。受け取って現金に入れる。特定口座は20.315%を源泉で引く（申告不要）。
@@ -816,7 +946,9 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     cost.k += tK;
     ass.g = (ass.g + tG) * (1 + g(input.goldR, shock?.gold));
     cost.g += tG;
-    ass.dc = (ass.dc + dcSelf + dcEmp) * (1 + g(input.dcR, shock?.sec));
+    const dcGrowth = 1 + g(input.dcR, shock?.sec);
+    ass.dc = (ass.dc + dcSelf + dcEmp + spDcSelf + spDcEmp) * dcGrowth;
+    sp.dc = (sp.dc + spDcSelf + spDcEmp) * dcGrowth;
 
     // ── 取り崩し（売却益に課税。必要な手取りから逆算して売る）──
     let draw = 0;
@@ -923,24 +1055,24 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       reCostTot,
       rePayTot,
       reTaxTot,
-      jobNet: (job + side + spouseJob) * (1 - taxShare),
-      penNet: (pen + dcAnnuity) * (1 - taxShare),
+      jobNet: (job + side + spouseJob + spSide) * (1 - taxShare),
+      penNet: (pen + dcAnnuity + spDcAnnuity) * (1 - taxShare),
       inherit,
       lifeExp,
       otherLoanPay,
       care,
       socialIns,
       childAllow,
-      sevGross,
-      sevTax,
+      sevGross: sevGross + spSevGross,
+      sevTax: sevTax + spSevTax,
       dcPayout,
-      dcTax,
-      dcContribSelf: dcSelf,
+      dcTax: dcTax + spDcTax,
+      dcContribSelf: dcSelf + spDcSelf,
       hlDeduct,
       saleTax,
       nisaCost: cost.nisa,
       nisaOverflow: nisaOverflow + spNisaOverflow,
-      sevAnnuity,
+      sevAnnuity: sevAnnuity + spSevAnnuity,
       latentTax:
         Math.max(0, ass.toku - cost.toku) * CAPITAL_GAIN_TAX +
         Math.max(0, ass.g - cost.g) * CAPITAL_GAIN_TAX +
@@ -954,10 +1086,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       insPayout: insY.payout,
       wageSelf: job,
       wageSpouse: spouseJob,
-      sideInc: side,
+      sideInc: side + spSide,
       pubPen: pen,
-      corpPen: dcAnnuity + sevAnnuity,
-      dcLump,
+      corpPen: dcAnnuity + sevAnnuity + spCorpPen,
+      dcLump: dcLump + spDcLump,
       survPen: surv.total,
       insSepTax: insY.separateTax,
       nisaIn: nisaIn + spNisaIn,
@@ -968,6 +1100,7 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       divTax,
       spNisa: sp.nisa,
       spToku: sp.toku,
+      spDc: sp.dc,
     });
   }
 
@@ -1015,6 +1148,21 @@ function deceasedRecord(
   }
   const p = input.spousePension;
   const sAge = (spouseCurAge ?? 0) + (deathAge - input.curAge);
+  if (input.spJobs) {
+    // ver6.2: 配偶者の勤務先を新しい形で入れていれば、本人と同じ式を配偶者の年齢で使う
+    const jobs = input.spouseWork === "work" ? input.spJobs : [];
+    const first = jobs.length ? Math.min(...jobs.map((j) => j.start)) : sAge;
+    const last = jobs.length ? Math.max(...jobs.map((j) => j.end)) : sAge;
+    const elapsedJ = Math.max(0, (Math.min(sAge, last) - first) * 12);
+    const futureMonths = jobs.reduce((a, j) => a + Math.max(0, j.end - Math.max(sAge, j.start)) * 12, 0);
+    const curJob = jobs.find((j) => sAge >= j.start && sAge < j.end);
+    return {
+      isKosei: p.category === "kosei",
+      koseiMonths: p.koseiYears > 0 ? Math.max(0, p.koseiYears * 12 - futureMonths) : elapsedJ,
+      avgAnnualIncome: p.koseiAvgIncome > 0 ? p.koseiAvgIncome : (curJob?.inc ?? jobs[0]?.inc ?? 0),
+      inService: !!curJob,
+    };
+  }
   const elapsed = Math.max(0, (Math.min(sAge, input.spouseIncEnd) - input.spouseIncStart) * 12);
   const months = p.koseiYears > 0 ? Math.min(elapsed, p.koseiYears * 12) : elapsed;
   return {

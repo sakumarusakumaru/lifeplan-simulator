@@ -334,6 +334,23 @@ export interface PlanInput {
   // ver6: 配当・分配金を受け取って生活費に回す（年利回り %・その年の年初の評価額に対して）。
   // 口座の想定利回り（nisaR / tokuR）は配当込みの合計のもうけ。受け取る分はその中から取り出す（値上がり＝合計−配当）。
   // 特定口座は20.315%の源泉分離（申告不要）、NISAは非課税。受け取り始めるまでは再投資（合計の利回りで増える）
+  // ver6.2: 配偶者の勤務先・副業（本人と同じ形。年齢はすべて配偶者の年齢）。
+  // spJobs があれば spouseIncY / spouseIncStart / spouseIncEnd は使わない。spouseWork が "none" なら勤務先・副業は数えない
+  spJobs?: Job[];
+  spSideJobs?: SideJob[];
+  // ver6.2: 配偶者の iDeCo・企業型DC（年齢は配偶者の年齢。利回りは本人と同じ dcR。未入力の既定は rules.ts の SP_DEFAULTS）
+  spDcType?: DcType;
+  spDcBal?: number;
+  spSaveDcM?: number;
+  spDcEmployerM?: number;
+  spSaveDcEndAge?: number;
+  spDcJoinAge?: number;         // 0・未入力＝今の年齢から加入したものとして計算
+  spDcStartAge?: number;
+  spDcMethod?: DcPayoutMethod;
+  spDcYears?: number;
+  // ver6.2: 働き方（基本タブで選ぶ。画面の枝分かれ用で、計算は年金の種類・spouseWork・dcType を読む）
+  selfWork?: "employee" | "self" | "none";
+  spWork?: "employee" | "part" | "self" | "none";
   divStartAge?: number;         // 配当を受け取り始める年齢（本人の年齢。0・未入力＝今から）
   divNisaY?: number;
   divTokuY?: number;
@@ -468,7 +485,7 @@ export interface AssetSnapshot {
   nisa: number;    // NISA口座（時価）。ver6〜 配偶者名義の分も含めた世帯の合計
   toku: number;    // 特定口座（時価）。同上
   k: number;       // 暗号資産
-  dc: number;      // iDeCo・企業型DC
+  dc: number;      // iDeCo・企業型DC。ver6.2〜 配偶者名義の分も含めた世帯の合計
   g: number;       // 金
 }
 
@@ -567,6 +584,7 @@ export interface YearlyResult {
   divTax: number;        // 特定口座の配当にかかった税（20.315%）
   spNisa: number;        // 配偶者名義のNISA（ass.nisa の内数）
   spToku: number;        // 配偶者名義の特定口座（ass.toku の内数）
+  spDc: number;          // 配偶者名義の iDeCo・DC（ass.dc の内数）
 }
 
 export interface SimulationWarning {

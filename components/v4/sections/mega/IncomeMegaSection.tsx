@@ -11,6 +11,7 @@ import { TextField } from "@/components/v4/inputs/TextField";
 import { AddButton, ListItemCard, manYen } from "@/components/v4/ListItemCard";
 import { CollapsibleSubGroup } from "@/components/v4/CollapsibleSubGroup";
 import { Section, TabModeContext } from "@/components/v4/Section";
+import { ageOn } from "@/lib/v4/calc/age";
 import { calcPension } from "@/lib/v4/calc/pension";
 import { sevPlanOf, simulate } from "@/lib/v4/calc/simulate";
 import { taishokuShotokuKojo } from "@/lib/v4/calc/tax";
@@ -23,6 +24,8 @@ import type {
   PensionMode,
   SideJob,
 } from "@/lib/v4/calc/types";
+import { selfWorkOf, spJobsOf, spWorkOf } from "@/lib/v4/calc/workStyle";
+import { useVBase } from "@/components/v4/useVBase";
 import { usePlanStore } from "@/store/v4/plan-store";
 
 // 臨時収入の追加ボタン（押すと目安の金額で1件入る。あとで直す）
@@ -220,16 +223,21 @@ const SEV_METHOD_OPTIONS: { value: "lump" | "annuity" | "mix"; label: string }[]
 ];
 
 // 退職金の受け取り方を選び、3通りの「受取総額」と「税・社会保険を引いた手取り」を比べる
-function SeverancePicker({ plan, index, update }: { plan: PlanInput; index: number; update: (p: Partial<Job>) => void }) {
-  const j = plan.jobs[index];
+//   spouse: 配偶者の勤務先（plan.spJobs）について比べる
+function SeverancePicker({ plan, index, update, spouse = false }: { plan: PlanInput; index: number; update: (p: Partial<Job>) => void; spouse?: boolean }) {
+  const list = spouse ? spJobsOf(plan) : plan.jobs;
+  const j = list[index];
   const method = j.sevMethod ?? "lump";
   const cmp = useMemo(() => {
-    const withJob = (o: Partial<Job>): PlanInput => ({ ...plan, jobs: plan.jobs.map((x, k) => (k === index ? { ...x, ...o } : x)) });
+    const withJob = (o: Partial<Job>): PlanInput => {
+      const next = list.map((x, k) => (k === index ? { ...x, ...o } : x));
+      return spouse ? { ...plan, spJobs: next } : { ...plan, jobs: next };
+    };
     const cost = (r: ReturnType<typeof simulate>) => r.rows.reduce((a, x) => a + x.taxWage + x.sevTax, 0);
     const none = cost(simulate(withJob({ sev: 0 })));
     const one = (o: Partial<Job>) => {
       const p = withJob(o);
-      const sp = sevPlanOf(p.jobs[index]);
+      const sp = sevPlanOf((spouse ? spJobsOf(p) : p.jobs)[index]);
       const extra = cost(simulate(p)) - none;
       return { total: sp.total, net: sp.total - extra, extra };
     };
@@ -240,7 +248,9 @@ function SeverancePicker({ plan, index, update }: { plan: PlanInput; index: numb
       { key: "annuity", label: `年金（${yrs}年）`, ...one({ sevMethod: "annuity", sevYears: yrs, sevRate: rate }) },
       { key: "mix", label: `一部年金（一時金${j.sevLumpPct ?? 50}%）`, ...one({ sevMethod: "mix", sevYears: yrs, sevRate: rate, sevLumpPct: j.sevLumpPct ?? 50 }) },
     ];
-  }, [plan, index, j.sevYears, j.sevRate, j.sevLumpPct]);
+    // list は plan から作るので plan が変われば作り直される
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, index, spouse, j.sevYears, j.sevRate, j.sevLumpPct]);
   const best = cmp.reduce((a, b) => (b.net > a.net ? b : a));
   const man = (v: number) => `${Math.round(v / 10000).toLocaleString()}万円`;
 
@@ -316,6 +326,26 @@ export function IncomeMegaSection() {
   const addSide = () => setField("sideJobs", [...plan.sideJobs, NEW_SIDE_JOB()]);
   const removeSide = (i: number) => setField("sideJobs", plan.sideJobs.filter((_, idx) => idx !== i));
 
+  // ver6.2: 配偶者の勤務先・副業（本人と同じ形。年齢は配偶者の年齢）
+  const v6 = useVBase() === "/v6";
+  const selfWork = selfWorkOf(plan);
+  const spWork = spWorkOf(plan);
+  const spJobs = spJobsOf(plan);
+  const spSide = plan.spSideJobs ?? [];
+  const spAge = plan.spouseBirth ? ageOn(plan.spouseBirth, plan.baseDate) : null;
+  // 欄の名前を「事業の所得」にするのは、配偶者が自営業のときだけ
+  const spSelfEmployed = spWork === "self";
+  const spDependent = plan.spousePension.category === "dependent";
+  const updateSpJob = (i: number, patch: Partial<Job>) => setField("spJobs", spJobs.map((j, idx) => (idx === i ? { ...j, ...patch } : j)));
+  // 配偶者が60歳以上でも期間が逆転しないように、退社は「60歳」と「今の年齢＋5年」の遅いほう
+  const addSpJob = () => {
+    const start = spAge ?? 30;
+    const end = Math.max(60, start + 5);
+    setField("spJobs", [...spJobs, { ...NEW_JOB(), name: "配偶者の勤務先", start, end, sevAge: end }]);
+  };
+  const removeSpJob = (i: number) => setField("spJobs", spJobs.filter((_, idx) => idx !== i));
+  const updateSpSide = (i: number, patch: Partial<SideJob>) => setField("spSideJobs", spSide.map((j, idx) => (idx === i ? { ...j, ...patch } : j)));
+
   const updateWindfall = (i: number, patch: Partial<InheritanceEvent>) =>
     setField("inheritances", plan.inheritances.map((ev, idx) => (idx === i ? { ...ev, ...patch } : ev)));
   const removeWindfall = (i: number) => setField("inheritances", plan.inheritances.filter((_, idx) => idx !== i));
@@ -329,8 +359,14 @@ export function IncomeMegaSection() {
       status={plan.jobs.length > 0 || plan.selfPension.koseiAvgIncome > 0 ? "entered" : "default"}
     >
       <div className="flex flex-col gap-2">
-        <CollapsibleSubGroup title="給与・勤務先">
+        <CollapsibleSubGroup title={v6 && selfWork === "self" ? "事業の収入（本人）" : v6 && plan.spouseBirth ? "給与・勤務先（本人）" : "給与・勤務先"}>
           <div className="flex flex-col gap-3">
+            {v6 && selfWork === "none" ? (
+              <p className="text-[11px] leading-relaxed text-[#0a0a0a]/65">
+                「1 基本」で「働いていない」を選んでいます。これから働く予定や、退職金を受け取る予定があれば入れてください
+                {plan.jobs.some((j) => j.inc > 0 && j.end > plan.curAge) ? "（いま入っている勤務先の年収は計算に入っています。働いていなければ年収を0円にするか、削除してください）" : ""}。
+              </p>
+            ) : null}
             {plan.jobs.map((j, i) => (
               <ListItemCard
                 key={i}
@@ -380,7 +416,7 @@ export function IncomeMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
-        <CollapsibleSubGroup title="副業" defaultOpen={false}>
+        <CollapsibleSubGroup title={v6 && plan.spouseBirth ? "副業（本人）" : "副業"} defaultOpen={false}>
           <div className="flex flex-col gap-3">
             {plan.sideJobs.map((j, i) => (
               <ListItemCard
@@ -403,9 +439,100 @@ export function IncomeMegaSection() {
           </div>
         </CollapsibleSubGroup>
 
+        {/* ver6.2: 配偶者の勤務先・副業を本人と同じ形で（働き方は「1 基本」で選ぶ） */}
+        {v6 && tabMode && plan.spouseBirth ? (
+          spWork === "none" ? (
+            <CollapsibleSubGroup title="給与・勤務先（配偶者）" defaultOpen={false}>
+              <p className="text-[11px] leading-relaxed text-[#0a0a0a]/65">
+                「1 基本」で配偶者は「働いていない」を選んでいるので、配偶者の給与・副業は0円として計算します
+                {spJobs.some((j) => j.inc > 0) || spSide.some((j) => j.inc > 0) ? "（前に入れた勤務先・副業は残してありますが、計算には入れていません）" : ""}。
+                働く予定があれば、「1 基本」で働き方を変えると入力欄が出ます。
+              </p>
+            </CollapsibleSubGroup>
+          ) : (
+            <>
+              <CollapsibleSubGroup title={spWork === "self" ? "事業の収入（配偶者）" : "給与・勤務先（配偶者）"}>
+                <div className="flex flex-col gap-3">
+                  <p className="text-[11px] leading-relaxed text-[#0a0a0a]/65">
+                    年齢はすべて配偶者の年齢で入れます{spAge !== null ? `（いま${spAge}歳）` : ""}。税金・社会保険料は、本人とは別に配偶者の収入で計算します。
+                    {spWork === "part" && spDependent ? "扶養の範囲内（年収130万円未満）なら、配偶者の社会保険料はかかりません。" : ""}
+                    {spWork === "part" && !spDependent ? "本人が会社員・公務員ではないので、配偶者は国民年金・国民健康保険を自分で払う計算です。" : ""}
+                  </p>
+                  {spJobs.map((j, i) => (
+                    <ListItemCard
+                      key={i}
+                      kicker={`JOB ${String(i + 1).padStart(2, "0")}`}
+                      summary={`${j.name || "勤務先"}・年収${manYen(j.inc)}・${j.start}〜${j.end}歳`}
+                      onRemove={() => removeSpJob(i)}
+                    >
+                      <div className="grid grid-cols-1 gap-2">
+                        <TextField label="名称" value={j.name} onChange={(v) => updateSpJob(i, { name: v })} />
+                        <div className="grid grid-cols-2 gap-2">
+                          <NumberField
+                            label={spSelfEmployed ? "事業の所得（売上 − 必要経費）" : "年収（額面）"}
+                            value={j.inc}
+                            onChange={(v) => updateSpJob(i, { inc: v })}
+                            unit="円"
+                            hint={
+                              spSelfEmployed
+                                ? "青色申告特別控除（65万円）を引く前の額。計算で65万円を引きます"
+                                : spAge !== null && j.start <= spAge
+                                  ? "今の勤務先は今年の年収"
+                                  : "入社した年の年収"
+                            }
+                          />
+                          <PercentField label="昇給率（年・複利）" value={j.raise ?? 0} onChange={(v) => updateSpJob(i, { raise: v })} min={0} max={20} step={0.1} hint="年収が毎年この率で上がると仮定" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <NumberField label="入社年齢（配偶者）" value={j.start} onChange={(v) => updateSpJob(i, { start: v })} unit="歳" />
+                          <NumberField label="退社年齢（配偶者）" value={j.end} onChange={(v) => updateSpJob(i, { end: v })} unit="歳" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <NumberField label="退職金" value={j.sev} onChange={(v) => updateSpJob(i, { sev: v })} unit="円" hint="退職所得（勤続年数の控除＋1/2課税）で計算" />
+                          <NumberField label="退職金 受取（配偶者）" value={j.sevAge} onChange={(v) => updateSpJob(i, { sevAge: v })} unit="歳" />
+                        </div>
+                        {j.sev > 0 ? <SeverancePicker plan={plan} index={i} update={(p) => updateSpJob(i, p)} spouse /> : null}
+                      </div>
+                    </ListItemCard>
+                  ))}
+                  <AddButton label="配偶者の勤務先を追加" onClick={addSpJob} />
+                </div>
+              </CollapsibleSubGroup>
+
+              <CollapsibleSubGroup title="副業（配偶者）" defaultOpen={spSide.length > 0}>
+                <div className="flex flex-col gap-3">
+                  {spSide.map((j, i) => (
+                    <ListItemCard
+                      key={i}
+                      kicker={`SIDE ${String(i + 1).padStart(2, "0")}`}
+                      summary={`${j.name || "副業"}・年${manYen(j.inc)}・${j.start}〜${j.end}歳`}
+                      onRemove={() => setField("spSideJobs", spSide.filter((_, idx) => idx !== i))}
+                    >
+                      <div className="grid grid-cols-1 gap-2">
+                        <TextField label="名称" value={j.name} onChange={(v) => updateSpSide(i, { name: v })} />
+                        <NumberField label="年間の所得（売上−経費）" value={j.inc} onChange={(v) => updateSpSide(i, { inc: v })} unit="円" hint="配偶者の所得として、配偶者の本業と合算して課税" />
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-1 md:grid-cols-2">
+                          <NumberField label="開始年齢（配偶者）" value={j.start} onChange={(v) => updateSpSide(i, { start: v })} unit="歳" />
+                          <NumberField label="終了年齢（配偶者）" value={j.end} onChange={(v) => updateSpSide(i, { end: v })} unit="歳" />
+                        </div>
+                      </div>
+                    </ListItemCard>
+                  ))}
+                  <AddButton label="配偶者の副業を追加" onClick={() => setField("spSideJobs", [...spSide, { ...NEW_SIDE_JOB(), start: spAge ?? 30 }])} />
+                </div>
+              </CollapsibleSubGroup>
+            </>
+          )
+        ) : null}
+
         {/* ver5: 配偶者の働き方と年収は、本人の収入と同じブロックで聞く（ver4 は基本設定の中） */}
-        {tabMode && plan.spouseBirth ? (
+        {!v6 && tabMode && plan.spouseBirth ? (
           <CollapsibleSubGroup title="配偶者の収入">
+            {plan.spJobs || (plan.spSideJobs?.length ?? 0) > 0 ? (
+              <p className="text-[11px] font-bold leading-relaxed text-[#9a7430]">
+                ver6 で配偶者の勤務先・副業を入れているので、下の年収ではなく ver6 の内容で計算しています。直すときは ver6（/v6）の画面で。
+              </p>
+            ) : null}
             <SelectField
               label="働き方"
               value={plan.spouseWork}

@@ -185,3 +185,197 @@ test("V6-13 今の価値に直すと、配当と配偶者の残高も物価で�
   near(real.rows[i].divGross, nominal.rows[i].divGross / f, 1);
   near(real.rows[i].spToku, nominal.rows[i].spToku / f, 1);
 });
+
+// ── ver6.2: 配偶者の勤務先・副業・iDeCo ──
+const couple: PlanInput = {
+  ...base,
+  spouseWork: "work",
+  spouseIncY: 400 * MAN,
+  spouseIncStart: 25,
+  spouseIncEnd: 60,
+  spousePension: { mode: "auto", category: "kosei", koseiYears: 35, koseiAvgIncome: 400 * MAN, kokuminMonths: 480, manualMonth: 0 },
+  useSpousePen: true,
+  penStartB: 65,
+};
+const spJob = (o: Partial<PlanInput["jobs"][number]> = {}) => ({ name: "配偶者の勤務先", start: 25, end: 60, inc: 400 * MAN, raise: 0, sev: 0, sevAge: 60, sevMethod: "lump" as const, ...o });
+
+test("V6-20 配偶者の勤務先を新しい形で入れても、同じ内容なら前の入れ方（年収・開始・終了）と同じ結果", () => {
+  const a = simulate(couple);
+  const b = simulate({ ...couple, spJobs: [spJob()] });
+  a.rows.forEach((x, i) => {
+    near(x.nw, b.rows[i].nw, 1e-6);
+    near(x.taxWage, b.rows[i].taxWage, 1e-6);
+  });
+});
+
+test("V6-21 配偶者の昇給: 年収は配偶者の年齢に沿って複利で増える", () => {
+  const r = simulate({ ...couple, spJobs: [spJob({ raise: 2 })] }).rows;
+  near(r[0].wageSpouse, 400 * MAN, 1);
+  near(r[10].wageSpouse, 400 * MAN * Math.pow(1.02, 10), 1);
+  // 配偶者は38歳 → 60歳になる年（本人62歳）から給与なし
+  assert.equal(r.find((x) => x.age === 62)!.wageSpouse, 0);
+  assert.ok(r.find((x) => x.age === 61)!.wageSpouse > 0);
+});
+
+test("V6-22 配偶者の退職金: 配偶者の勤続年数で退職所得控除を引く（本人が同じ条件で受け取るときと同じ税）", () => {
+  // 勤続35年の控除は 800万＋70万×15＝1,850万。1,500万なら税0、3,000万なら (3,000−1,850)÷2 に課税
+  const low = simulate({ ...couple, spJobs: [spJob({ sev: 1500 * MAN })] }).rows.find((x) => x.age === 62)!;
+  near(low.sevGross, 1500 * MAN, 1);
+  assert.equal(low.sevTax, 0);
+  const high = simulate({ ...couple, spJobs: [spJob({ sev: 3000 * MAN })] }).rows.find((x) => x.age === 62)!;
+  // 本人が 25〜60歳・退職金3,000万のとき（本人60歳＝同じ2046年ではないので、税額の式で確かめる）
+  const selfSame = simulate({ ...base, jobs: [{ name: "勤務先", start: 25, end: 60, inc: 400 * MAN, raise: 0, sev: 3000 * MAN, sevAge: 60, sevMethod: "lump" }] }).rows.find((x) => x.age === 60)!;
+  assert.ok(high.sevTax > 0);
+  near(high.sevTax, selfSame.sevTax, 20_000); // 年による税制の差（防衛特別所得税など）の分だけ許容
+});
+
+test("V6-23 配偶者の副業は配偶者の所得として課税される（本人の副業に入れるより税が少ない）", () => {
+  const asSpouse = simulate({ ...couple, spSideJobs: [{ name: "副業", start: 30, end: 60, inc: 100 * MAN }] }).rows[0];
+  const asSelf = simulate({ ...couple, sideJobs: [{ name: "副業", start: 30, end: 65, inc: 100 * MAN }] }).rows[0];
+  near(asSpouse.sideInc, 100 * MAN, 1);
+  near(asSelf.sideInc, 100 * MAN, 1);
+  // 本人は年収1,500万で税率が高いので、同じ100万でも配偶者の所得にしたほうが税が少ない
+  assert.ok(asSpouse.taxWage < asSelf.taxWage - 5 * MAN);
+});
+
+test("V6-24 配偶者のiDeCo: 掛金は配偶者の所得から引かれ、残高は配偶者名義の内数。受取は配偶者の年齢で", () => {
+  const off = simulate(couple);
+  const on = simulate({ ...couple, spSaveDcM: 20000, spDcType: "employee-none", spDcStartAge: 60, spDcMethod: "lump", spDcJoinAge: 38 });
+  const r0 = on.rows[0];
+  assert.equal(r0.dcContribSelf, 24 * MAN);
+  near(r0.spDc, 24 * MAN * (1 + couple.dcR / 100), 1);
+  near(r0.ass.dc, r0.spDc, 1);
+  // 所得控除: 24万×（所得税＋住民税）ぶん税が減る
+  assert.ok(off.rows[0].taxWage - r0.taxWage > 3 * MAN);
+  // 配偶者60歳（本人62歳）で一時金。受け取ると残高は0
+  const pay = on.rows.find((x) => x.age === 62)!;
+  assert.ok(pay.dcLump > 500 * MAN);
+  assert.equal(pay.spDc, 0);
+  near(pay.ass.dc, 0, 1e-6);
+  // 掛金は60歳の前の年まで
+  assert.equal(on.rows.find((x) => x.age === 61)!.dcContribSelf, 24 * MAN);
+  assert.equal(pay.dcContribSelf, 0);
+});
+
+test("V6-25 本人と配偶者のDCは別々: 本人が受け取っても配偶者の残高は残る", () => {
+  const r = simulate({ ...couple, dcBal: 500 * MAN, dcStartAge: 60, dcMethod: "lump", spDcBal: 300 * MAN, spDcStartAge: 65, spDcMethod: "lump" }).rows;
+  const at60 = r.find((x) => x.age === 60)!;
+  near(at60.dcLump, 500 * MAN * Math.pow(1 + couple.dcR / 100, 20), 1);
+  near(at60.ass.dc, at60.spDc, 1);
+  assert.ok(at60.spDc > 300 * MAN);
+  // 配偶者65歳＝本人67歳で受け取る
+  const at67 = r.find((x) => x.age === 67)!;
+  assert.ok(at67.dcLump > 300 * MAN);
+  assert.equal(at67.spDc, 0);
+});
+
+test("V6-26 配偶者が働いていない設定なら、残っている勤務先・副業は数えない。配偶者がいなければDCも数えない", () => {
+  const none = simulate({ ...couple, spouseWork: "none", spJobs: [spJob()], spSideJobs: [{ name: "副業", start: 30, end: 60, inc: 100 * MAN }] }).rows[0];
+  assert.equal(none.wageSpouse, 0);
+  assert.equal(none.sideInc, 0);
+  const solo = simulate({ ...couple, spouseBirth: "", spDcBal: 300 * MAN, spSaveDcM: 20000 }).rows[0];
+  assert.equal(solo.spDc, 0);
+  assert.equal(solo.ass.dc, 0);
+  assert.equal(solo.dcContribSelf, 0);
+});
+
+test("V6-27 配偶者が亡くなる試算: 配偶者のDCと在職中の退職金（按分）が一時金として入り、以後の給与は0", () => {
+  const plan: PlanInput = {
+    ...couple,
+    spJobs: [spJob({ sev: 1000 * MAN })],
+    spDcBal: 300 * MAN,
+    risk: { ...couple.risk, who: "spouse", deathAge: 50 },
+  };
+  const r = simulate(plan, { death: true }).rows;
+  const at = r.find((x) => x.age === 50)!;
+  const before = r.find((x) => x.age === 49)!;
+  // 配偶者は48歳: 退職金 1,000万×(48−25)/(60−25)、DCは前年末の残高
+  near(at.deathLump, 1000 * MAN * (23 / 35) + before.spDc, 1);
+  assert.equal(at.spDc, 0);
+  assert.equal(at.wageSpouse, 0);
+});
+
+test("V6-28 相続: 配偶者名義のDCは本人の遺産（退職手当金等）に入れない", () => {
+  const plan = { ...couple, dcBal: 400 * MAN, spDcBal: 300 * MAN, inheritSet: { selfSharePct: 100, spouseMode: "legal" as const, smallLand: false } };
+  const row = simulate(plan).rows[0];
+  const b = estateBreakdown(plan, row, 1, 1, plan.inheritSet, true);
+  near(b.retirementGross, row.ass.dc - row.spDc, 1);
+});
+
+// ── ver6.2 レビューで見つかった点 ──
+test("V6-30 配偶者が亡くなる試算: 勤務先を新しい形で入れても、遺族厚生年金は前の入れ方と同じ", () => {
+  const withKid: PlanInput = { ...couple, kids: [{ name: "子", birth: "2020-01-01", offset: 34, s: { k: "pub", e: "pub", j: "pub", h: "pub", u: "pub", g: "none" }, opt: { ronin: false, dorm: false, send: 0 } }], risk: { ...couple.risk, who: "spouse", deathAge: 50 }, spousePension: { ...couple.spousePension, koseiYears: 0, koseiAvgIncome: 0 } };
+  const legacy = simulate(withKid, { death: true }).rows;
+  const neo = simulate({ ...withKid, spJobs: [spJob()] }, { death: true }).rows;
+  const sum = (rows: typeof legacy, k: "survKosei" | "survKiso") => rows.reduce((a, x) => a + x[k], 0);
+  assert.ok(sum(legacy, "survKosei") > 0);
+  near(sum(neo, "survKosei"), sum(legacy, "survKosei"), 1);
+  near(sum(neo, "survKiso"), sum(legacy, "survKiso"), 1);
+});
+
+test("V6-31 働き方: 選んでも厚生年金の入力を壊さない", async () => {
+  const { applySelfWork, applySpWork, selfWorkOf, spWorkOf, spDcTypeOf } = await import("@/lib/v4/calc/workStyle");
+  // 本人「働いていない」は年金の種類を変えない（退職した元会社員の厚生年金が残る）
+  const retired: PlanInput = { ...couple, jobs: [], selfPension: { mode: "auto", category: "kosei", koseiYears: 38, koseiAvgIncome: 600 * MAN, kokuminMonths: 480, manualMonth: 0 } };
+  const p1 = { ...retired, ...applySelfWork(retired, "none") };
+  assert.equal(p1.selfPension.category, "kosei");
+  assert.equal(selfWorkOf(p1), "none");
+  // 本人を自営業に変えても、厚生年金の配偶者は変えない。扶養の配偶者だけ国民年金に入れ替える
+  const p2 = { ...couple, ...applySelfWork(couple, "self") };
+  assert.equal(p2.spousePension.category, "kosei");
+  const dep: PlanInput = { ...couple, spouseWork: "none", spousePension: { ...couple.spousePension, category: "dependent" } };
+  const p3 = { ...dep, ...applySelfWork(dep, "self") };
+  assert.equal(p3.spousePension.category, "kokumin");
+  assert.equal(spWorkOf(p3), "none");
+  const p4 = { ...p3, ...applySelfWork(p3, "employee") };
+  assert.equal(p4.spousePension.category, "dependent");
+  // 60歳以上の元会社員の配偶者が「働いていない」: 厚生年金のまま。60歳未満は扶養に
+  assert.equal(applySpWork(couple, "none", "employee", 62).spousePension!.category, "kosei");
+  assert.equal(applySpWork(couple, "none", "employee", 45).spousePension!.category, "dependent");
+  // 表示は実際のデータを優先（保存した働き方と食い違っても、spouseWork が none なら「働いていない」）
+  assert.equal(spWorkOf({ ...couple, spWork: "employee", spouseWork: "none" }), "none");
+  assert.equal(spWorkOf({ ...couple, spWork: "part", spousePension: { ...couple.spousePension, category: "kosei" } }), "employee");
+  // iDeCoの区分は、未設定なら年金の種類から
+  assert.equal(spDcTypeOf(dep), "dependent");
+  assert.equal(spDcTypeOf(couple), "employee-none");
+  assert.equal(spDcTypeOf({ ...couple, spDcType: "employee-db" }), "employee-db");
+});
+
+test("V6-32 専業主婦（第3号）のiDeCoは月2.3万が上限のまま（区分を選んでいなくても）", () => {
+  const dep: PlanInput = { ...couple, spouseWork: "none", spousePension: { ...couple.spousePension, category: "dependent" }, spSaveDcM: 50000 };
+  const rows = simulate(dep).rows;
+  assert.equal(rows[0].dcContribSelf, 23000 * 12);
+  assert.equal(rows[3].dcContribSelf, 23000 * 12); // 2027年以降も2.3万
+});
+
+test("V6-33 簡易税モード: 所得のない配偶者のiDeCoで世帯の税は減らない", () => {
+  const dep: PlanInput = { ...couple, taxMode: "simple", spouseWork: "none", spousePension: { ...couple.spousePension, category: "dependent" } };
+  const off = simulate(dep).rows[0];
+  const on = simulate({ ...dep, spSaveDcM: 23000 }).rows[0];
+  near(on.taxWage, off.taxWage, 1);
+});
+
+test("V6-34 本人が亡くなる試算: 配偶者の会社掛金は続き、配偶者が自分で出す掛金は止まる", () => {
+  const plan: PlanInput = { ...couple, spJobs: [spJob()], spDcType: "employee-dc", spSaveDcM: 10000, spDcEmployerM: 20000, risk: { ...couple.risk, who: "self", deathAge: 45 } };
+  const r = simulate(plan, { death: true }).rows;
+  const y44 = r.find((x) => x.age === 44)!;
+  const y46 = r.find((x) => x.age === 46)!;
+  const y47 = r.find((x) => x.age === 47)!;
+  assert.equal(y44.dcContribSelf, 12 * MAN);
+  assert.equal(y46.dcContribSelf, 0);
+  // 46→47歳の残高は、会社掛金24万を足して運用した分だけ増える
+  near(y47.spDc, (y46.spDc + 24 * MAN) * (1 + couple.dcR / 100), 1);
+});
+
+test("V6-35 配偶者のDC: 加入年齢が空欄なら注意を出し、受取開始を過ぎていても期間が逆転しない", () => {
+  const old: PlanInput = { ...couple, spouseBirth: "1964-01-01", spouseWork: "none", spDcBal: 800 * MAN, spDcStartAge: 60, spDcMethod: "lump" };
+  const r = simulate(old);
+  assert.ok(r.warnings.some((w) => w.text.includes("加入した年齢")));
+  // 62歳なので最初の年に受け取る
+  near(r.rows[0].dcLump, 800 * MAN, 1);
+  assert.ok(Number.isFinite(r.rows[0].dcTax) && r.rows[0].dcTax >= 0);
+  // 加入年齢を入れれば（30歳から30年）控除1,500万で税0
+  const ok = simulate({ ...old, spDcJoinAge: 30 });
+  assert.equal(ok.rows[0].dcTax, 0);
+  assert.ok(!ok.warnings.some((w) => w.text.includes("加入した年齢")));
+});

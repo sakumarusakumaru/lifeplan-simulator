@@ -12,6 +12,8 @@ export function anonymizePlan(plan: PlanInput): PlanInput {
     spouseBirth: monthOnly(plan.spouseBirth),
     jobs: plan.jobs.map((j, i) => ({ ...j, name: `勤務先${i + 1}` })),
     sideJobs: plan.sideJobs.map((j, i) => ({ ...j, name: `副業${i + 1}` })),
+    ...(plan.spJobs ? { spJobs: plan.spJobs.map((j, i) => ({ ...j, name: `配偶者の勤務先${i + 1}` })) } : {}),
+    ...(plan.spSideJobs ? { spSideJobs: plan.spSideJobs.map((j, i) => ({ ...j, name: `配偶者の副業${i + 1}` })) } : {}),
     kids: plan.kids.map((k, i) => ({ ...k, name: `子${i + 1}`, birth: monthOnly(k.birth) })),
     res: plan.res.map((r, i) => ({ ...r, name: `物件${i + 1}` })),
     // 保険会社名は残しても個人は特定しにくいが、念のため消す（種類・金額は検証に必要なので残す）
