@@ -269,10 +269,13 @@ export function estateBreakdown(plan: PlanInput, row: YearlyResult, heirCount: n
   const retirementGross = a.dc - spouseDc + deathSeverance(plan, row.age) / deflate;
   const retirement = Math.max(0, retirementGross - 500 * MAN * heirCount);
   // 住宅ローンは本人の債務（団信があれば亡くなると0になるので債務から外す）
-  const hlDebt = plan.risk?.danshin ? 0 : row.hlBal;
+  // ver6.3: 配偶者名義のローンは配偶者の債務（本人の遺産からは引かない）
+  const spouseHl = hasSpouse ? Math.max(0, row.spHlBal ?? 0) : 0;
+  const hlDebt = plan.risk?.danshin ? 0 : row.hlBal - spouseHl;
   const reLoans = loans - row.hlBal;
   const total = Math.max(0, sharedFin * share + homeSelf - homeLandCut + re + insurance + retirement - hlDebt - reLoans);
-  const spouseOwn = hasSpouse ? Math.max(0, (sharedFin + hv) * (1 - share) + spouseNamed + spouseDc) : 0;
+  // 配偶者名義のローンは配偶者の財産から引く（マイナスのままにして、二次相続で受け取った分と相殺する。0止めは二次相続の側）
+  const spouseOwn = hasSpouse ? Math.max(0, (sharedFin + hv) * (1 - share) + spouseNamed + spouseDc) - spouseHl : 0;
   return {
     financial: sharedFin * share,
     home: homeSelf - homeLandCut,

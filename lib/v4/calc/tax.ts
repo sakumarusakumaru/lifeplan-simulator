@@ -351,7 +351,8 @@ export interface HouseholdTaxInput {
   self: PersonIncome;
   spouse: PersonIncome | null;
   kidAges: number[];
-  hlDeductCredit: number; // 住宅ローン控除の控除可能額（0.7%×年末残高 等）
+  hlDeductCredit: number; // 住宅ローン控除の控除可能額（0.7%×年末残高 等）。本人の税から引く
+  spouseHlDeductCredit?: number; // ver6.3: 配偶者名義のローンの控除可能額。配偶者の税から引く
   // 本人に追加する所得控除（ひとり親控除・寡婦控除など）
   extraDeduction?: { income: number; jumin: number };
   // 配偶者に追加する所得控除（生命保険料控除など）
@@ -378,6 +379,7 @@ export interface TaxBreakdown {
   juminSpouse: number;
   hlDeduct: number;        // 実際に減税された住宅ローン控除
   jigyozei: number;        // 個人事業税（自営業）。(事業所得 − 事業主控除290万) × 5%（業種で3〜5%・対象外もある）
+  jigyozeiSpouse: number;  // うち配偶者の分
   total: number;           // 税＋社会保険の合計（住宅ローン控除後）
   taxableSelf: number;     // 本人の課税所得（参考）
   marginalSelf: number;    // 本人の限界税率（参考）
@@ -499,10 +501,21 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
     const spFamJ = selfIsEarner ? 0 : familyJ;
     const t = Math.max(0, sp.goukei - kisoKojoIncomeTax(sp.goukei, year) - ded - spFamI - spExtra.income);
     const tj = Math.max(0, sp.goukei - kisoKojoJumin(sp.goukei) - ded - spFamJ - spExtra.jumin);
-    itSp = Math.floor((calcShotokuzei(t) * sur) / 100) * 100;
+    let itBaseSp = calcShotokuzei(t);
     const tjr = Math.floor(tj / 1000) * 1000;
     const spJinteki = jintekiDiffOf(sp.goukei, selfIsEarner ? { ...haiInfo, on: false } : haiInfo, selfIsEarner ? [] : inp.kidAges);
-    jmSp = Math.floor(Math.max(0, tjr * 0.1 - chouseiKojo(tjr, sp.goukei, spJinteki)) / 100) * 100 + (sp.goukei > 45 * MAN ? 5000 : 0);
+    let jmSpWari = Math.max(0, tjr * 0.1 - chouseiKojo(tjr, sp.goukei, spJinteki));
+    // 配偶者名義のローンの住宅ローン控除（本人と同じ引き方を配偶者の税に）
+    const spCredit = inp.spouseHlDeductCredit ?? 0;
+    if (spCredit > 0) {
+      const fromIt = Math.min(itBaseSp, spCredit);
+      itBaseSp -= fromIt;
+      const fromJm = Math.min(spCredit - fromIt, jmSpWari, t * 0.05, 97_500);
+      jmSpWari -= fromJm;
+      hl += fromIt * sur + fromJm;
+    }
+    itSp = Math.floor((itBaseSp * sur) / 100) * 100;
+    jmSp = Math.floor(jmSpWari / 100) * 100 + (sp.goukei > 45 * MAN ? 5000 : 0);
   }
 
   // 個人事業税（自営業）: (事業所得 − 事業主控除290万) × 5%。青色申告特別控除は引かない。業種で3〜5%・対象外もあるので、法定業種の多くに当たる5%で計算
@@ -522,6 +535,7 @@ export function calcHouseholdTax(inp: HouseholdTaxInput): TaxBreakdown {
     juminSpouse: Math.round(jmSp),
     hlDeduct: Math.round(hl),
     jigyozei,
+    jigyozeiSpouse: jigyo(inp.spouse),
     total,
     taxableSelf: Math.round(selfTaxable),
     marginalSelf: marginalRate(selfTaxable),

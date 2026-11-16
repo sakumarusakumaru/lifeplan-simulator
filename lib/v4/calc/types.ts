@@ -388,6 +388,7 @@ export interface PlanInput {
   // 制度系
   childAllowance: boolean;  // 児童手当を収入に含める
   penIndex: number;         // 年金額の改定率（%/年）。マクロ経済スライドで物価上昇率より低め
+  hlOwner?: "self" | "spouse"; // ver6.3: ローンを1本で入れているときの名義（未設定は本人）
   hlDeduct: boolean;        // 住宅ローン控除を適用中
   hlDeductEndAge: number;   // 住宅ローン控除が終わる年齢
   hlDeductLimit: number;    // 住宅ローン控除の借入限度額（円）
@@ -585,6 +586,11 @@ export interface YearlyResult {
   spNisa: number;        // 配偶者名義のNISA（ass.nisa の内数）
   spToku: number;        // 配偶者名義の特定口座（ass.toku の内数）
   spDc: number;          // 配偶者名義の iDeCo・DC（ass.dc の内数）
+  // ver6.3
+  spHlBal: number;       // 配偶者名義の住宅ローン残高（hlBal の内数）
+  spHomePay: number;     // 配偶者名義の住宅ローンの返済額（homePay の内数）
+  incSelf: number;       // 本人の手取り収入（給与・副業・年金・退職金・DC − 本人の税・社会保険料）
+  incSpouse: number;     // 配偶者の手取り収入（同上）。収入 income からこの2つを引いた残りが、世帯の収入（児童手当・不動産・臨時収入・配当・保険など）
 }
 
 export interface SimulationWarning {
@@ -618,6 +624,8 @@ export interface HomeLoanPart {
   rateAfter?: number;       // 固定期間選択型: 固定が終わったあとの金利の見込み（%）
   method: LoanMethod;
   rule5y?: boolean;         // 変動・元利均等: 返済額は5年ごとに見直し、上げ幅は1.25倍まで（5年ルール・125%ルール）。既定はあり
+  // ver6.3: ローンの名義（住宅ローンだけ。未設定は本人）。住宅ローン控除はその人の税から引き、団信はその人が亡くなったときだけ残債が0になる
+  owner?: "self" | "spouse";
 }
 
 // 繰上返済: 一部（期間短縮型・返済額軽減型）／全額（一括返済）

@@ -1,5 +1,6 @@
 "use client";
 
+import { loanParts } from "@/lib/v4/calc/homeLoan";
 import { useState } from "react";
 
 import { CARD, INNER, INNER2, note } from "@/components/v4/frame";
@@ -104,6 +105,7 @@ const STAGES: Stage[] = [
 
 export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanInput; base: SimulationSummary; real: boolean; no?: string }) {
   const jp = useVBase() !== "/v4"; // ver5 は見出しを日本語だけに
+  const hasSpouseLoan = !!plan.spouseBirth && loanParts(plan).some((p) => p.owner === "spouse");
   const hasSpouse = ageOn(plan.spouseBirth, plan.baseDate) !== null;
   // 配偶者も子もいない場合は、親または兄弟姉妹の1人が相続すると仮定する
   const noFamily = !hasSpouse && plan.kids.length === 0;
@@ -270,6 +272,11 @@ export function InheritanceGuide({ plan, base, real, no = "04" }: { plan: PlanIn
                   ? `配偶者名義で入れたNISA・特定口座（いま${Math.round(((plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0)) / 10000).toLocaleString()}万円）を除いた、現金・本人の口座・自宅のうち本人名義の分。配偶者名義の口座（iDeCo・DCも）と残りは配偶者の財産（二次相続で使う）`
                   : "現金・運用資産・自宅のうち本人名義の分。残りは配偶者の財産（二次相続で使う）"}
               </span>
+              {hasSpouseLoan && set.selfSharePct >= 100 ? (
+                <span className="text-[9px] font-bold leading-snug text-[#9a7430]">
+                  ● 配偶者名義の住宅ローンがあります。ペアローンなら自宅は夫婦の共有のはずなので、持分に合わせて割合を直してください（100%のままだと、自宅が全部本人の遺産に入り、相続税が多めに出ます）
+                </span>
+              ) : null}
             </label>
           ) : null}
           {canSplit ? (

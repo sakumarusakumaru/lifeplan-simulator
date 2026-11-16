@@ -383,7 +383,18 @@ export function ExpenseMegaSection() {
                   {plan.useHomeLoan && (plan.homePurchasePrice ?? 0) > 0 && Math.abs((plan.homePurchasePrice ?? 0) - (downPay?.amount ?? 0) - plan.hlBal) >= 10_000 ? (
                     <>
                       {"　"}
-                      <button type="button" onClick={() => patchPlan({ hlBal: Math.max(0, (plan.homePurchasePrice ?? 0) - (downPay?.amount ?? 0)), hlParts: undefined })} className="font-bold underline underline-offset-2">
+                      <button type="button" onClick={() => {
+                          const total = Math.max(0, (plan.homePurchasePrice ?? 0) - (downPay?.amount ?? 0));
+                          const parts = plan.hlParts ?? [];
+                          const old = parts.reduce((x, q) => x + q.bal, 0);
+                          if (parts.length > 1 && old > 0) {
+                            const scaled = parts.map((q) => ({ ...q, bal: Math.round((q.bal * total) / old / 10000) * 10000 }));
+                            scaled[0] = { ...scaled[0], bal: Math.max(0, total - scaled.slice(1).reduce((x, q) => x + q.bal, 0)) };
+                            patchPlan({ hlParts: scaled, hlBal: total });
+                          } else {
+                            patchPlan({ hlBal: total, hlParts: undefined });
+                          }
+                        }} className="font-bold underline underline-offset-2">
                         借入額を {man(Math.max(0, (plan.homePurchasePrice ?? 0) - (downPay?.amount ?? 0)))} にする
                       </button>
                     </>

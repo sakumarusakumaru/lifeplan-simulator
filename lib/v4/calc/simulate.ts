@@ -138,7 +138,25 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
   // 住宅ローン: ミックスローン・金利タイプ・返済方法・繰上返済を含めた年ごとの予定を先に作る（homeLoan.ts）
   const loans = scheduleLoans(input);
   let hlBal = loans.startBal;
-  let hlCleared = false; // 団体信用生命保険で残債が0になった
+  let hlCleared = false; // 団体信用生命保険で残債が0になった（本人名義の分）
+  // ver6.3: 配偶者名義のローン（hlBal の内数）。控除は配偶者の税から、団信は配偶者が亡くなったときだけ
+  const spLoanIdx = spOk ? loans.parts.flatMap((p, i) => (p.owner === "spouse" ? [i] : [])) : [];
+  const spLoanYear = (a: number) => {
+    let pay = 0;
+    let prepay = 0;
+    let bal = 0;
+    for (const i of spLoanIdx) {
+      const y = loans.partYears[i].get(a);
+      if (y) {
+        pay += y.pay;
+        prepay += y.prepay;
+        bal += y.bal;
+      }
+    }
+    return { pay, prepay, bal };
+  };
+  let spHlBal = spLoanIdx.reduce((a, i) => a + loans.parts[i].bal, 0);
+  let spHlCleared = false;
 
   const rSims: RealEstateSim[] = input.res.map((r) => ({
     ...r,
@@ -340,8 +358,14 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       deathLump += (risk.deathInsurance || 0) + (opts.extraInsurance ?? 0);
       // 団体信用生命保険: 本人が亡くなると住宅ローンの残債は0
       if (selfDies && risk.danshin) {
-        hlBal = 0;
+        hlBal = spHlBal; // 配偶者名義の分は残る
         hlCleared = true;
+      }
+      // 配偶者が亡くなると、配偶者名義のローンの残債が0（ペアローンはそれぞれが団信に入る）
+      if (spouseDies && risk.danshin && spLoanIdx.length) {
+        hlBal -= spHlBal;
+        spHlBal = 0;
+        spHlCleared = true;
       }
       // 本人のDC残高は死亡一時金として遺族へ（配偶者名義の分は残る）
       if (selfDies && ass.dc - sp.dc > 0) {
@@ -628,21 +652,37 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
     // ── 住宅ローン（返済は後で計上。控除は年末残高で）──
     let homePay = 0;
     let hlPrepay = 0;
-    if (!hlCleared && age >= loans.start) {
-      // 毎月の返済（月ごとに残高×年利÷12の利息）と、その年の繰上返済
-      const y = loans.byAge.get(age);
-      homePay = y ? y.pay + y.prepay : 0;
-      hlPrepay = y ? y.prepay : 0;
-      hlBal = y ? y.bal : 0;
+    let spHomePay = 0;
+    if (!spLoanIdx.length) {
+      if (!hlCleared && age >= loans.start) {
+        // 毎月の返済（月ごとに残高×年利÷12の利息）と、その年の繰上返済
+        const y = loans.byAge.get(age);
+        homePay = y ? y.pay + y.prepay : 0;
+        hlPrepay = y ? y.prepay : 0;
+        hlBal = y ? y.bal : 0;
+      }
+    } else if (age >= loans.start) {
+      // 名義ごとに分ける。団信で消えた名義の分は返済なし
+      const y = loans.byAge.get(age) ?? { pay: 0, interest: 0, prepay: 0, bal: 0 };
+      const ys = spLoanYear(age);
+      const zero = { pay: 0, prepay: 0, bal: 0 };
+      const selfY = hlCleared ? zero : { pay: y.pay - ys.pay, prepay: y.prepay - ys.prepay, bal: y.bal - ys.bal };
+      const spY = spHlCleared ? zero : ys;
+      spHomePay = spY.pay + spY.prepay;
+      homePay = selfY.pay + selfY.prepay + spHomePay;
+      hlPrepay = selfY.prepay + spY.prepay;
+      spHlBal = spY.bal;
+      hlBal = selfY.bal + spY.bal;
     }
-    const hlCredit =
-      input.hlDeduct && input.useHomeLoan && age >= input.hlStart && age < input.hlDeductEndAge && !selfGone
-        ? 0.007 * Math.min(hlBal, input.hlDeductLimit)
-        : 0;
+    // 住宅ローン控除: 名義ごとの年末残高 × 0.7%（借入限度額は1人ずつ）を、その人の税から引く
+    const hlOn = input.hlDeduct && input.useHomeLoan && age >= input.hlStart && age < input.hlDeductEndAge;
+    const hlCredit = hlOn && !selfGone ? 0.007 * Math.min(hlBal - spHlBal, input.hlDeductLimit) : 0;
+    const spHlCredit = hlOn && spLoanIdx.length > 0 && !spouseGone ? 0.007 * Math.min(spHlBal, input.hlDeductLimit) : 0;
 
     // ── 税・社会保険 ──
     const kidAgesNow = input.kids.map((k) => age - k.offset).filter((a) => a >= 0);
     let tax = 0;
+    let taxSp = 0; // うち配偶者の税・社会保険料（収入を本人・配偶者に分けて見せるため）
     let socialIns = 0;
     let hlDeduct = 0;
     let marginal = input.taxRate / 100;
@@ -673,11 +713,13 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
           },
           spouse: null,
           kidAges: kidAgesNow,
-          hlDeductCredit: 0,
+          hlDeductCredit: spHlCredit, // 遺族（配偶者）自身の名義のローンの控除は続く
           extraDeduction: addDed(widowDeduction(kidsDependent, survivorSex, year), addDed(insDedSelf, insDedSpouse)),
         });
         tax = tr.total;
+        taxSp = tr.total;
         socialIns = tr.shahoSelf;
+        hlDeduct = tr.hlDeduct;
         marginal = tr.marginalSelf;
       }
     } else if (input.taxMode === "detailed") {
@@ -716,12 +758,14 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         spouse,
         kidAges: kidAgesNow,
         hlDeductCredit: hlCredit,
+        spouseHlDeductCredit: spHlCredit,
         extraDeduction: spouseGone
           ? addDed(widowDeduction(kidsDependent, survivorSex, year), addDed(insDedSelf, insDedSpouse))
           : insDedSelf,
         spouseExtraDeduction: insDedSpouse,
       });
       tax = tr.total;
+      taxSp = tr.shahoSpouse + tr.shotokuzeiSpouse + tr.juminSpouse + tr.jigyozeiSpouse;
       socialIns = tr.shahoSelf + tr.shahoSpouse;
       hlDeduct = tr.hlDeduct;
       marginal = tr.marginalSelf;
@@ -732,9 +776,23 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
         (job + side + spouseJob + spSide + Math.max(0, reProfitTot) - dcSelf - Math.min(spDcSelf, spouseJob + spSide) + insY.taxable["本人"] + insY.taxable["配偶者"] -
           insDedSelf.income - insDedSpouse.income) * rate +
         (pen + dcAnnuity + sevAnnuity + spCorpPen) * penRate;
-      hlDeduct = Math.min(Math.max(0, raw), hlCredit);
+      // 簡易モードは世帯でまとめて計算するので、配偶者の分は額面の割合で分ける
+      const spG = spouseJob + spSide + spousePenY + spCorpPen;
+      if (spHlCredit > 0) {
+        // 配偶者名義のローンがあるときは、住宅ローン控除も人ごとの税（額面の割合で分けた分）までしか引かない
+        const rawPos = Math.max(0, raw);
+        const rawSp = ordinaryGross > 0 ? (rawPos * spG) / ordinaryGross : 0;
+        hlDeduct = Math.min(hlCredit, rawPos - rawSp) + Math.min(spHlCredit, rawSp);
+      } else {
+        hlDeduct = Math.min(Math.max(0, raw), hlCredit);
+      }
       tax = Math.max(0, raw - hlDeduct);
+      taxSp = ordinaryGross > 0 ? (tax * spG) / ordinaryGross : 0;
     }
+    // 本人・配偶者それぞれの手取り収入（年次の内訳・グラフ用）。不動産や保険の所得にかかる税は本人の側に入る
+    const spGrossOrd = spouseJob + spSide + spousePenY + spCorpPen;
+    const incSpouse = spGrossOrd + (spSevGross - spSevTax) + (spDcLump - spDcTax) - taxSp;
+    const incSelf = ordinaryGross - spGrossOrd + (sevGross - sevTax) + (dcLump - dcTax) - (tax - taxSp);
     // 不動産のキャッシュフロー（税は本体の税計算に含めた。簡易表示用に按分）
     for (let i = 0; i < reFlows.length; i++) {
       const f = reFlows[i];
@@ -1101,6 +1159,10 @@ export function simulate(input: PlanInput, opts: SimulateOptions = {}): Simulati
       spNisa: sp.nisa,
       spToku: sp.toku,
       spDc: sp.dc,
+      spHlBal: age >= input.hlStart ? spHlBal : 0,
+      spHomePay,
+      incSelf,
+      incSpouse,
     });
   }
 

@@ -56,7 +56,17 @@ const FILLS_HOVER = {
   cf: "#cf7a4a",
 };
 
-const KEYS: ("収入" | "支出" | "投資積立")[] = ["収入", "支出", "投資積立"];
+type BarKey = "収入" | "本人の収入" | "配偶者の収入" | "世帯の収入" | "支出" | "投資積立";
+const KEYS: BarKey[] = ["収入", "支出", "投資積立"];
+// ver6.3: 配偶者に収入があるときは、収入の棒を 本人／配偶者／世帯（手当・不動産・配当など）に分ける。
+// 色は同じ青系で明るさを変える（色の違いが分かりにくい人でも、濃さで区別できるように）
+const SPLIT_INCOME_KEYS: BarKey[] = ["本人の収入", "配偶者の収入", "世帯の収入"];
+const KEYS_SPLIT: BarKey[] = [...SPLIT_INCOME_KEYS, "支出", "投資積立"];
+const SPLIT_FILL: Record<string, { base: string; hover: string }> = {
+  本人の収入: { base: "#4a6a8c", hover: "#36516f" },
+  配偶者の収入: { base: "#86a9c9", hover: "#6a93b8" },
+  世帯の収入: { base: "#c3d6e6", hover: "#a9c4da" },
+};
 const KEY_TO_FILL: Record<string, "income" | "expense" | "invest"> = {
   収入: "income",
   支出: "expense",
@@ -70,6 +80,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   const jp = (pathname?.startsWith("/v5") || pathname?.startsWith("/v6")) ?? false;
 
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const split = (pathname?.startsWith("/v6") ?? false) && rows.some((r) => (r.incSpouse ?? 0) >= 1);
+  const keys = split ? KEYS_SPLIT : KEYS;
   // スマホでは吹き出しを小さくしてグラフ上端に固定（グラフを隠さないため）
   const compact = useIsNarrow();
 
@@ -86,8 +98,22 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
       const overIn = r.income > cap;
       const overOut = out > cap;
       const scale = overOut ? cap / out : 1;
+      // 収入の内訳（本人・配偶者・世帯）。マイナスの部分は0にして、棒の高さ（収入の合計）に合うように割り振る
+      const shown = Math.max(0, overIn ? cap : r.income);
+      const pSelf = Math.max(0, r.incSelf ?? 0);
+      const pSp = Math.max(0, r.incSpouse ?? 0);
+      const pOther = Math.max(0, r.income - (r.incSelf ?? 0) - (r.incSpouse ?? 0));
+      const pTot = pSelf + pSp + pOther;
+      const k = pTot > 0 ? shown / pTot : 0;
       return {
         age: r.age,
+        本人の収入: Math.round(pSelf * k),
+        配偶者の収入: Math.round(pSp * k),
+        世帯の収入: Math.round(pOther * k),
+        // 吹き出し用の実額（棒は合計に合わせて割り振るので、マイナスの年などは棒と一致しない）
+        実本人の収入: Math.round(r.incSelf ?? 0),
+        実配偶者の収入: Math.round(r.incSpouse ?? 0),
+        実世帯の収入: Math.round(r.income - (r.incSelf ?? 0) - (r.incSpouse ?? 0)),
         収入: Math.round(overIn ? cap : r.income),
         支出: -Math.round(r.exp * scale),
         投資積立: -Math.round(r.inv * scale),
@@ -117,7 +143,8 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
   // 線・棒が先に動き、そのあと目盛りと一緒に伸び縮みする
   const { data, domain, ticks } = useAnimatedChart(rawData, target);
 
-  const getFill = (key: "収入" | "支出" | "投資積立"): string => {
+  const getFill = (key: BarKey): string => {
+    if (SPLIT_FILL[key]) return hoveredKey === key ? SPLIT_FILL[key].hover : SPLIT_FILL[key].base;
     const k = KEY_TO_FILL[key];
     return hoveredKey === key ? FILLS_HOVER[k] : FILLS[k];
   };
@@ -139,6 +166,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
       {jp ? (
         <p className="-mt-1.5 mb-3 text-[11px] leading-relaxed text-[#0a0a0a]/70">
           0の線より上の棒はその年の収入（手取り）、下の棒は支出と投資の積立。赤い線は差し引きで、0より上なら貯まる年、下なら貯金や投資を取り崩す年です。
+          {split ? " 収入の棒は、濃い色が本人、中くらいが配偶者、薄い色が世帯の収入（児童手当・不動産・配当・臨時収入・保険など）です。" : ""}
         </p>
       ) : null}
 
@@ -189,7 +217,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
             <Tooltip
               content={({ payload, label }) => {
                 if (!payload?.length) return null;
-                const ORDER = ["収入", "支出", "投資積立", "収支"];
+                const ORDER = [...keys, "収支"];
                 const sorted = ORDER.map((k) =>
                   payload.find((p) => p.dataKey === k),
                 ).filter(Boolean) as typeof payload;
@@ -208,14 +236,22 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
                   >
                     <p style={{ color: "#0a0a0a", fontWeight: 800, margin: compact ? "0 0 3px" : "0 0 6px", fontSize: compact ? 12 : 12 }}>
                       {label}歳
+                      {split && typeof (payload[0]?.payload as Record<string, unknown> | undefined)?.["実収入"] === "number" ? (
+                        <span style={{ fontWeight: 700, marginLeft: 8, fontSize: 10.5 }}>
+                          収入の合計 {fmtAbs((payload[0].payload as Record<string, number>)["実収入"])}
+                        </span>
+                      ) : null}
                     </p>
                     {sorted.map((entry) => {
                       const key = entry.dataKey as string;
-                      const val = Number(entry.value ?? 0);
+                      const isSplit = (SPLIT_INCOME_KEYS as string[]).includes(key);
+                      // 本人・配偶者・世帯の収入は、割り振る前の実額を出す（税・社保だけ払う年はマイナス）
+                      const actual = isSplit ? (entry.payload as Record<string, unknown> | undefined)?.[`実${key}`] : undefined;
+                      const val = Number(typeof actual === "number" ? actual : entry.value ?? 0);
                       const absVal = Math.abs(val);
                       const isCF = key === "収支";
-                      const isIncome = key === "収入";
-                      const sign = isCF ? (val >= 0 ? "+" : "−") : isIncome ? "+" : "−";
+                      const isIncome = key === "収入" || isSplit;
+                      const sign = isCF || isSplit ? (val >= 0 ? "+" : "−") : isIncome ? "+" : "−";
                       const isHovered = hoveredKey === key;
                       const valueColor = isCF
                         ? cf < 0
@@ -296,7 +332,7 @@ export function CashflowChart({ rows, lifeEvents = [] }: CashflowChartProps) {
               position={compact ? { y: 0 } : undefined}
             />
 
-            {KEYS.map((key) => (
+            {keys.map((key) => (
               <Bar
                 isAnimationActive={false}
                 key={key}

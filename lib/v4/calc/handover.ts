@@ -1,7 +1,7 @@
 // 「お金の引き継ぎ書」の財産・負債の一覧。金額はシミュレーターの入力（作成日時点）から自動で入る
 import { parseYMD, yearToStartAge } from "./age";
 import { computeRealEstateValue, ownsHomeAt } from "./finance";
-import { propertyLoanParts, scheduleLoans, scheduleParts, type LoanPartSummary } from "./homeLoan";
+import { loanParts, propertyLoanParts, scheduleLoans, scheduleParts, type LoanPartSummary } from "./homeLoan";
 import { HAS, deathBenefitAt, deathCoverActive, normalizeInsurance, premiumAt, typeLabel } from "./insurance";
 import type { DcType, HandoverInput, HandoverItem, HomeLoanPart, Insurance, PlanInput, RealEstate, YearlyResult } from "./types";
 
@@ -128,7 +128,10 @@ export function monthlyPayments(plan: PlanInput, row: YearlyResult | undefined, 
   const add = (label: string, monthly: number, note: string) => {
     if (monthly > 0) out.push({ label, monthly, note });
   };
-  if (row && row.homePay > 0) add("住宅ローンの返済", row.homePay / 12, plan.risk?.danshin ? "団信で返済されれば止まる" : "");
+  // ver6.3: 配偶者名義のローンは、本人が亡くなっても団信では止まらない
+  const spPay = row ? Math.min(row.homePay, Math.max(0, row.spHomePay ?? 0)) : 0;
+  if (row && row.homePay - spPay > 0) add(spPay > 0 ? "住宅ローンの返済（本人名義）" : "住宅ローンの返済", (row.homePay - spPay) / 12, plan.risk?.danshin ? "団信で返済されれば止まる" : "");
+  if (spPay > 0) add("住宅ローンの返済（配偶者名義）", spPay / 12, "配偶者のローン。返済は続く");
   add("家賃", plan.rentM, "名義の変更・解約は管理会社へ");
   plan.otherLoans.forEach((ln, i) => add(ln.label || `ローン${i + 1}`, ln.monthlyPay, "残りの返済は相続の対象"));
   ins.forEach((p) => {
@@ -176,7 +179,9 @@ export function buildAfterDeathSteps(
   if (employed) {
     at("14日以内")[1] = "健康保険証を勤務先に返す（家族が扶養に入っていたら、国民健康保険などへの加入手続き）";
   }
-  if (plan.useHomeLoan && plan.hlBal > 0 && plan.risk?.danshin) at("すみやかに").push("住宅ローンの銀行に連絡（団体信用生命保険でローンを返済する手続き）");
+  // 団信の手続きは、本人名義のローンがあるときだけ
+  const selfLoan = !plan.spouseBirth || loanParts(plan).some((p) => p.owner !== "spouse");
+  if (plan.useHomeLoan && plan.hlBal > 0 && plan.risk?.danshin && selfLoan) at("すみやかに").push("住宅ローンの銀行に連絡（団体信用生命保険でローンを返済する手続き）");
   if (hasSecurities) at("すみやかに").push("証券会社に連絡（口座の凍結と相続の手続き。NISAは相続人の特定口座へその日の時価で移る）");
   if (plan.cryptoBal > 0) at("すみやかに").push("暗号資産の取引所に連絡（どこの取引所か分からないと手続きが難しい）");
   if (plan.dcBal > 0) at("すみやかに").push(`${DC_LABEL[plan.dcType]}の死亡一時金を請求（5年を過ぎると遺族が受け取れなくなる）`);
@@ -305,12 +310,16 @@ export function autoSources(plan: PlanInput): AutoSource[] {
   // 住宅ローン: 返済中のもの。ミックスローン（hlParts が2本以上）は1本ずつ。1本目は前からの "hl" のまま（作った項目を引き継ぐ）
   if (plan.useHomeLoan && plan.hlBal > 0 && plan.hlStart <= plan.curAge) {
     const sched = scheduleLoans(plan);
+    // ver6.3: 配偶者名義のローンは本人の債務ではないので、本人の負債の一覧には入れない（毎月の支払いの表と注記で知らせる）
+    const split = !!plan.spouseBirth && sched.parts.some((q) => q.owner === "spouse") && sched.parts.some((q) => q.owner !== "spouse");
     sched.parts.forEach((p, i) => {
+      if (p.owner === "spouse" && plan.spouseBirth) return;
       out.push({
         src: i === 0 ? "hl" : `hl-${i}`,
         cat: "housingLoan",
         amount: p.bal,
-        f: { danshin: plan.risk?.danshin ? "あり" : "なし", memo: sched.parts.length > 1 ? `ミックスローンの${p.label || `${i + 1}本目`}` : "" },
+        // 名義が分かれているとき（ペアローン）は「ミックスローンの」を付けない
+        f: { danshin: plan.risk?.danshin ? "あり" : "なし", memo: sched.parts.length > 1 && !split ? `ミックスローンの${p.label || `${i + 1}本目`}` : "" },
         live: loanLive(p, sched.summaries[i], plan, baseYear),
       });
     });

@@ -29,7 +29,19 @@ const PREPAY_OPTIONS = [
   { value: "full" as const, label: "全額繰上（一括返済）" },
 ];
 
+const OWNER_OPTIONS = [
+  { value: "self" as const, label: "本人" },
+  { value: "spouse" as const, label: "配偶者" },
+];
+
 const man = (yen: number) => `${Math.round(yen / 10000).toLocaleString()}万円`;
+
+// ver6.3 ペアローンの型: 合計を半分ずつ、本人と配偶者で1本ずつ（金利・年数は同じで始めて、あとで直す）
+export function pairParts(total: number, years: number, rate: number): HomeLoanPart[] {
+  const half = Math.round(total / 2 / 10000) * 10000;
+  const one = (bal: number, owner: "self" | "spouse"): HomeLoanPart => ({ label: owner === "self" ? "本人のローン" : "配偶者のローン", bal, years, rate, rateType: "variable", method: "annuity", rule5y: true, owner });
+  return [one(half, "self"), one(Math.max(0, total - half), "spouse")];
+}
 
 // 固定と変動のミックスの型: 合計を半分ずつ、変動は今の金利、全期間固定は少し高め（今の金利＋0.8%、最低1.5%）
 export function mixParts(total: number, years: number, rate: number): HomeLoanPart[] {
@@ -48,6 +60,7 @@ export function LoanPartsEditor({
   curAge,
   start,
   onSimple,
+  owners = false,
 }: {
   parts: HomeLoanPart[];
   setParts: (next: HomeLoanPart[]) => void;
@@ -56,6 +69,7 @@ export function LoanPartsEditor({
   curAge: number;
   start: number; // 返済が始まる年齢（すでに始まっていれば今の年齢）
   onSimple?: () => void; // 「簡単な入力に戻す」
+  owners?: boolean; // ver6.3: 住宅ローンで配偶者がいるとき、1本ごとに名義（本人／配偶者）を選べる
 }) {
   const updPart = (i: number, p: Partial<HomeLoanPart>) => setParts(parts.map((x, idx) => (idx === i ? { ...x, ...p } : x)));
   // 画面には入力中の中身をそのまま出す（残高0でも消さない）。計算側は残高のある分だけ使う
@@ -77,20 +91,24 @@ export function LoanPartsEditor({
     const b0 = Math.round((t * share0) / 100 / 10000) * 10000;
     setParts([{ ...parts[0], bal: b0 }, { ...parts[1], bal: Math.max(0, t - b0) }]);
   };
-  const nameOf = (p: HomeLoanPart, i: number) => (p.rateType === "fixed" ? "全期間固定" : p.rateType === "fixedPeriod" ? "当初固定" : p.rateType === "variable" ? "変動" : `ローン${i + 1}`);
+  const rateName = (p: HomeLoanPart, i: number) => (p.rateType === "fixed" ? "全期間固定" : p.rateType === "fixedPeriod" ? "当初固定" : p.rateType === "variable" ? "変動" : `ローン${i + 1}`);
+  const ownerName = (p: HomeLoanPart) => (p.owner === "spouse" ? "配偶者" : "本人");
+  const nameOf = (p: HomeLoanPart, i: number) => (owners ? `${ownerName(p)}・${rateName(p, i)}` : rateName(p, i));
+  // 名義が分かれている2本はペアローン
+  const pair = owners && parts.length === 2 && ownerName(parts[0]) !== ownerName(parts[1]);
 
   return (
     <div className="flex flex-col gap-2">
       {parts.length === 2 ? (
         <div className="flex flex-col gap-2 p-3" style={INNER}>
-          <p className="text-[11px] font-bold">ミックスローンの合計と割合</p>
+          <p className="text-[11px] font-bold">{pair ? "ペアローンの合計と割合" : "ミックスローンの合計と割合"}</p>
           <NumberField label="合計の借入額（残高）" value={total} onChange={setTotal} unit="円" />
           <div>
             <div className="flex justify-between text-[11px] font-bold tabular-nums">
               <span>{nameOf(parts[0], 0)} {share0}%（{man(parts[0].bal)}）</span>
               <span>{nameOf(parts[1], 1)} {100 - share0}%（{man(parts[1].bal)}）</span>
             </div>
-            <input type="range" min={0} max={100} step={5} value={share0} onChange={(e) => setShare(Number(e.target.value))} className="w-full accent-[#5b7c99]" aria-label="ミックスローンの割合" />
+            <input type="range" min={0} max={100} step={5} value={share0} onChange={(e) => setShare(Number(e.target.value))} className="w-full accent-[#5b7c99]" aria-label={pair ? "ペアローンの割合" : "ミックスローンの割合"} />
           </div>
           <p className="text-[10px] text-[#0a0a0a]/55">それぞれの金利・年数・金利のタイプは下で変えられます。</p>
         </div>
@@ -115,6 +133,15 @@ export function LoanPartsEditor({
             <NumberField label="残高" value={p.bal} onChange={(v) => updPart(i, { bal: v })} unit="円" />
             <NumberField label="残りの返済年数" value={p.years} onChange={(v) => updPart(i, { years: v })} unit="年" />
           </div>
+          {owners ? (
+            <SelectField
+              label="名義（誰のローンか）"
+              value={p.owner ?? "self"}
+              onChange={(v) => updPart(i, { owner: v })}
+              options={OWNER_OPTIONS}
+              hint="住宅ローン控除はこの人の税金から引き、団信はこの人が亡くなったときにこのローンが0になります"
+            />
+          ) : null}
           <SelectField label="金利のタイプ" value={p.rateType} onChange={(v) => updPart(i, { rateType: v })} options={RATE_TYPE_OPTIONS} />
           <div className="grid grid-cols-2 gap-2">
             <PercentField label={p.rateType === "fixedPeriod" ? "いまの金利（固定期間中）" : "金利"} value={p.rate} onChange={(v) => updPart(i, { rate: v })} />

@@ -230,6 +230,9 @@ test("THRU-04 年次サマリーの内訳: 収入・支出・積立の内訳を�
       assert.ok(Math.abs(incomeParts - r.income) < 1, `${r.age}歳 収入 ${incomeParts} ≠ ${r.income}`);
       const expParts = r.basicL + r.special + r.homeRent + r.homeTax + r.homePay + r.eduT + r.eduJ + r.ins + r.care + r.lifeExp + r.otherLoanPay;
       assert.ok(Math.abs(expParts - r.exp) < 1, `${r.age}歳 支出 ${expParts} ≠ ${r.exp}`);
+      // 本人の手取り＋配偶者の手取り＋世帯の収入（手当・不動産・臨時収入・配当・保険・遺族年金）＝収入
+      const household = r.childAllow + r.reInc + r.inherit + r.divGross - r.divTax + r.insPayout - r.insSepTax + r.incomeProt + r.deathLump + r.survPen;
+      assert.ok(Math.abs(r.incSelf + r.incSpouse + household - r.income) < 1, `${r.age}歳 本人＋配偶者＋世帯 ≠ 収入`);
       const invParts = r.nisaIn + r.tokuIn + r.cryptoIn + r.goldIn + r.dcContribSelf;
       assert.ok(Math.abs(invParts - r.inv) < 1, `${r.age}歳 積立 ${invParts} ≠ ${r.inv}`);
     }

@@ -33,7 +33,7 @@ export function loanParts(plan: PlanInput): HomeLoanPart[] {
   if (!plan.useHomeLoan) return [];
   if (plan.hlParts && plan.hlParts.length) return plan.hlParts.filter((p) => p.bal > 0 && p.years > 0);
   if (plan.hlBal > 0 && plan.hlTerm > 0)
-    return [{ label: "住宅ローン", bal: plan.hlBal, years: plan.hlTerm, rate: plan.hlRate, rateType: "variable", method: "annuity", rule5y: true }];
+    return [{ label: "住宅ローン", bal: plan.hlBal, years: plan.hlTerm, rate: plan.hlRate, rateType: "variable", method: "annuity", rule5y: true, ...(plan.hlOwner === "spouse" ? { owner: "spouse" as const } : {}) }];
   return [];
 }
 
@@ -123,9 +123,11 @@ export function schedulePart(p: HomeLoanPart, start: number, prepays: LoanPrepay
 }
 
 // 複数本のローンを合わせた年ごとの予定と、ローンごとのまとめ（住宅ローン・不動産投資のローンで共用）
-export function scheduleParts(parts: HomeLoanPart[], start: number, prepays: LoanPrepay[]) {
-  const live = parts.filter((p) => p.bal > 0 && p.years > 0);
-  const each = live.map((p, i) => schedulePart(p, start, prepays, i));
+//   origIdx: 繰上返済の「どのローン」（LoanPrepay.part）と照らす番号。省略すると parts の中で残高のある順の番号
+export function scheduleParts(parts: HomeLoanPart[], start: number, prepays: LoanPrepay[], origIdx?: number[]) {
+  const liveIdx = parts.map((p, i) => (p.bal > 0 && p.years > 0 ? i : -1)).filter((i) => i >= 0);
+  const live = liveIdx.map((i) => parts[i]);
+  const each = live.map((p, k) => schedulePart(p, start, prepays, origIdx ? origIdx[liveIdx[k]] : k));
   const byAge = new Map<number, LoanYear>();
   for (const e of each) {
     for (const [age, y] of e.years) {
@@ -135,12 +137,17 @@ export function scheduleParts(parts: HomeLoanPart[], start: number, prepays: Loa
   }
   const startBal = live.reduce((a, p) => a + p.bal, 0);
   const payoffAge = each.length ? Math.max(...each.map((e) => e.summary.payoffAge ?? start)) : null;
-  return { parts: live, start, startBal, byAge, summaries: each.map((e) => e.summary), payoffAge };
+  // partYears: ローン1本ごとの年ごとの予定（名義ごとに分けて見るときに使う）
+  return { parts: live, start, startBal, byAge, summaries: each.map((e) => e.summary), payoffAge, partYears: each.map((e) => e.years) };
 }
 
 // 住宅ローン: すべてのローンを合わせた年ごとの予定と、ローンごとのまとめ
+//   繰上返済の「どのローン」は画面の番号（hlParts の番号）。残高0のローンが間にあっても番号がずれないようにする
 export function scheduleLoans(plan: PlanInput) {
-  return scheduleParts(loanParts(plan), Math.max(plan.hlStart, plan.curAge), plan.hlPrepays ?? []);
+  const start = Math.max(plan.hlStart, plan.curAge);
+  if (plan.useHomeLoan && plan.hlParts && plan.hlParts.length)
+    return scheduleParts(plan.hlParts, start, plan.hlPrepays ?? [], plan.hlParts.map((_, i) => i));
+  return scheduleParts(loanParts(plan), start, plan.hlPrepays ?? []);
 }
 
 // 不動産投資のローン: 複数本（ミックス）なら各本、1本なら物件の欄から

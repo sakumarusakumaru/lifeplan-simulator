@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { CARD, note } from "@/components/v4/frame";
+import { loanParts } from "@/lib/v4/calc/homeLoan";
 import { AssumptionTiers } from "@/components/v5/AssumptionTiers";
 import { AssetsChart } from "@/components/v4/charts/AssetsChart";
 import { CashflowChart } from "@/components/v4/charts/CashflowChart";
@@ -830,6 +831,80 @@ function BalanceSheetTimeline({
         ) : null}
       </div>
       <BalanceSheetVis assets={assets} liabilities={liabilities} netWorth={netWorth} />
+      <OwnerTable plan={plan} row={isNow ? undefined : row} />
+    </div>
+  );
+}
+
+// ver6.3: 名義ごとの内訳（本人・配偶者）。名義を分けて入れた口座とローンだけを並べ、分けていないものは下に一言
+function OwnerTable({ plan, row }: { plan: PlanInput; row?: SimulationSummary["rows"][number] }) {
+  if (!plan.spouseBirth) return null;
+  const nowLoans = plan.curAge >= plan.hlStart ? loanParts(plan) : [];
+  const v = row
+    ? {
+        nisa: [row.ass.nisa - row.spNisa, row.spNisa],
+        toku: [row.ass.toku - row.spToku, row.spToku],
+        dc: [row.ass.dc - row.spDc, row.spDc],
+        hl: [row.hlBal - row.spHlBal, row.spHlBal],
+        cash: Math.max(0, row.ass.c),
+        kg: row.ass.k + row.ass.g,
+      }
+    : {
+        nisa: [plan.nisaBal, plan.spNisaBal ?? 0],
+        toku: [plan.tokuBal, plan.spTokuBal ?? 0],
+        dc: [plan.dcBal, plan.spDcBal ?? 0],
+        hl: [
+          nowLoans.filter((p) => p.owner !== "spouse").reduce((a, p) => a + p.bal, 0),
+          nowLoans.filter((p) => p.owner === "spouse").reduce((a, p) => a + p.bal, 0),
+        ],
+        cash: plan.cashBal,
+        kg: plan.cryptoBal + plan.goldBal,
+      };
+  // 配偶者名義のものが何もなければ出さない（全部「本人」と並ぶだけの表は要らない）
+  const everSpouse =
+    (plan.spNisaBal ?? 0) + (plan.spTokuBal ?? 0) + (plan.spDcBal ?? 0) + (plan.spNisaTsumitateM ?? 0) + (plan.spNisaGrowthM ?? 0) + (plan.spSaveTokuM ?? 0) + (plan.spSaveDcM ?? 0) + (plan.spDcEmployerM ?? 0) > 0 ||
+    loanParts(plan).some((p) => p.owner === "spouse");
+  if (!everSpouse) return null;
+  const lines: { label: string; self: number; sp: number; minus?: boolean }[] = [
+    { label: "NISA口座", self: v.nisa[0], sp: v.nisa[1] },
+    { label: "特定口座", self: v.toku[0], sp: v.toku[1] },
+    { label: "iDeCo・DC", self: v.dc[0], sp: v.dc[1] },
+    { label: "住宅ローン", self: v.hl[0], sp: v.hl[1], minus: true },
+  ].filter((x) => Math.round(x.self / 10000) !== 0 || Math.round(x.sp / 10000) !== 0);
+  if (!lines.length) return null;
+  const total = (k: "self" | "sp") => lines.reduce((a, x) => a + (x.minus ? -x[k] : x[k]), 0);
+  const cell = (yen: number, minus?: boolean) => (Math.round(yen / 10000) === 0 ? "–" : `${minus ? "−" : ""}${fmtMan(yen)}`);
+  const td = "px-2 py-1 text-right tabular-nums";
+  return (
+    <div className="rounded-xl px-4 py-3" style={CARD}>
+      <p className="text-[13px] font-bold text-[#0a0a0a]">名義ごとの内訳</p>
+      <table className="mt-2 w-full border-collapse text-[11px]">
+        <thead>
+          <tr style={{ borderBottom: "1px solid rgba(10,10,10,0.14)" }}>
+            <th className="px-2 py-1 text-left font-bold text-[#0a0a0a]/60" />
+            <th className={`${td} font-bold text-[#0a0a0a]/60`}>本人</th>
+            <th className={`${td} font-bold text-[#0a0a0a]/60`}>配偶者</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((x) => (
+            <tr key={x.label} style={{ borderBottom: "1px solid rgba(10,10,10,0.07)" }}>
+              <td className="px-2 py-1 text-left">{x.label}</td>
+              <td className={td}>{cell(x.self, x.minus)}</td>
+              <td className={td}>{cell(x.sp, x.minus)}</td>
+            </tr>
+          ))}
+          <tr>
+            <td className="px-2 py-1 text-left font-bold">差し引き</td>
+            <td className={`${td} font-bold`}>{cell(Math.abs(total("self")), total("self") < 0)}</td>
+            <td className={`${td} font-bold`}>{cell(Math.abs(total("sp")), total("sp") < 0)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="mt-2 text-[10px] leading-relaxed text-[#0a0a0a]/55">
+        現金・預金（{fmtMan(v.cash)}）{Math.round(v.kg / 10000) !== 0 ? `、暗号資産・金（${fmtMan(v.kg)}）` : ""}、自宅・不動産は名義を分けていません。
+        相続の試算では、これらを「本人名義の財産の割合」で分けます（「もしも」の相続の備え）。
+      </p>
     </div>
   );
 }

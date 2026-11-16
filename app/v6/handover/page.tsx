@@ -1,5 +1,6 @@
 "use client";
 
+import { loanParts } from "@/lib/v4/calc/homeLoan";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -208,6 +209,11 @@ export default function HandoverPage() {
   const spouseAge = ageOn(plan.spouseBirth, null);
   const hasSpouse = spouseAge !== null;
   const survivorLabel = plan.risk.spouseSex === "male" ? "夫" : "妻";
+
+  // ver6.3: 名義ごとの住宅ローン（返済が始まっているもの）
+  const loanNow = plan.useHomeLoan && plan.hlStart <= plan.curAge ? loanParts(plan) : [];
+  const spLoanNow = plan.spouseBirth ? loanNow.filter((p) => p.owner === "spouse").reduce((a, p) => a + p.bal, 0) : 0;
+  const selfLoanNow = loanNow.reduce((a, p) => a + p.bal, 0) - spLoanNow;
 
   const items = h.items ?? [];
   // シミュレーターから作った項目で、金額が0になり中身も書いていないものは出さない
@@ -573,7 +579,8 @@ export default function HandoverPage() {
           {sideView("debt")}
           <p className="mt-3 hv-sm leading-relaxed text-[#0a0a0a]/75">
             負債は相続の対象です。マイナスの財産がプラスより多いときは、亡くなったことを知ってから3か月以内に、家庭裁判所で相続放棄・限定承認を申し立てられます。
-            {plan.useHomeLoan && plan.hlBal > 0 && plan.risk.danshin ? "住宅ローンは団信で返済される想定です（銀行に連絡すると手続きが始まります）。" : ""}
+            {plan.useHomeLoan && selfLoanNow > 0 && plan.risk.danshin ? `${spLoanNow > 0 ? "本人名義の" : ""}住宅ローンは団信で返済される想定です（銀行に連絡すると手続きが始まります）。` : ""}
+            {spLoanNow > 0 ? `配偶者名義の住宅ローン（いまの残高 約${Math.round(spLoanNow / 10000).toLocaleString()}万円）は本人の債務ではないので、この一覧には入れていません。本人が亡くなっても返済は続きます。` : ""}
           </p>
         </>
       ),
@@ -715,7 +722,9 @@ export default function HandoverPage() {
           ) : null}
           <ul className="mt-4 list-disc pl-5 hv-sm leading-relaxed text-[#0a0a0a]/75">
             <li>遺族年金は年金事務所で請求します（非課税）。請求するまで振り込まれません。</li>
-            {plan.useHomeLoan && plan.risk.danshin ? <li>住宅ローンは団信で返済され、毎月の返済はなくなる想定です。</li> : null}
+            {plan.useHomeLoan && plan.risk.danshin && selfLoanNow > 0 ? (
+              <li>{spLoanNow > 0 ? "本人名義の住宅ローンは団信で返済され、その分の毎月の返済はなくなる想定です。配偶者名義のローンの返済は続きます。" : "住宅ローンは団信で返済され、毎月の返済はなくなる想定です。"}</li>
+            ) : null}
             <li>銀行が名義人の死亡を知ると、その口座は止まります。当面の生活費は家族名義の口座にも置いておくと安心です（遺産分割の前でも、一定額までは引き出せる制度があります）。</li>
             <li>生活費は今の{plan.risk.livingRate}%で暮らす前提で試算しています。</li>
           </ul>

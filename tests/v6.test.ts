@@ -379,3 +379,147 @@ test("V6-35 配偶者のDC: 加入年齢が空欄なら注意を出し、受取�
   assert.equal(ok.rows[0].dcTax, 0);
   assert.ok(!ok.warnings.some((w) => w.text.includes("加入した年齢")));
 });
+
+// ── ver6.3: 住宅ローンの名義（ペアローン）と、本人・配偶者ごとの手取り ──
+const part = (bal: number, owner?: "self" | "spouse") => ({ label: "ローン", bal, years: 30, rate: 1, rateType: "fixed" as const, method: "annuity" as const, ...(owner ? { owner } : {}) });
+const withLoan: PlanInput = {
+  ...couple,
+  spJobs: [spJob({ inc: 600 * MAN, end: 65 })],
+  spousePension: { ...couple.spousePension, koseiAvgIncome: 600 * MAN },
+  homeOwned: true,
+  useHomeLoan: true,
+  hlStart: 40,
+  hlDeduct: true,
+  hlDeductEndAge: 53,
+  hlDeductLimit: 3000 * MAN,
+  hlParts: [part(4000 * MAN)],
+  hlBal: 4000 * MAN,
+  hlTerm: 30,
+  hlRate: 1,
+};
+
+test("V6-40 ペアローン: 残高・返済の合計は同じ。住宅ローン控除は名義ごとに、限度額も1人ずつ", () => {
+  const single = simulate(withLoan).rows[0];
+  const pair = simulate({ ...withLoan, hlParts: [part(2000 * MAN, "self"), part(2000 * MAN, "spouse")] }).rows[0];
+  near(pair.hlBal, single.hlBal, 1);
+  near(pair.home, single.home, 1);
+  near(pair.spHlBal, pair.hlBal / 2, 1);
+  // 1本（本人名義4,000万）は限度額3,000万まで → 21万。ペアは2人とも残高×0.7%。
+  // 所得税から引くと復興特別所得税（2.1%）も一緒に減るので、減税額は ×1.021
+  near(single.hlDeduct, 3000 * MAN * 0.007 * 1.021, 300);
+  near(pair.hlDeduct, pair.hlBal * 0.007 * 1.021, 300);
+  assert.ok(pair.hlDeduct > single.hlDeduct + 5 * MAN);
+});
+
+test("V6-41 収入のない配偶者の名義にすると、その分の住宅ローン控除は受けられない", () => {
+  const dep: PlanInput = { ...withLoan, spouseWork: "none", spousePension: { ...couple.spousePension, category: "dependent" }, hlParts: [part(2000 * MAN, "self"), part(2000 * MAN, "spouse")] };
+  const r = simulate(dep).rows[0];
+  near(r.hlDeduct, (r.hlBal - r.spHlBal) * 0.007 * 1.021, 300);
+  // ローンを1本で入れて名義を配偶者にしても同じ扱い（全部が配偶者名義 → 控除0）
+  const one = simulate({ ...dep, hlParts: undefined, hlOwner: "spouse" }).rows[0];
+  near(one.spHlBal, one.hlBal, 1);
+  assert.equal(one.hlDeduct, 0);
+});
+
+test("V6-42 団信: 亡くなった人の名義のローンだけが0になる", () => {
+  const pairPlan: PlanInput = { ...withLoan, hlParts: [part(2000 * MAN, "self"), part(2000 * MAN, "spouse")], risk: { ...withLoan.risk, danshin: true, who: "self", deathAge: 45 } };
+  const base44 = simulate(pairPlan).rows.find((x) => x.age === 46)!;
+  const selfDies = simulate(pairPlan, { death: true }).rows.find((x) => x.age === 46)!;
+  near(selfDies.hlBal, base44.spHlBal, 1); // 配偶者名義の分だけ残る
+  near(selfDies.spHlBal, base44.spHlBal, 1);
+  near(selfDies.homePay, base44.homePay / 2, 1);
+  const spDies = simulate({ ...pairPlan, risk: { ...pairPlan.risk, who: "spouse" } }, { death: true }).rows.find((x) => x.age === 46)!;
+  near(spDies.hlBal, base44.hlBal - base44.spHlBal, 1); // 本人名義の分だけ残る
+  assert.equal(spDies.spHlBal, 0);
+  // 全部が本人名義なら、配偶者が亡くなってもローンは残る（今までどおり）
+  const allSelf = simulate({ ...pairPlan, hlParts: [part(4000 * MAN)], risk: { ...pairPlan.risk, who: "spouse" } }, { death: true }).rows.find((x) => x.age === 46)!;
+  near(allSelf.hlBal, base44.hlBal, 1);
+});
+
+test("V6-43 繰上返済は指定したローン（配偶者名義）の残高だけを減らす", () => {
+  const plan: PlanInput = { ...withLoan, hlParts: [part(2000 * MAN, "self"), part(2000 * MAN, "spouse")], hlPrepays: [{ age: 42, amount: 500 * MAN, kind: "shorten", part: 1 }] };
+  const a = simulate({ ...plan, hlPrepays: [] }).rows.find((x) => x.age === 42)!;
+  const b = simulate(plan).rows.find((x) => x.age === 42)!;
+  near(b.hlBal - b.spHlBal, a.hlBal - a.spHlBal, 1);
+  assert.ok(a.spHlBal - b.spHlBal > 490 * MAN);
+});
+
+test("V6-44 相続: 配偶者名義のローンは本人の債務に入れない", () => {
+  const plan = { ...withLoan, hlParts: [part(2000 * MAN, "self"), part(2000 * MAN, "spouse")], risk: { ...withLoan.risk, danshin: false }, inheritSet: { selfSharePct: 100, spouseMode: "legal" as const, smallLand: false } };
+  const row = simulate(plan).rows[0];
+  const b = estateBreakdown(plan, row, 1, 1, plan.inheritSet, true);
+  near(b.loans, row.hlBal - row.spHlBal, 1);
+});
+
+test("V6-45 本人・配偶者ごとの手取り: 配偶者だけが働く年は、配偶者の手取りだけがプラス", () => {
+  const plan: PlanInput = { ...couple, jobs: [], spJobs: [spJob({ inc: 500 * MAN })], selfPension: { ...couple.selfPension, category: "kokumin" } };
+  const r = simulate(plan).rows[0];
+  assert.ok(r.incSpouse > 350 * MAN && r.incSpouse < 420 * MAN);
+  assert.ok(r.incSelf <= 0); // 本人は収入なしで国民年金・国保だけ払う
+  near(r.incSelf + r.incSpouse, r.income, 1);
+});
+
+// ── ver6.3 レビューで見つかった点 ──
+test("V6-46 簡易税モードでも、収入のない配偶者名義の分は住宅ローン控除を受けられない", () => {
+  const dep: PlanInput = { ...withLoan, taxMode: "simple", taxRate: 20, spouseWork: "none", spJobs: [], spousePension: { ...couple.spousePension, category: "dependent" } };
+  const allSelf = simulate(dep).rows[0];
+  const pair = simulate({ ...dep, hlParts: [part(2000 * MAN, "self"), part(2000 * MAN, "spouse")] }).rows[0];
+  const allSpouse = simulate({ ...dep, hlParts: [part(4000 * MAN, "spouse")] }).rows[0];
+  near(allSelf.hlDeduct, 3000 * MAN * 0.007, 1); // 限度額3,000万まで
+  near(pair.hlDeduct, (pair.hlBal - pair.spHlBal) * 0.007, 1); // 本人名義の分だけ
+  assert.equal(allSpouse.hlDeduct, 0);
+});
+
+test("V6-47 住宅ローン控除は、本人と配偶者を入れ替えても同じ額（配偶者の税からも同じ引き方）", async () => {
+  const { calcHouseholdTax } = await import("@/lib/v4/calc/tax");
+  const a = { age: 40, wageY: 700 * MAN, workStyle: "employee" as const, penY: 0, otherShotokuY: 0, dcSelfContribY: 0, dependentOfSpouse: false };
+  const b = { age: 38, wageY: 350 * MAN, workStyle: "employee" as const, penY: 0, otherShotokuY: 0, dcSelfContribY: 0, dependentOfSpouse: false };
+  const x = calcHouseholdTax({ year: 2026, self: a, spouse: b, kidAges: [], hlDeductCredit: 10 * MAN, spouseHlDeductCredit: 25 * MAN });
+  const y = calcHouseholdTax({ year: 2026, self: b, spouse: a, kidAges: [], hlDeductCredit: 25 * MAN, spouseHlDeductCredit: 10 * MAN });
+  near(x.hlDeduct, y.hlDeduct, 2);
+  near(x.total, y.total, 2);
+  // 年収350万の人は25万を引ききれない（所得税の全額＋住民税は課税所得の5%・9.75万まで）
+  assert.ok(x.hlDeduct < 35 * MAN * 1.021 - 5 * MAN);
+});
+
+test("V6-48 本人が亡くなったあとも、配偶者名義のローンの控除は配偶者の税から続く", () => {
+  const plan: PlanInput = { ...withLoan, hlParts: [part(2000 * MAN, "self"), part(2000 * MAN, "spouse")], risk: { ...withLoan.risk, danshin: true, who: "self", deathAge: 45 } };
+  const r = simulate(plan, { death: true }).rows.find((x) => x.age === 46)!;
+  near(r.hlDeduct, r.spHlBal * 0.007 * 1.021, 300);
+  // 配偶者が亡くなって団信がなければ、配偶者名義のローンは残る（控除はなくなる）
+  const noDanshin = simulate({ ...plan, risk: { ...plan.risk, danshin: false, who: "spouse" } }, { death: true }).rows.find((x) => x.age === 46)!;
+  assert.ok(noDanshin.spHlBal > 1500 * MAN);
+});
+
+test("V6-49 配偶者を消したあとに名義「配偶者」が残っていても、本人のローンとして計算する", () => {
+  const solo: PlanInput = { ...withLoan, spouseBirth: "" };
+  const a = simulate(solo).rows;
+  const b = simulate({ ...solo, hlParts: [part(4000 * MAN, "spouse")] }).rows;
+  const c = simulate({ ...solo, hlParts: undefined, hlOwner: "spouse" }).rows;
+  a.forEach((x, i) => {
+    assert.equal(b[i].nw, x.nw);
+    assert.equal(b[i].spHlBal, 0);
+    assert.equal(b[i].hlDeduct, x.hlDeduct);
+  });
+  assert.equal(c[0].spHlBal, 0);
+});
+
+test("V6-50 繰上返済の「どのローン」は画面の番号どおり（残高0のローンが前にあってもずれない）", () => {
+  const plan: PlanInput = { ...withLoan, hlParts: [part(0, "self"), part(4000 * MAN, "spouse")], hlPrepays: [{ age: 42, amount: 500 * MAN, kind: "shorten", part: 1 }] };
+  const a = simulate({ ...plan, hlPrepays: [] }).rows.find((x) => x.age === 42)!;
+  const b = simulate(plan).rows.find((x) => x.age === 42)!;
+  near(b.hlPrepay, 500 * MAN, 1);
+  assert.ok(a.hlBal - b.hlBal > 490 * MAN);
+});
+
+test("V6-51 引き継ぎ書: 毎月の支払いは名義ごとに分け、団信の注記は本人名義の分だけ", async () => {
+  const { monthlyPayments } = await import("@/lib/v4/calc/handover");
+  const plan: PlanInput = { ...withLoan, hlParts: [part(2000 * MAN, "self"), part(2000 * MAN, "spouse")], risk: { ...withLoan.risk, danshin: true } };
+  const row = simulate(plan).rows[0];
+  const pays = monthlyPayments(plan, row).filter((x) => x.label.startsWith("住宅ローン"));
+  assert.equal(pays.length, 2);
+  near(pays[0].monthly, pays[1].monthly, 1);
+  assert.ok(pays[0].note.includes("団信"));
+  assert.ok(pays[1].note.includes("続く"));
+  near((pays[0].monthly + pays[1].monthly) * 12, row.homePay, 1);
+});

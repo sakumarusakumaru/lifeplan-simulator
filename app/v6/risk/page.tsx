@@ -103,6 +103,12 @@ export default function RiskPage() {
   const compact = useIsNarrow();
   const base = useSimResult(effPlan);
   const death = useSimResult(effPlan, { death: true });
+  // ver6.3: 団信で0になるのは、亡くなる人の名義のローンだけ（配偶者名義の分は spHlBal）
+  const rowAtDeath = base.rows.find((r) => r.age === deathAge);
+  const hasSpLoan = base.rows.some((r) => (r.spHlBal ?? 0) > 1);
+  const hasSelfLoan = base.rows.some((r) => r.hlBal - (r.spHlBal ?? 0) > 1);
+  const danshinCleared = who === "self" ? (rowAtDeath?.hlBal ?? 0) - (rowAtDeath?.spHlBal ?? 0) : rowAtDeath?.spHlBal ?? 0;
+  const danshinLeft = (rowAtDeath?.hlBal ?? 0) - danshinCleared;
   const needNominal = useMemo(() => requiredCoverage(effPlan), [effPlan]);
   // 相続の計算は名目の金額で行い、最後に「今の価値」に割り戻す（換算済みの行を渡すと二重に割り戻してしまう）
   const baseNominal = useMemo(() => simulate(effPlan), [effPlan]);
@@ -223,12 +229,12 @@ export default function RiskPage() {
               max={100}
               hint="今の生活費・特別費に対する割合。目安は子あり7割、夫婦のみ6割"
             />
-            {plan.useHomeLoan && who === "self" ? (
+            {plan.useHomeLoan && (who === "self" ? hasSelfLoan : hasSpLoan) ? (
               <CheckboxField
                 label="住宅ローンに団信あり"
                 value={risk.danshin}
                 onChange={(v) => update({ danshin: v })}
-                hint="亡くなると残債が0になる"
+                hint={hasSpLoan ? `${who === "self" ? "本人" : "配偶者"}が亡くなると、${who === "self" ? "本人" : "配偶者"}名義のローンの残債が0になる（もう1人の名義の分は残る）` : "亡くなると残債が0になる"}
               />
             ) : null}
             <div className="px-3 py-2 text-[11px] leading-relaxed" style={INNER}>
@@ -318,9 +324,10 @@ export default function RiskPage() {
                   color={death.shortfallAge !== null ? RED : GREEN}
                 />
               </div>
-              {who === "self" && plan.useHomeLoan && risk.danshin ? (
+              {plan.useHomeLoan && risk.danshin && danshinCleared > 0 ? (
                 <p className="mt-2 text-[11px] text-[#0a0a0a]/60">
-                  団信で住宅ローン残高 {man(base.rows.find((r) => r.age === deathAge)?.hlBal ?? 0)} が0になる前提です。
+                  団信で{hasSpLoan ? `${who === "self" ? "本人" : "配偶者"}名義の` : ""}住宅ローン残高 {man(danshinCleared)} が0になる前提です。
+                  {danshinLeft > 0 ? `${who === "self" ? "配偶者" : "本人"}名義の ${man(danshinLeft)} は返済が続きます。` : ""}
                 </p>
               ) : null}
             </Section>
